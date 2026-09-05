@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Royale — 4-Player Chess Simulator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h1>Chess Royale <span class="subtitle">4-Player Chess Simulator</span></h1>
+    </header>
+
+    <div class="main">
+      <div class="board-wrap">
+        <canvas id="board" width="616" height="616"></canvas>
+        <div id="winner-overlay" class="overlay hidden">
+          <div class="overlay-card">
+            <h2 id="winner-text">Game Over</h2>
+            <button id="overlay-restart">Play Again</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>Setup</h2>
+          <div class="field">
+            <label>Mode</label>
+            <div class="btn-group">
+              <button id="mode-play" class="mode-btn active">Play (You vs 3 AI)</button>
+              <button id="mode-simulate" class="mode-btn">Simulate (4 AI)</button>
+            </div>
+          </div>
+          <div class="field" id="color-field">
+            <label>Your color</label>
+            <div class="btn-group color-group">
+              <button class="color-btn" data-color="red" style="--c:#e74c3c">Red</button>
+              <button class="color-btn" data-color="blue" style="--c:#3498db">Blue</button>
+              <button class="color-btn" data-color="yellow" style="--c:#f1c40f">Yellow</button>
+              <button class="color-btn" data-color="green" style="--c:#2ecc71">Green</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="speed">AI speed: <span id="speed-label">Normal</span></label>
+            <input type="range" id="speed" min="0" max="1200" value="500" step="50">
+          </div>
+          <button id="new-game" class="primary-btn">New Game</button>
+          <button id="pause-btn" class="secondary-btn hidden">Pause AI</button>
+        </section>
+
+        <section class="panel">
+          <h2>Players</h2>
+          <ul id="player-list" class="player-list"></ul>
+        </section>
+
+        <section class="panel">
+          <h2>Move Log</h2>
+          <div id="move-log" class="move-log"></div>
+        </section>
+
+        <section class="panel rules-panel">
+          <h2>House Rules</h2>
+          <ul class="rules-list">
+            <li>4 armies share one connected cross-shaped board.</li>
+            <li>Turn order: Red → Blue → Yellow → Green.</li>
+            <li>No "check" — capture a king to eliminate that player, their remaining pieces are removed.</li>
+            <li>Last player standing wins.</li>
+            <li>Pawns auto-promote to Queen at the board's far edge.</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script src="js/board.js"></script>
+  <script src="js/rules.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
