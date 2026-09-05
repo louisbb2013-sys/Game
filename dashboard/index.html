@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI OS — Personal Command Center</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="os">
+
+    <header class="statusbar">
+      <div class="statusbar-left">
+        <span class="os-mark">◆ AI OS</span>
+        <span class="statusbar-sep">·</span>
+        <span id="clock" class="mono"></span>
+      </div>
+      <form id="command-form" class="command-bar" autocomplete="off">
+        <span class="command-icon mono">&gt;</span>
+        <input id="command-input" type="text" placeholder="Ask your AI OS — e.g. &quot;email me tomorrow's calendar&quot;" aria-label="Command input">
+      </form>
+      <div class="statusbar-right">
+        <button id="open-connections" class="btn-ghost">Connections</button>
+        <div class="avatar" title="Louis">L</div>
+      </div>
+    </header>
+
+    <div class="sample-banner">
+      <span class="sample-banner-badge">SAMPLE DATA</span>
+      Every widget below shows placeholder content, not your real inbox, calendar, or transactions. This repo is public, so live account data is never written to it — open a Claude session against a connected tool to pull a real, private snapshot on demand. See <a href="README.md">README</a> for how.
+    </div>
+
+    <main class="grid">
+
+      <!-- Mail — primary, largest tile -->
+      <section class="card card-mail" data-card="mail">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="card-icon" style="--icon-bg:#e7f2f0;--icon-fg:#2f8f80">✉</span>
+            <div>
+              <h2>Mail</h2>
+              <p class="card-sub">louisbb2013@icloud.com</p>
+            </div>
+          </div>
+          <span class="pill pill-warn" data-status-pill="mail">Not connected</span>
+        </header>
+
+        <div class="tab-row" role="tablist" aria-label="Mail accounts">
+          <button class="tab active" data-tab="icloud">iCloud</button>
+          <button class="tab" data-tab="gmail">Gmail</button>
+          <button class="tab" data-tab="outlook">Outlook</button>
+        </div>
+
+        <div class="mail-stats">
+          <div class="stat"><span class="stat-value mono">14</span><span class="stat-label">unread</span></div>
+          <div class="stat"><span class="stat-value mono">3</span><span class="stat-label">flagged</span></div>
+          <div class="stat"><span class="stat-value mono">2m</span><span class="stat-label">ago synced</span></div>
+        </div>
+
+        <ul class="mail-list" id="mail-list"></ul>
+
+        <footer class="card-foot mono">
+          <span id="mail-meta">iCloud Mail · App-Specific Password · IMAP :993 / SMTP :587</span>
+        </footer>
+      </section>
+
+      <!-- Calendar -->
+      <section class="card card-calendar" data-card="calendar">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="card-icon" style="--icon-bg:#eef1fb;--icon-fg:#4a5fc1">◔</span>
+            <div>
+              <h2>Calendar</h2>
+              <p class="card-sub">Next 7 days</p>
+            </div>
+          </div>
+          <span class="pill pill-warn" data-status-pill="calendar">Not connected</span>
+        </header>
+        <ul class="event-list" id="event-list"></ul>
+        <footer class="card-foot mono">Google Calendar · OAuth 2.0 · scope: calendar.readonly</footer>
+      </section>
+
+      <!-- Files / Drive -->
+      <section class="card card-files" data-card="files">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="card-icon" style="--icon-bg:#fdf1e3;--icon-fg:#b5791f">▤</span>
+            <div>
+              <h2>Files</h2>
+              <p class="card-sub">Google Drive</p>
+            </div>
+          </div>
+          <span class="pill pill-warn" data-status-pill="files">Not connected</span>
+        </header>
+        <div class="storage-meter">
+          <div class="storage-bar"><div class="storage-fill" style="width:62%"></div></div>
+          <div class="storage-caption mono"><span>11.2 GB used</span><span>18 GB total</span></div>
+        </div>
+        <ul class="file-list" id="file-list"></ul>
+        <footer class="card-foot mono">Drive API v3 · scope: drive.readonly</footer>
+      </section>
+
+      <!-- Payments / Square -->
+      <section class="card card-payments" data-card="payments">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="card-icon" style="--icon-bg:#eaf7ee;--icon-fg:#3f9a5c">$</span>
+            <div>
+              <h2>Payments</h2>
+              <p class="card-sub">Square</p>
+            </div>
+          </div>
+          <span class="pill pill-warn" data-status-pill="payments">Not connected</span>
+        </header>
+        <div class="big-stat">
+          <span class="big-stat-value mono">$2,148.30</span>
+          <span class="big-stat-delta up mono">▲ 9.4% vs last week</span>
+        </div>
+        <svg class="sparkline" viewBox="0 0 240 56" preserveAspectRatio="none" aria-hidden="true">
+          <polyline points="0,40 20,38 40,34 60,36 80,28 100,30 120,22 140,24 160,16 180,18 200,10 220,12 240,4" />
+        </svg>
+        <footer class="card-foot mono">Square API · location: Main St · last settled 09:00</footer>
+      </section>
+
+      <!-- Domains / GoDaddy -->
+      <section class="card card-domains" data-card="domains">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="card-icon" style="--icon-bg:#f2eefb;--icon-fg:#7a4fc1">◆</span>
+            <div>
+              <h2>Domains</h2>
+              <p class="card-sub">GoDaddy</p>
+            </div>
+          </div>
+          <span class="pill pill-warn" data-status-pill="domains">Not connected</span>
+        </header>
+        <ul class="domain-list" id="domain-list"></ul>
+        <footer class="card-foot mono">GoDaddy Domains API · key + secret</footer>
+      </section>
+
+      <!-- Messages / Teams -->
+      <section class="card card-messages" data-card="messages">
+        <header class="card-head">
+          <div class="card-title">
+            <span class="card-icon" style="--icon-bg:#eaf3fb;--icon-fg:#2f7fb5">◨</span>
+            <div>
+              <h2>Messages</h2>
+              <p class="card-sub">Microsoft Teams</p>
+            </div>
+          </div>
+          <span class="pill pill-warn" data-status-pill="messages">Not connected</span>
+        </header>
+        <div class="mail-stats">
+          <div class="stat"><span class="stat-value mono">5</span><span class="stat-label">unread chats</span></div>
+          <div class="stat"><span class="stat-value mono">2</span><span class="stat-label">@mentions</span></div>
+        </div>
+        <ul class="mini-list" id="messages-list"></ul>
+        <footer class="card-foot mono">Microsoft Graph · OAuth 2.0 · scope: Chat.Read</footer>
+      </section>
+
+    </main>
+
+    <nav class="dock" aria-label="Quick launch">
+      <a class="dock-item" href="https://www.icloud.com/mail" target="_blank" rel="noopener"><span class="dock-icon">✉</span>Mail</a>
+      <a class="dock-item" href="https://calendar.google.com" target="_blank" rel="noopener"><span class="dock-icon">◔</span>Calendar</a>
+      <a class="dock-item" href="https://drive.google.com" target="_blank" rel="noopener"><span class="dock-icon">▤</span>Files</a>
+      <a class="dock-item" href="https://squareup.com/dashboard" target="_blank" rel="noopener"><span class="dock-icon">$</span>Payments</a>
+      <a class="dock-item" href="https://dcc.godaddy.com" target="_blank" rel="noopener"><span class="dock-icon">◆</span>Domains</a>
+      <a class="dock-item" href="https://teams.microsoft.com" target="_blank" rel="noopener"><span class="dock-icon">◨</span>Messages</a>
+    </nav>
+
+    <div id="connections-panel" class="panel hidden" role="dialog" aria-modal="true" aria-labelledby="connections-title">
+      <div class="panel-card">
+        <header class="panel-head">
+          <h2 id="connections-title">Connections</h2>
+          <button id="close-connections" class="btn-ghost" aria-label="Close">✕</button>
+        </header>
+        <p class="panel-note">Connecting a tool here only changes what this dashboard shows — it does not perform a real OAuth sign-in. Wiring a real connection requires a backend to hold API credentials, which a static page like this one can't do safely on its own.</p>
+        <ul id="connections-list" class="connections-list"></ul>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
