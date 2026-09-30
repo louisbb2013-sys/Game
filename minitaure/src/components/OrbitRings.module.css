@@ -1,0 +1,70 @@
+.rings {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rings ellipse {
+  fill: none;
+  stroke: rgb(109 79 211 / 0.22);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.rings[data-tone='night'] ellipse {
+  stroke: rgb(210 196 248 / 0.22);
+}
+
+.rings .halo {
+  stroke: none;
+  fill: rgb(210 196 248 / 0.16);
+  filter: blur(40px);
+}
+
+.rings[data-tone='night'] .halo {
+  fill: rgb(109 79 211 / 0.22);
+}
+
+.planet {
+  fill: #6d4fd3;
+}
+.planet2 {
+  fill: #f8c9db;
+}
+
+.spin1,
+.spin2 {
+  transform-origin: 400px 400px;
+  transform-box: view-box;
+}
+
+.spin1 {
+  animation: sway 26s ease-in-out infinite alternate;
+}
+.spin2 {
+  animation: sway 34s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes sway {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .rings ellipse {
+    stroke: rgb(210 196 248 / 0.2);
+  }
+  .rings .halo {
+    fill: rgb(109 79 211 / 0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin1,
+  .spin2 {
+    animation: none;
+  }
+}

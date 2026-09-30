@@ -1,0 +1,42 @@
+.mark {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 100, 'WONK' 0, 'opsz' 144;
+  font-weight: 380;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.letter,
+.i {
+  display: inline-block;
+  will-change: transform;
+}
+
+.i {
+  position: relative;
+}
+
+.dotless {
+  display: inline-block;
+}
+
+.dot {
+  position: absolute;
+  left: 50%;
+  top: 0.13em;
+  width: calc(0.17em * var(--dot-scale, 1));
+  height: calc(0.17em * var(--dot-scale, 1));
+  margin-left: calc(-0.085em * var(--dot-scale, 1));
+  border-radius: 50%;
+  /* Same ink as the letters: two contrasting glowing dots would read as eyes. */
+  background: currentColor;
+}
+
+.logoMark {
+  flex: none;
+  color: var(--ink);
+}

@@ -1,0 +1,158 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-lg);
+  transition: transform var(--dur-3) var(--ease-out);
+}
+
+.card:hover {
+  transform: translateY(-6px);
+}
+
+.media {
+  display: block;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  transition: box-shadow var(--dur-3) var(--ease-out);
+}
+
+.card:hover .media {
+  box-shadow: var(--shadow-2);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 1rem 0.3rem 0;
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.name {
+  margin-top: 0.35rem;
+  font-size: clamp(1.35rem, 1.2rem + 0.6vw, 1.7rem);
+  font-weight: 420;
+}
+
+.nameLink {
+  text-decoration: none;
+}
+.nameLink:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.blurb {
+  margin-bottom: 1rem;
+  margin-top: 0.35rem;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--line-strong);
+}
+
+.price {
+  font-family: var(--font-display);
+  font-variation-settings: var(--soft);
+  font-size: 1.45rem;
+  font-weight: 430;
+  font-variant-numeric: tabular-nums;
+}
+
+.add {
+  position: relative;
+  min-height: 44px;
+  min-width: 132px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.add:hover {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+.add:active {
+  transform: scale(0.95);
+}
+
+.add[data-added] {
+  background: var(--c-violet);
+  border-color: var(--c-violet);
+  color: #fff;
+}
+
+.addInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.card[data-kind='coffret'] .price::after {
+  content: ' le trio';
+  font-family: var(--font-text);
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+@media (max-width: 560px) {
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .add {
+    min-width: 0;
+    width: 100%;
+  }
+  .blurb {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover {
+    transform: none;
+  }
+}

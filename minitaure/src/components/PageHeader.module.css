@@ -1,0 +1,45 @@
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-top: calc(var(--nav-h) + var(--safe-top) + clamp(2.5rem, 6vw, 6rem));
+  padding-bottom: var(--space-6);
+}
+
+.copy {
+  max-width: 50rem;
+}
+
+.mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-top: 1rem;
+}
+
+.title {
+  font-size: var(--fs-2xl);
+  font-weight: 380;
+}
+
+.title em {
+  font-style: italic;
+  font-weight: 330;
+  color: var(--accent);
+}
+
+.lede {
+  margin-top: 1.2rem;
+}
+
+.aside {
+  flex: none;
+}
+
+@media (max-width: 820px) {
+  .head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

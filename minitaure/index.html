@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Minitaure — Petites créatures sans visage, venues d’une douce nébuleuse.</title>
+    <meta
+      name="description"
+      content="Minitaure : des créatures de collection, rondes, douces et sans visage, numérotées une à une. Découvrez le catalogue et la boutique."
+    />
+    <meta name="theme-color" content="#FCF9F4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1A1745" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="canonical" href="https://minitaure.example/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Minitaure" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content="Minitaure — Petites créatures sans visage, venues d’une douce nébuleuse." />
+    <meta
+      property="og:description"
+      content="Des créatures de collection, rondes, douces et sans visage, numérotées une à une."
+    />
+    <meta property="og:url" content="https://minitaure.example/" />
+    <meta property="og:image" content="https://minitaure.example/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Brume, une créature ronde à fourrure lavande, entourée de petites créatures en orbite." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Minitaure — Petites créatures sans visage" />
+    <meta name="twitter:description" content="Des créatures de collection, rondes, douces et sans visage, numérotées une à une." />
+    <meta name="twitter:image" content="https://minitaure.example/og.jpg" />
+    <style>
+      /* Pre-paint background so there is never a white flash in dark mode. */
+      html { background: #fcf9f4; }
+      @media (prefers-color-scheme: dark) { html { background: #1a1745; } }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <p style="font-family: system-ui; padding: 2rem; text-align: center">
+        Minitaure a besoin de JavaScript pour afficher ses créatures.
+      </p>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

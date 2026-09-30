@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="g" cx="38%" cy="32%" r="72%">
+      <stop offset="0" stop-color="#EFE9FC"/>
+      <stop offset="0.45" stop-color="#D2C4F8"/>
+      <stop offset="1" stop-color="#6D4FD3"/>
+    </radialGradient>
+    <filter id="f" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="1" seed="2"/>
+      <feDisplacementMap in="SourceGraphic" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+  <ellipse cx="32" cy="33.5" rx="26" ry="24.5" fill="url(#g)" filter="url(#f)"/>
+</svg>

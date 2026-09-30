@@ -1,0 +1,132 @@
+/* ==========================================================================
+   Minitaure design tokens — the single source of colour, type, space,
+   radius, shadow and motion values.
+   ========================================================================== */
+
+:root {
+  /* Brand palette (raw) */
+  --c-cream: #fcf9f4;
+  --c-midnight: #1f1b4d;
+  --c-night: #1a1745;
+  --c-night-2: #24205a;
+  --c-violet: #6d4fd3;
+  --c-lavender-soft: #efe9fc;
+  --c-lavender: #d2c4f8;
+  --c-pink: #f8c9db;
+  --c-mint: #c6ebd6;
+  --c-peach: #fbd8b4;
+  --c-sky: #bbd6f9;
+
+  /* Semantic (light) */
+  --bg: var(--c-cream);
+  --bg-raised: #ffffff;
+  --bg-soft: var(--c-lavender-soft);
+  --ink: var(--c-midnight);
+  --ink-2: #4a4672; /* secondary text, 8.2:1 on cream */
+  --ink-3: #6b6790; /* tertiary text, 5.1:1 on cream */
+  --line: rgb(31 27 77 / 0.12);
+  --line-strong: rgb(31 27 77 / 0.22);
+  --accent: var(--c-violet);
+  --accent-ink: #ffffff;
+  --accent-soft: rgb(109 79 211 / 0.1);
+  --danger: #b3261e;
+  --success: #1f7a52;
+  --focus: #6d4fd3;
+  --glass: rgb(252 249 244 / 0.72);
+  --plate: #ffffff;
+
+  /* Night sections are always midnight, in both themes */
+  --night-bg: var(--c-night);
+  --night-ink: var(--c-cream);
+  --night-ink-2: #c9c3ec;
+  --night-line: rgb(252 249 244 / 0.14);
+
+  /* Type */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-text: 'Figtree Variable', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  --soft: 'SOFT' 100, 'WONK' 0;
+
+  --fs-xs: 0.78rem;
+  --fs-sm: 0.9rem;
+  --fs-base: 1.0625rem;
+  --fs-md: clamp(1.1rem, 1rem + 0.4vw, 1.3rem);
+  --fs-lg: clamp(1.4rem, 1.2rem + 0.9vw, 1.9rem);
+  --fs-xl: clamp(2rem, 1.5rem + 2.2vw, 3.3rem);
+  --fs-2xl: clamp(2.6rem, 1.6rem + 4.4vw, 5.6rem);
+  --fs-hero: clamp(3.1rem, 1.4rem + 7.6vw, 8.4rem);
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: clamp(4.5rem, 3rem + 6vw, 9rem);
+  --gutter: clamp(1.1rem, 0.6rem + 2.6vw, 3rem);
+  --maxw: 1320px;
+
+  /* Radius */
+  --r-sm: 12px;
+  --r-md: 20px;
+  --r-lg: 28px;
+  --r-xl: 40px;
+  --r-pill: 999px;
+
+  /* Shadows: soft, violet-tinted, never grey */
+  --shadow-1: 0 1px 2px rgb(31 27 77 / 0.05), 0 4px 14px rgb(31 27 77 / 0.05);
+  --shadow-2: 0 2px 6px rgb(31 27 77 / 0.05), 0 18px 40px -12px rgb(60 40 140 / 0.18);
+  --shadow-3: 0 30px 80px -20px rgb(40 26 110 / 0.35);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.33, 0.1, 0.18, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 160ms;
+  --dur-2: 320ms;
+  --dur-3: 640ms;
+  --dur-4: 1100ms;
+
+  /* Layout */
+  --nav-h: 76px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--c-night);
+    --bg-raised: #221e56;
+    --bg-soft: #24205a;
+    --ink: var(--c-cream);
+    --ink-2: #cfc9ef;
+    --ink-3: #aaa3d8;
+    --line: rgb(252 249 244 / 0.12);
+    --line-strong: rgb(252 249 244 / 0.24);
+    --accent: #b3a2f5;
+    --accent-ink: #16133c;
+    --accent-soft: rgb(179 162 245 / 0.14);
+    --danger: #ffb4ab;
+    --success: #8fd9b4;
+    --focus: #c8bbff;
+    --glass: rgb(26 23 69 / 0.7);
+    --plate: #221e56;
+    --night-bg: #120f36;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.2), 0 4px 14px rgb(0 0 0 / 0.18);
+    --shadow-2: 0 2px 6px rgb(0 0 0 / 0.2), 0 18px 40px -12px rgb(0 0 0 / 0.45);
+    --shadow-3: 0 30px 80px -20px rgb(0 0 0 / 0.6);
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --nav-h: 64px;
+    --r-lg: 22px;
+  }
+}

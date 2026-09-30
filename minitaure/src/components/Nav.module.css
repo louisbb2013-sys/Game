@@ -1,0 +1,210 @@
+.header {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding-top: var(--safe-top);
+  padding-inline: max(var(--gutter), var(--safe-left)) max(var(--gutter), var(--safe-right));
+  pointer-events: none;
+  color: var(--ink);
+  transition: color var(--dur-3) var(--ease-out);
+}
+
+.header[data-night] {
+  color: var(--c-cream);
+  --ink: var(--c-cream);
+  --line: rgb(252 249 244 / 0.16);
+  --glass: rgb(26 23 69 / 0.62);
+  --accent: #b3a2f5;
+}
+
+.bar {
+  pointer-events: auto;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 0.4rem;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  transition:
+    height var(--dur-3) var(--ease-out),
+    margin-top var(--dur-3) var(--ease-out),
+    padding var(--dur-3) var(--ease-out),
+    background-color var(--dur-3) var(--ease-out),
+    border-color var(--dur-3) var(--ease-out),
+    box-shadow var(--dur-3) var(--ease-out),
+    backdrop-filter var(--dur-3) var(--ease-out);
+}
+
+.header[data-scrolled] .bar {
+  height: 60px;
+  margin-top: 10px;
+  padding: 0 0.5rem 0 1.1rem;
+  background: var(--glass);
+  border-color: var(--line);
+  box-shadow: 0 10px 40px -18px rgb(31 27 77 / 0.35);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  min-height: 44px;
+  border-radius: var(--r-pill);
+  margin-right: auto;
+}
+
+.word {
+  font-size: 1.62rem;
+  --dot-scale: 1.25;
+  transform: translateY(-1px);
+}
+
+.links ul {
+  display: flex;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.95rem;
+  border-radius: var(--r-pill);
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.78;
+  transition: opacity var(--dur-2), background-color var(--dur-2);
+}
+
+.link:hover {
+  opacity: 1;
+  background: var(--accent-soft);
+}
+
+.link[aria-current='page'] {
+  opacity: 1;
+}
+
+.dot {
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cart,
+.menuBtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  transition: background-color var(--dur-2), transform var(--dur-2) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cart:hover,
+.menuBtn:hover {
+  background: var(--accent-soft);
+}
+.cart:active,
+.menuBtn:active {
+  transform: scale(0.94);
+}
+
+.badge {
+  position: absolute;
+  top: 5px;
+  right: 3px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--c-violet);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.header[data-night] .badge {
+  box-shadow: 0 0 0 2px var(--c-night);
+}
+
+.menuBtn {
+  display: none;
+}
+
+.burger {
+  position: relative;
+  width: 22px;
+  height: 12px;
+}
+.burger span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.6px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform var(--dur-3) var(--ease-out), top var(--dur-3) var(--ease-out), width var(--dur-3) var(--ease-out);
+}
+.burger span:first-child {
+  top: 0;
+}
+.burger span:last-child {
+  top: 10px;
+  width: 64%;
+  left: auto;
+}
+.burger[data-open] span:first-child {
+  top: 5px;
+  transform: rotate(45deg);
+}
+.burger[data-open] span:last-child {
+  top: 5px;
+  width: 100%;
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 900px) {
+  .links {
+    display: none;
+  }
+  .menuBtn {
+    display: grid;
+  }
+  .word {
+    font-size: 1.4rem;
+  }
+}

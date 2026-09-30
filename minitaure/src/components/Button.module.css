@@ -1,0 +1,111 @@
+.btn {
+  --h: 52px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: var(--h);
+  padding: 0 1.55rem;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.98rem;
+  letter-spacing: 0.005em;
+  text-decoration: none;
+  white-space: nowrap;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lg {
+  --h: 58px;
+  padding: 0 1.9rem;
+  font-size: 1.02rem;
+}
+
+/* A soft light that follows the hover, like fur catching light */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: radial-gradient(circle at 50% 120%, rgb(255 255 255 / 0.28), transparent 55%);
+  opacity: 0;
+  transform: translateY(20%);
+  transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out);
+}
+
+.btn:hover::before {
+  opacity: 1;
+  transform: none;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 90ms;
+}
+
+.icon {
+  display: inline-flex;
+  transition: transform var(--dur-3) var(--ease-out);
+}
+
+.btn:hover .icon {
+  transform: translateX(3px);
+}
+
+.primary {
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: 0 10px 30px -12px rgb(31 27 77 / 0.55);
+}
+.primary:hover {
+  box-shadow: 0 16px 36px -14px rgb(31 27 77 / 0.6);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.ghost:hover {
+  border-color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.soft {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.soft:hover {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn:hover,
+  .btn:active {
+    transform: none;
+  }
+  .btn:hover .icon {
+    transform: none;
+  }
+}

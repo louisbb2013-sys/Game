@@ -6,6 +6,9 @@ share one connected, cross-shaped board.
 > Also in this repo: [`dashboard/`](dashboard/) — an "AI OS" personal
 > command center for connecting mail, calendar, and other tools. See
 > [`dashboard/README.md`](dashboard/README.md).
+>
+> And [`minitaure/`](minitaure/) — the Minitaure brand website (Vite + React +
+> Three.js, shell-fur 3D creatures). See [`minitaure/README.md`](minitaure/README.md).
 
 ## Play
 
