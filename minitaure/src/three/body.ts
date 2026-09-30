@@ -92,8 +92,8 @@ function buildBody(creature: Creature, detail: number) {
       case 'crown': {
         // A ring of many small locks (never two "ear-like" bumps).
         const ring = smoothstep(0.62, 0.74, y) * (1 - smoothstep(0.86, 0.95, y));
-        const peaks = Math.pow(0.5 + 0.5 * Math.cos(angle * 11), 5);
-        len += ring * peaks * 0.75 * amount;
+        const peaks = Math.pow(0.5 + 0.5 * Math.cos(angle * 17), 3);
+        len += ring * (0.35 + peaks * 0.4) * amount;
         clump = ring * peaks * 0.8;
         mask = ring * peaks * 0.7;
         break;
@@ -119,12 +119,12 @@ function buildBody(creature: Creature, detail: number) {
         break;
       }
       case 'band': {
-        const b = Math.abs(ty + 0.12 + wob * 0.06);
+        const b = Math.abs(ty + wob * 0.06);
         mask = 1 - smoothstep(0.12 * (0.6 + amount), 0.26 * (0.6 + amount), b);
         break;
       }
       case 'sheen': {
-        const b = Math.abs(ty + 0.1 + wob * 0.05);
+        const b = Math.abs(ty + wob * 0.05);
         sheen = (1 - smoothstep(0.06, 0.2, b)) * amount;
         mask = sheen;
         break;
@@ -146,7 +146,8 @@ function buildBody(creature: Creature, detail: number) {
 /** Evenly-ish distributed spot centres on the unit sphere (x, y, z, radius). */
 function makeSpotPoints(seed: number, amount: number) {
   const rand = rng(seed * 13 + 5);
-  const count = Math.round(7 + amount * 6);
+  // Many small spots: a few large ones can line up like eyes and a mouth.
+  const count = Math.round(18 + amount * 10);
   const pts: [number, number, number, number][] = [];
   for (let i = 0; i < count; i++) {
     // Fibonacci sphere + jitter.
@@ -158,7 +159,7 @@ function makeSpotPoints(seed: number, amount: number) {
     const y = Math.cos(phi) + (rand() - 0.5) * jitter;
     const z = Math.sin(theta) * Math.sin(phi) + (rand() - 0.5) * jitter;
     const l = Math.hypot(x, y, z);
-    pts.push([x / l, y / l, z / l, 0.2 + rand() * 0.14 + amount * 0.08]);
+    pts.push([x / l, y / l, z / l, 0.1 + rand() * 0.11 + amount * 0.05]);
   }
   return pts;
 }

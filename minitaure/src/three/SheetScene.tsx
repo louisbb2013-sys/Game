@@ -31,7 +31,7 @@ export default function SheetScene({
         interactive
         tilt={!still}
         float={!still}
-        scale={1.08}
+        scale={0.95}
         yaw={0.5}
         position={[0, -0.12, 0]}
       />

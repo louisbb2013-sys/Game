@@ -39,7 +39,7 @@ export function ProductCard({ product, priority }: { product: Product; priority?
         tabIndex={-1}
         aria-hidden="true"
       >
-        <CreaturePlate creatures={creatures} hovered={hovered} tint={col?.tint} alt="" priority={priority} />
+        <CreaturePlate creatures={creatures} hovered={hovered} tint={col?.tint} alt="" priority={priority} wide={isCoffret} />
       </Link>
       <div className={styles.body}>
         <p className={styles.kicker}>

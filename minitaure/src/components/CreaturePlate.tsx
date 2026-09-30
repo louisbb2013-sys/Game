@@ -18,6 +18,8 @@ interface Props {
   priority?: boolean;
   /** Allow a live 3D thumbnail when the device can afford it. */
   live?: boolean;
+  /** Twice as wide (coffret cards). */
+  wide?: boolean;
 }
 
 /**
@@ -25,14 +27,14 @@ interface Props {
  * creature standing on it. Shows the still first, then (desktop-class
  * devices only) swaps seamlessly to a live 3D thumbnail.
  */
-export function CreaturePlate({ creatures, hovered = false, tint, layoutId, alt, className, priority, live = true }: Props) {
+export function CreaturePlate({ creatures, hovered = false, tint, layoutId, alt, className, priority, live = true, wide = false }: Props) {
   const q = useQuality();
   const [isLive, setIsLive] = useState(false);
   const canLive = live && q.tier === 'high';
   const trio = creatures.length > 1;
 
   return (
-    <div className={[styles.plate, className].filter(Boolean).join(' ')} style={{ '--tint': tint } as CSSProperties} data-hovered={hovered || undefined}>
+    <div className={[styles.plate, wide && styles.wide, className].filter(Boolean).join(' ')} style={{ '--tint': tint } as CSSProperties} data-hovered={hovered || undefined}>
       <span className={styles.halo} aria-hidden="true" />
       <motion.div layoutId={layoutId} className={styles.stage} data-live={isLive || undefined} transition={{ type: 'spring', stiffness: 170, damping: 26 }}>
         {trio ? (

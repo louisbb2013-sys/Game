@@ -34,7 +34,8 @@ function Flight({ groups, progress }: Omit<Props, 'className'>) {
   const q = useQuality();
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
-  const narrow = size.width < 700;
+  // Portrait viewports (phones, tablets upright) need the camera further back.
+  const narrow = size.width / size.height < 1.05;
 
   const { path, look } = useMemo(() => {
     const pts: THREE.Vector3[] = [];
@@ -81,11 +82,14 @@ function Flight({ groups, progress }: Omit<Props, 'className'>) {
 
 function Cluster({ index, collection, creatures }: { index: number; collection: Collection; creatures: Creature[] }) {
   const q = useQuality();
+  const size = useThree((s) => s.size);
+  // On landscape screens the captions sit on the left: shift creatures right.
+  const offsetX = size.width / size.height >= 1.05 ? 1.6 : 0;
   const x0 = index * CLUSTER_GAP;
   const n = creatures.length;
   return (
-    <group position={[x0, 0, 0]}>
-      <Nebula color={collection.accent} color2="#1F1B4D" position={[0.5, 0.3, -4]} scale={11} opacity={0.32} />
+    <group position={[x0 + offsetX, 0, 0]}>
+      <Nebula color={collection.accent} color2="#6D4FD3" position={[0.5, 0.3, -4]} scale={11} opacity={0.2} />
       {creatures.map((c, i) => {
         // Arrange as a gentle arc; the first creature is the "lead".
         const a = (i - (n - 1) / 2) * 0.75;

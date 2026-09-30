@@ -81,6 +81,7 @@ export default function Shop() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: reduced ? 1 : 0.96 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                className={p.kind === 'coffret' ? styles.wide : undefined}
               >
                 <Reveal kind="scale" amount={0.15} delay={(i % 4) * 0.06}>
                   <ProductCard product={p} priority={i < 2} />

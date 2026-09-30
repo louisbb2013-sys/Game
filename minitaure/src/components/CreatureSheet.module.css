@@ -91,7 +91,8 @@
 
 .orb {
   position: relative;
-  width: min(84%, 560px);
+  /* Sized so the still matches the live 3D framing at the crossfade. */
+  width: min(88%, 600px);
   transition: opacity 700ms var(--ease-out);
 }
 
@@ -177,6 +178,7 @@
 }
 
 .tagline {
+  line-height: 1.35;
   margin-top: 0.7rem;
   font-family: var(--font-display);
   font-variation-settings: var(--soft);
@@ -209,8 +211,7 @@
   padding-right: 1rem;
 }
 
-.specs > div:nth-child(2),
-.specs > div:nth-child(3) {
+.specs > div:nth-child(n + 3) {
   grid-column: 1 / -1;
 }
 
@@ -245,7 +246,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
-  margin-top: 1.8rem;
+  margin-top: 1.4rem;
 }
 
 .pager {

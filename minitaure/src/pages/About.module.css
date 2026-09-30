@@ -103,24 +103,8 @@
   place-items: center;
 }
 
-.chRing {
-  position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  border: 1px solid var(--line-strong);
-  border-top-color: var(--accent);
-}
-
-.chRing::after {
-  content: '';
-  position: absolute;
-  inset: 12%;
-  border-radius: 50%;
-  border: 1px dashed var(--line);
-}
-
 .chOrb {
-  width: 64%;
+  width: 72%;
   position: relative;
 }
 

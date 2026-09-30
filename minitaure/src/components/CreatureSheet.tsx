@@ -159,44 +159,6 @@ export function CreatureSheet({ creature, onClose }: { creature: Creature; onClo
           <p id="sheet-tagline" className={styles.tagline}>
             {creature.tagline}
           </p>
-          <div className={styles.story}>
-            {creature.story.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-
-          <dl className={styles.specs}>
-            <div>
-              <dt>Taille</dt>
-              <dd>{creature.size}</dd>
-            </div>
-            <div>
-              <dt>Matière</dt>
-              <dd>{creature.material}</dd>
-            </div>
-            <div>
-              <dt>Collection</dt>
-              <dd>
-                {col?.name} — <span className={styles.muted}>{col?.subtitle}</span>
-              </dd>
-            </div>
-            <div>
-              <dt>Fourrure</dt>
-              <dd>{FUR_WORDS(creature)}</dd>
-            </div>
-            <div>
-              <dt>Couleurs</dt>
-              <dd className={styles.swatches}>
-                <span style={{ background: creature.fur.base }} title="Racine" aria-hidden="true" />
-                <span style={{ background: creature.fur.tip }} title="Pointes" aria-hidden="true" />
-                {creature.detail.color && <span style={{ background: creature.detail.color }} title="Détail" aria-hidden="true" />}
-                <span className="visually-hidden">
-                  Racine {creature.fur.base}, pointes {creature.fur.tip}
-                </span>
-              </dd>
-            </div>
-          </dl>
-
           <div className={styles.actions}>
             <ButtonLink to={`/boutique?collection=${creature.collection}`} variant="primary" icon={<Arrow />}>
               Voir en boutique
@@ -213,6 +175,44 @@ export function CreatureSheet({ creature, onClose }: { creature: Creature; onClo
               </Button>
             )}
           </div>
+
+          <div className={styles.story}>
+            {creature.story.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+
+          <dl className={styles.specs}>
+            <div>
+              <dt>Taille</dt>
+              <dd>{creature.size}</dd>
+            </div>
+            <div>
+              <dt>Couleurs</dt>
+              <dd className={styles.swatches}>
+                <span style={{ background: creature.fur.base }} title="Racine" aria-hidden="true" />
+                <span style={{ background: creature.fur.tip }} title="Pointes" aria-hidden="true" />
+                {creature.detail.color && <span style={{ background: creature.detail.color }} title="Détail" aria-hidden="true" />}
+                <span className="visually-hidden">
+                  Racine {creature.fur.base}, pointes {creature.fur.tip}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt>Fourrure</dt>
+              <dd>{FUR_WORDS(creature)}</dd>
+            </div>
+            <div>
+              <dt>Matière</dt>
+              <dd>{creature.material}</dd>
+            </div>
+            <div>
+              <dt>Collection</dt>
+              <dd>
+                {col?.name} — <span className={styles.muted}>{col?.subtitle}</span>
+              </dd>
+            </div>
+          </dl>
 
           <nav className={styles.pager} aria-label="Autres créatures">
             <Link to={`/creatures/${prev.slug}`} replace className={styles.pagerLink}>

@@ -12,15 +12,17 @@
 @media (prefers-color-scheme: dark) {
   .plate {
     background:
-      radial-gradient(90% 70% at 50% 18%, rgb(255 255 255 / 0.08), transparent 70%),
-      color-mix(in oklab, var(--tint, #2a2566) 16%, #211d55);
+      radial-gradient(75% 60% at 50% 42%, color-mix(in oklab, var(--tint, #d2c4f8) 20%, transparent), transparent 72%),
+      linear-gradient(180deg, #27235f, #1b1850);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
   }
 }
 
 :global(.night) .plate {
   background:
-    radial-gradient(90% 70% at 50% 18%, rgb(255 255 255 / 0.08), transparent 70%),
-    color-mix(in oklab, var(--tint, #2a2566) 14%, #1f1b50);
+    radial-gradient(75% 60% at 50% 42%, color-mix(in oklab, var(--tint, #d2c4f8) 18%, transparent), transparent 72%),
+    linear-gradient(180deg, #25215c, #19164a);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
 }
 
 /* Soft pedestal disc */
@@ -86,6 +88,18 @@
 .t2 {
   right: 1%;
   width: 37%;
+}
+
+.wide {
+  aspect-ratio: 2.08 / 1.02;
+}
+.wide .trio {
+  width: 62%;
+  margin: 0 auto;
+}
+.wide .halo {
+  left: 24%;
+  right: 24%;
 }
 
 @media (prefers-reduced-motion: reduce) {

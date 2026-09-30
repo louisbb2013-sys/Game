@@ -130,3 +130,124 @@ All tokens live in `src/styles/tokens.css`.
   doux).
 - The site lives in `minitaure/` because the repository already hosts other
   projects at its root.
+- `three` is pinned to 0.182: r183+ logs a `THREE.Clock` deprecation warning
+  from inside R3F 9 on every page, and a clean console is part of "done".
+- Devices with a **software** WebGL renderer (SwiftShader, llvmpipe) get the
+  `static` tier. Rasterising 30+ fur shells on the CPU pegged the main thread
+  (Lighthouse TBT 12 s → 0.2 s after this change). This also means headless
+  test browsers see stills unless a tier is forced with `?q=`.
+- Lenis is disabled when `navigator.webdriver` is true (automation): smoothing
+  fights programmatic scroll jumps in screenshots and audits. Humans always get
+  it (unless they prefer reduced motion).
+
+## 9. Review log
+
+Each round: screenshots at 390 / 768 / 1440 (`npm run shots`), the creature
+sheet, interaction checks (`scripts/interactions.mjs`), fallbacks, and an
+independent critique by a second reviewer ("the council").
+
+### Round 1 — flaws found and fixed
+1. Mask reveals never fired (the observer watched the clipped line, which is
+   never "in view") → observe the clipping wrapper.
+2. Hero creature over-framed and cropped; satellites orbiting off-canvas →
+   camera pulled back, orbits scale with the viewport width.
+3. Fur looked like a washed-out halo: alpha-to-coverage wrote partial alpha into
+   a premultiplied canvas → opaque output with an alpha test.
+4. A faint cross on every creature (lattice cell boundaries aligned at zero
+   parallax) → opaque undercoat + lattices rotated off the object axes.
+5. Grain ("sandpaper") from a dithered alpha threshold → removed.
+6. Réglisse's crown rendered as two bumps that read as **ears** → a ring of
+   eleven small locks.
+7. Nav tone (day/night) lagged after fast scrolls → re-check once scrolling settles.
+8. Wordmark dots floated too high → re-seated on the stems.
+9. Mobile hero caption collided with the eyebrow; stage sat under the nav.
+10. Creature sheet 3D framed far too large → matched to the still's framing.
+
+### Round 2 — council critique + own review
+1. **Face risk:** the two violet glowing dots over the "i"s read as eyes →
+   dots now use the text colour.
+2. **Face risk:** coffret trio (big sphere on top of two) read as a head with
+   ears → three creatures side by side on one ground line.
+3. **Face risk:** level bands across the middle (Minuit, Pistache, Orage…)
+   could read as a visor or mouth → all band patterns run on a tilted axis,
+   like a planet's ring.
+4. Product-card buttons misaligned across a row → price row pinned to the
+   card bottom.
+5. Mobile filter chips cut mid-chip with no hint → fade mask on the scroller.
+6. Mobile footer too tall → smaller wordmark and tighter rhythm on phones.
+7. À propos chapter numerals collided with the rings; failed contrast → moved,
+   solid colour ≥ 3:1.
+8. Contact aside looked unanchored → the creature now sits on a tinted plate.
+9. Collection flight cropped creatures on portrait screens → camera distance
+   follows the aspect ratio, not the width.
+10. Dark theme: plates were flat grey boxes → tinted glow + hairline edge.
+11. SEO: missing robots.txt → robots.txt + sitemap.xml.
+12. Intro animation used clamped frame deltas: on slow devices the fur grew in
+    slow motion → wall-clock timing for appearances.
+
+### Round 3 — council critique + own review
+1. **Face risk:** Praline/Mirabelle spots could form an eyes-and-mouth triad →
+   18–28 small scattered spots instead of 7–13 large ones.
+2. **Face risk:** an off-centre tilted band reads as a smile → bands centred
+   on the tilted equator.
+3. **Face risk:** Réglisse's crown locks → a soft continuous crest of 17 short
+   locks.
+4. Featured cards were staggered, so labels sat on two baselines → one baseline.
+5. Collection flight: captions blurred during the swap and creatures sat
+   behind the text → crossfade, creatures shifted right on landscape screens,
+   warm nebulae mixed with violet (no muddy brown).
+6. Boutique ended on an orphan card → coffrets are wide cards (3 × 2 + 14 = five full rows).
+7. Creature sheet: CTA was below the fold → CTA sits under the tagline; spec
+   rows tidied; tagline leading tightened.
+8. Contact inputs had 1.6:1 borders → ≥ 3:1 non-text contrast.
+9. Concept section text ran into the section edge → more bottom padding.
+10. Still vs live 3D size jump at the sheet crossfade → framing matched.
+
+### Polish pass
+- **Removed:** the concentric orbit rings around the À propos chapter
+  creatures. They repeated the hero's rings three more times and made the
+  storytelling busier; the creature alone, with parallax, carries the chapter.
+- Easing unified on `cubic-bezier(.22,1,.36,1)`; exits are shorter than
+  entrances (cart, sheet, route).
+- Dark-theme plates re-lit with a tinted glow and a hairline edge.
+
+## 10. Verified results (final build, `npm run preview`)
+
+- `npm run build`: passes, no warnings. Initial JS ≈ 147 KB gzip; the 3D
+  bundle (≈ 240 KB gzip) loads only when a scene mounts.
+- `scripts/interactions.mjs`: 36/36 checks pass (keyboard, skip link, focus
+  trap and return, Escape, filters, cart and persistence, live announcements,
+  form validation and success, back button, deep links, mobile menu, no
+  horizontal scroll, touch targets).
+- Console: no errors or warnings on any page at 390 / 768 / 1440, light and dark,
+  reduced motion, and without WebGL.
+- Lighthouse, mobile preset, headless Chromium with **software** GL (so the
+  site serves its `static` tier), five runs, one per page:
+
+  | Page | Perf | A11y | Best practices | SEO | LCP | TBT |
+  |---|---|---|---|---|---|---|
+  | Accueil | 76 | 100 | 100 | 100 | 4.5 s | 200 ms |
+  | Boutique | 83 | 100 | 100 | 100 | 3.9 s | 70 ms |
+  | Créatures | 73 | 100 | 100 | 100 | 5.4 s | 160 ms |
+  | À propos | 84 | 100 | 100 | 100 | 3.5 s | 120 ms |
+  | Contact | 87 | 100 | 100 | 100 | 3.2 s | 70 ms |
+
+  Performance misses the 90 target. The limit is FCP (≈ 2.9 s): a client-rendered
+  SPA must download and run ≈ 147 KB of JS on the simulated slow-4G profile
+  before anything paints. Pre-rendering each route to static HTML is the
+  next step (see limitations).
+
+## 11. Known limitations
+
+- **Frame rate on real phones is unmeasured.** This environment has no GPU,
+  so 60 fps on a mid-range phone could not be verified. The budgets are set
+  for it (medium tier: 22 shells, DPR ≤ 1.5, stills on cards, off-screen
+  canvases paused, DPR steps down if FPS drops), but they still need a real
+  device check.
+- The 3D path was audited only on software GL (Lighthouse Perf 39 with 3D
+  forced on). That is why software renderers now get stills.
+- No pre-rendering/SSR: FCP depends on JS. Route-level pre-rendering (e.g.
+  `vite-react-ssg`) would bring FCP and LCP down considerably.
+- The shell-fur silhouette is alpha-tested, so strand tips can alias slightly
+  at DPR 1. At DPR ≥ 1.5 (most phones) this is not visible.
+- Checkout and the contact form are simulated behind clearly marked hooks.

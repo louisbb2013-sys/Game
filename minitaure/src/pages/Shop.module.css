@@ -27,6 +27,11 @@
 .grid > li {
   display: flex;
 }
+
+/* Coffrets take two columns: 3 × 2 + 14 figurines fill whole rows. */
+.grid > li.wide {
+  grid-column: span 2;
+}
 .grid > li > div {
   width: 100%;
 }

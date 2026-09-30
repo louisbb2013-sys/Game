@@ -157,12 +157,10 @@ function Chapter({ chapter, flip }: { chapter: (typeof CHAPTERS)[number]; flip: 
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   const y = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [60, -60]);
-  const rot = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [-8, 8]);
   const c = creatureBySlug(chapter.art)!;
   return (
     <section ref={ref} className={`container ${styles.chapter}`} data-flip={flip || undefined} aria-labelledby={`ch-${chapter.n}`}>
       <div className={styles.chArt} aria-hidden="true">
-        <motion.div className={styles.chRing} style={{ rotate: rot }} />
         <motion.div style={{ y }} className={styles.chOrb}>
           <CreatureOrb creature={c} alt="" />
         </motion.div>

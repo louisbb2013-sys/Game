@@ -293,10 +293,7 @@
   gap: clamp(1rem, 2vw, 2rem);
   align-items: start;
 }
-.f1,
-.f3 {
-  margin-top: clamp(2rem, 6vw, 5.5rem);
-}
+
 
 .latestGrid {
   display: grid;
@@ -338,6 +335,10 @@
   margin-top: 1rem;
   font-size: var(--fs-2xl);
   font-weight: 380;
+}
+
+.concept {
+  padding-bottom: calc(var(--space-9) + 2rem);
 }
 
 .principles {
@@ -491,20 +492,19 @@
   position: absolute;
   inset: 0 auto auto 0;
   opacity: 0;
-  transform: translateY(24px);
-  filter: blur(6px);
+  transform: translateY(16px);
   transition:
-    opacity 700ms var(--ease-out),
-    transform 900ms var(--ease-out),
-    filter 700ms var(--ease-out);
+    opacity 500ms var(--ease-out),
+    transform 800ms var(--ease-out),
+    visibility 0s linear 500ms;
   visibility: hidden;
 }
 
 .caption[data-active] {
   opacity: 1;
   transform: none;
-  filter: none;
   visibility: visible;
+  transition-delay: 250ms, 250ms, 0s;
 }
 
 .capIndex {
@@ -653,16 +653,7 @@
   .latestGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .f1,
-  .f3 {
-    margin-top: 0;
-  }
-  .f1 {
-    margin-top: 3rem;
-  }
-  .f3 {
-    margin-top: 3rem;
-  }
+
   .principles,
   .staticGroups {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -753,10 +744,6 @@
   .featuredGrid,
   .latestGrid {
     gap: 1rem 0.8rem;
-  }
-  .f1,
-  .f3 {
-    margin-top: 0;
   }
 }
 
