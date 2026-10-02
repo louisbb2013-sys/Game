@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body>
+<title>Bar Margin Calculator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: inputs column on the left (ingredients → packaging → labour → pricing), sticky results ledger on the right; stacks on phones. */
+:root {
+  --bg: #f6f4f2; --panel: #ffffff; --ink: #2a1d17; --muted: #75665e; --line: #e4ddd8;
+  --cacao: #5b3424; --cacao-soft: #efe4de; --gold: #b0802a; --good: #2f7a4d; --warn: #b4542b;
+  --seg1: #5b3424; --seg2: #c9a27a; --seg3: #8c9a8f; --seg4: #b0802a; --seg5: #b9aea7;
+  --display: "Young Serif", Georgia, serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17110e; --panel: #211915; --ink: #f1e8e2; --muted: #a8988e; --line: #3a2e28;
+  --cacao: #d9a585; --cacao-soft: #33241d; --gold: #d6aa55; --good: #6cc48f; --warn: #ef9067;
+  --seg1: #c98a66; --seg2: #e6c9a6; --seg3: #9fb3a5; --seg4: #d6aa55; --seg5: #7d706a;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #17110e; --panel: #211915; --ink: #f1e8e2; --muted: #a8988e; --line: #3a2e28;
+  --cacao: #d9a585; --cacao-soft: #33241d; --gold: #d6aa55; --good: #6cc48f; --warn: #ef9067;
+  --seg1: #c98a66; --seg2: #e6c9a6; --seg3: #9fb3a5; --seg4: #d6aa55; --seg5: #7d706a;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; margin: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 48px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 22px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(1.7rem, 4vw, 2.3rem); line-height: 1.1; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+.head-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 24px; align-items: start; }
+@media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.inputs { display: grid; gap: 16px; min-width: 0; }
+fieldset { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; margin: 0; padding: 16px 18px 18px; min-width: 0; }
+legend { font-family: var(--display); font-size: 1.1rem; padding: 0 6px; margin-left: -6px; }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 2px 0 12px; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+label { display: grid; gap: 4px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.field { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); overflow: hidden; }
+.field:focus-within { border-color: var(--cacao); box-shadow: 0 0 0 3px var(--cacao-soft); }
+.field span { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); padding: 0 9px; white-space: nowrap; text-transform: none; letter-spacing: 0; font-weight: 400; }
+input, select { font: inherit; color: var(--ink); background: transparent; border: 0; outline: none; width: 100%; min-width: 0; padding: 9px 10px; font-family: var(--mono); font-size: 0.95rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.field span + input { padding-left: 0; }
+select { border: 1px solid var(--line); border-radius: 7px; background: var(--panel); padding: 7px 10px; font-family: var(--body); width: auto; }
+.subtotal { margin-top: 12px; font-size: 0.85rem; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.subtotal b { font-family: var(--mono); color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+button { font: inherit; font-weight: 600; font-size: 0.9rem; border-radius: 7px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+button:hover { border-color: var(--cacao); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--cacao); outline-offset: 2px; }
+button.primary { background: var(--cacao); border-color: var(--cacao); color: var(--panel); }
+
+.ledger { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 18px; min-width: 0; }
+@media (max-width: 820px) { .ledger { position: static; } }
+.eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.big { font-family: var(--display); font-size: 2.6rem; line-height: 1; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--line); margin-top: 12px; }
+.stack div { height: 100%; transition: width .25s ease; }
+.legend { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 12px; margin-top: 10px; font-size: 0.85rem; }
+.legend .k { display: flex; align-items: center; gap: 8px; }
+.legend .k i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.legend .v, .legend .p { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.legend .p { color: var(--muted); }
+.prices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.price { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.price.ws { background: var(--cacao-soft); border-color: transparent; }
+.price .amt { font-family: var(--display); font-size: 1.7rem; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.price .note { font-size: 0.8rem; color: var(--muted); margin: 0; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 0.9rem; margin: 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.flag { font-size: 0.85rem; border-radius: 8px; padding: 9px 12px; background: var(--cacao-soft); }
+.flag.bad { color: var(--warn); }
+.flag.ok { color: var(--good); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+td { font-family: var(--mono); }
+tr.cur td { color: var(--cacao); font-weight: 600; }
+.foot { color: var(--muted); font-size: 0.8rem; margin-top: 22px; max-width: 70ch; }
+.toast { font-size: 0.8rem; color: var(--good); min-height: 1.2em; }
+@media (prefers-reduced-motion: reduce) { .stack div { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Bar Margin Calculator</h1>
+      <p class="sub">Enter one batch of chocolate. See what each bar costs you, the wholesale price to quote stores, and the shelf price they will likely set.</p>
+    </div>
+    <div class="head-tools">
+      <select id="currency" aria-label="Currency">
+        <option value="$">$ USD</option><option value="£">£ GBP</option><option value="€">€ EUR</option><option value="C$">C$ CAD</option><option value="A$">A$ AUD</option>
+      </select>
+      <button id="reset" type="button">Reset to example</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <form class="inputs" id="form" autocomplete="off">
+      <fieldset>
+        <legend>Batch</legend>
+        <p class="hint">Example figures are filled in. Replace them with your own.</p>
+        <div class="row">
+          <label for="bars">Bars per batch<div class="field"><input id="bars" type="number" min="1" step="1" inputmode="numeric"><span>bars</span></div></label>
+          <label for="weight">Bar weight<div class="field"><input id="weight" type="number" min="0" step="1" inputmode="decimal"><span>g</span></div></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Cacao</legend>
+        <p class="hint">Beans, nibs, mass or butter used in the batch.</p>
+        <div class="row">
+          <label for="cacaoKg">Amount used<div class="field"><input id="cacaoKg" type="number" min="0" step="0.01" inputmode="decimal"><span>kg</span></div></label>
+          <label for="cacaoPrice">Price<div class="field"><span class="cur">$</span><input id="cacaoPrice" type="number" min="0" step="0.01" inputmode="decimal"><span>/ kg</span></div></label>
+        </div>
+        <div class="subtotal">Cacao per batch <b id="cacaoTotal">–</b></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Sugar</legend>
+        <div class="row">
+          <label for="sugarKg">Amount used<div class="field"><input id="sugarKg" type="number" min="0" step="0.01" inputmode="decimal"><span>kg</span></div></label>
+          <label for="sugarPrice">Price<div class="field"><span class="cur">$</span><input id="sugarPrice" type="number" min="0" step="0.01" inputmode="decimal"><span>/ kg</span></div></label>
+        </div>
+        <div class="subtotal">Sugar per batch <b id="sugarTotal">–</b></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Packaging</legend>
+        <p class="hint">Foil, wrapper, label and sticker for one bar.</p>
+        <div class="row">
+          <label for="pack">Cost per bar<div class="field"><span class="cur">$</span><input id="pack" type="number" min="0" step="0.01" inputmode="decimal"><span>/ bar</span></div></label>
+        </div>
+        <div class="subtotal">Packaging per batch <b id="packTotal">–</b></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Labour</legend>
+        <p class="hint">Roasting, conching, tempering, moulding and wrapping. Pay yourself here too.</p>
+        <div class="row">
+          <label for="hours">Hours per batch<div class="field"><input id="hours" type="number" min="0" step="0.25" inputmode="decimal"><span>h</span></div></label>
+          <label for="rate">Hourly rate<div class="field"><span class="cur">$</span><input id="rate" type="number" min="0" step="0.5" inputmode="decimal"><span>/ h</span></div></label>
+        </div>
+        <div class="subtotal">Labour per batch <b id="labourTotal">–</b></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Other costs</legend>
+        <p class="hint">Optional. Milk powder, inclusions, energy, kitchen rent share. Leave at 0 if none.</p>
+        <div class="row">
+          <label for="other">Per batch<div class="field"><span class="cur">$</span><input id="other" type="number" min="0" step="0.01" inputmode="decimal"><span>/ batch</span></div></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pricing</legend>
+        <p class="hint">Specialty shops usually want 40–50% margin on the shelf price. Many makers aim for at least 50% on wholesale.</p>
+        <div class="row">
+          <label for="myMargin">Your wholesale margin<div class="field"><input id="myMargin" type="number" min="0" max="95" step="1" inputmode="decimal"><span>%</span></div></label>
+          <label for="storeMargin">Store's retail margin<div class="field"><input id="storeMargin" type="number" min="0" max="95" step="1" inputmode="decimal"><span>%</span></div></label>
+        </div>
+      </fieldset>
+    </form>
+
+    <aside class="ledger" aria-live="polite">
+      <div>
+        <p class="eyebrow">Cost per bar</p>
+        <p class="big" id="costPerBar">–</p>
+        <div class="stack" id="stack"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="prices">
+        <div class="price ws">
+          <p class="eyebrow">Wholesale</p>
+          <p class="amt" id="wholesale">–</p>
+          <p class="note" id="wsNote">per bar to stores</p>
+        </div>
+        <div class="price">
+          <p class="eyebrow">Retail (RRP)</p>
+          <p class="amt" id="retail">–</p>
+          <p class="note" id="rtNote">shelf price</p>
+        </div>
+      </div>
+
+      <dl class="kv">
+        <dt>Your profit per bar (wholesale)</dt><dd id="profitBar">–</dd>
+        <dt>Profit per batch (wholesale)</dt><dd id="profitBatch">–</dd>
+        <dt>Store's actual margin at RRP</dt><dd id="storeActual">–</dd>
+        <dt>Your margin selling direct at RRP</dt><dd id="directMargin">–</dd>
+        <dt>Cost per 100 g</dt><dd id="per100">–</dd>
+      </dl>
+
+      <div class="flag" id="flag"></div>
+
+      <div>
+        <p class="eyebrow" style="margin-bottom:6px">Wholesale options for your pitch</p>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Your margin</th><th>Wholesale</th><th>Profit / bar</th><th>RRP</th></tr></thead>
+            <tbody id="options"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:6px">
+        <button class="primary" id="copy" type="button">Copy pricing summary</button>
+        <div class="toast" id="toast"></div>
+      </div>
+    </aside>
+  </div>
+
+  <p class="foot">Margin is profit as a share of the selling price: wholesale = cost ÷ (1 − your margin), and RRP = wholesale ÷ (1 − store margin), rounded up to the next .49 or .99. Inputs are saved in this browser only.</p>
+</div>
+
+<script>
+(function () {
+  var EXAMPLE = { currency: "$", bars: 100, weight: 70, cacaoKg: 4.9, cacaoPrice: 12, sugarKg: 2.1, sugarPrice: 1.2, pack: 0.45, hours: 6, rate: 15, other: 10, myMargin: 50, storeMargin: 40 };
+  var FIELDS = ["bars","weight","cacaoKg","cacaoPrice","sugarKg","sugarPrice","pack","hours","rate","other","myMargin","storeMargin"];
+  var KEY = "bar-margin-calc-v1";
+  var $ = function (id) { return document.getElementById(id); };
+  var lastSummary = "";
+
+  function load() {
+    try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === "object") return Object.assign({}, EXAMPLE, s); } catch (e) {}
+    return Object.assign({}, EXAMPLE);
+  }
+  function save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
+  function fill(v) { FIELDS.forEach(function (f) { $(f).value = v[f]; }); $("currency").value = v.currency; }
+  function read() {
+    var v = { currency: $("currency").value };
+    FIELDS.forEach(function (f) { var n = parseFloat($(f).value); v[f] = isFinite(n) && n >= 0 ? n : 0; });
+    return v;
+  }
+  function money(n, c) { return isFinite(n) ? c + n.toFixed(2) : "–"; }
+  function pct(n) { return isFinite(n) ? (n * 100).toFixed(1) + "%" : "–"; }
+  // Round up to the next .49 or .99 price point
+  function charm(p) {
+    if (!isFinite(p) || p <= 0) return p;
+    var x = Math.ceil(p * 2) / 2 - 0.01;
+    if (x < p - 1e-9) x += 0.5;
+    return Math.round(x * 100) / 100;
+  }
+
+  function calc() {
+    var v = read(); save(v);
+    var c = v.currency;
+    document.querySelectorAll(".cur").forEach(function (el) { el.textContent = c; });
+    var bars = Math.max(0, Math.floor(v.bars));
+    var cacao = v.cacaoKg * v.cacaoPrice, sugar = v.sugarKg * v.sugarPrice;
+    var pack = v.pack * bars, labour = v.hours * v.rate, other = v.other;
+    $("cacaoTotal").textContent = money(cacao, c);
+    $("sugarTotal").textContent = money(sugar, c);
+    $("packTotal").textContent = money(pack, c);
+    $("labourTotal").textContent = money(labour, c);
+
+    var flag = $("flag");
+    var m = Math.min(v.myMargin, 95) / 100, s = Math.min(v.storeMargin, 95) / 100;
+    if (bars < 1) {
+      ["costPerBar","wholesale","retail","profitBar","profitBatch","storeActual","directMargin","per100"].forEach(function (id) { $(id).textContent = "–"; });
+      $("stack").innerHTML = ""; $("legend").innerHTML = ""; $("options").innerHTML = "";
+      flag.className = "flag bad"; flag.textContent = "Enter at least 1 bar per batch to see prices.";
+      lastSummary = ""; return;
+    }
+    var total = cacao + sugar + pack + labour + other;
+    var cost = total / bars;
+    var ws = cost / (1 - m);
+    var rrpRaw = ws / (1 - s);
+    var rrp = charm(rrpRaw);
+
+    $("costPerBar").textContent = money(cost, c);
+    $("wholesale").textContent = money(ws, c);
+    $("retail").textContent = money(rrp, c);
+    $("wsNote").textContent = Math.round(m * 100) + "% margin for you";
+    $("rtNote").textContent = "from " + money(rrpRaw, c) + " at " + Math.round(s * 100) + "% store margin";
+    $("profitBar").textContent = money(ws - cost, c);
+    $("profitBatch").textContent = money((ws - cost) * bars, c);
+    $("storeActual").textContent = rrp > 0 ? pct((rrp - ws) / rrp) : "–";
+    $("directMargin").textContent = rrp > 0 ? pct((rrp - cost) / rrp) : "–";
+    $("per100").textContent = v.weight > 0 ? money(cost / v.weight * 100, c) : "–";
+
+    var parts = [
+      ["Cacao", cacao, "--seg1"], ["Sugar", sugar, "--seg2"], ["Packaging", pack, "--seg3"],
+      ["Labour", labour, "--seg4"], ["Other", other, "--seg5"]
+    ];
+    $("stack").innerHTML = parts.map(function (p) {
+      var w = total > 0 ? p[1] / total * 100 : 0;
+      return '<div title="' + p[0] + '" style="width:' + w + '%;background:var(' + p[2] + ')"></div>';
+    }).join("");
+    $("legend").innerHTML = parts.map(function (p) {
+      return '<span class="k"><i style="background:var(' + p[2] + ')"></i>' + p[0] + '</span><span class="v">' + money(p[1] / bars, c) + '</span><span class="p">' + (total > 0 ? Math.round(p[1] / total * 100) : 0) + '%</span>';
+    }).join("");
+
+    var top = parts.slice().sort(function (a, b) { return b[1] - a[1]; })[0];
+    if (cost <= 0) { flag.className = "flag bad"; flag.textContent = "Add your costs to see prices."; }
+    else if (m < 0.3) { flag.className = "flag bad"; flag.textContent = "Your wholesale margin is under 30%. That leaves little room for discounts, distributors or a bad batch."; }
+    else if (rrp > 0 && labour / total > 0.45) { flag.className = "flag bad"; flag.textContent = "Labour is " + Math.round(labour / total * 100) + "% of your cost. Bigger batches would lower cost per bar fastest."; }
+    else { flag.className = "flag ok"; flag.textContent = "Ready to pitch at " + money(ws, c) + " wholesale with a " + money(rrp, c) + " RRP. Your biggest cost is " + top[0].toLowerCase() + " (" + Math.round(top[1] / total * 100) + "%)."; }
+
+    var rows = [0.3, 0.4, 0.5, 0.6];
+    if (rows.indexOf(Math.round(m * 100) / 100) === -1) rows.push(m);
+    rows.sort(function (a, b) { return a - b; });
+    $("options").innerHTML = rows.map(function (r) {
+      var w = cost / (1 - r);
+      var cur = Math.abs(r - m) < 1e-6 ? ' class="cur"' : "";
+      return "<tr" + cur + "><td>" + Math.round(r * 100) + "%</td><td>" + money(w, c) + "</td><td>" + money(w - cost, c) + "</td><td>" + money(charm(w / (1 - s)), c) + "</td></tr>";
+    }).join("");
+
+    lastSummary = [
+      "Bar pricing (" + bars + " bars/batch" + (v.weight > 0 ? ", " + v.weight + " g each" : "") + ")",
+      "Cost per bar: " + money(cost, c),
+      "Wholesale: " + money(ws, c) + " (" + Math.round(m * 100) + "% margin, " + money(ws - cost, c) + " profit/bar)",
+      "Suggested RRP: " + money(rrp, c) + " (store margin " + pct((rrp - ws) / rrp) + ")"
+    ].join("\n");
+  }
+
+  $("form").addEventListener("input", calc);
+  $("form").addEventListener("submit", function (e) { e.preventDefault(); });
+  $("currency").addEventListener("change", calc);
+  $("reset").addEventListener("click", function () { fill(EXAMPLE); calc(); });
+  $("copy").addEventListener("click", function () {
+    var t = $("toast");
+    if (!lastSummary) { t.textContent = "Nothing to copy yet."; return; }
+    var done = function () { t.textContent = "Copied. Paste it into your pitch email."; };
+    var fail = function () { t.textContent = lastSummary.replace(/\n/g, " · "); };
+    try { navigator.clipboard.writeText(lastSummary).then(done, fail); } catch (e) { fail(); }
+  });
+
+  fill(load()); calc();
+})();
+</script>
+</body></html>

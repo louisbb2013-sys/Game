@@ -3,7 +3,9 @@
 A browser-based chess variant where four armies (Red, Blue, Yellow, Green)
 share one connected, cross-shaped board.
 
-> Also in this repo: [`dashboard/`](dashboard/) — an "AI OS" personal
+> Also in this repo: [`margin-calculator/`](margin-calculator/) — a chocolate
+> bar cost and margin calculator (open `margin-calculator/index.html`), and
+> [`dashboard/`](dashboard/) — an "AI OS" personal
 > command center for connecting mail, calendar, and other tools. See
 > [`dashboard/README.md`](dashboard/README.md).
 
