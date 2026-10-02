@@ -1,0 +1,565 @@
+<title>Idea Sorter</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: capture box on top, a one-line summary, then ideas grouped into time buckets (or category / priority), cards in a wrapping grid. */
+:root {
+  --bg: #eef1f5; --surface: #ffffff; --ink: #17202b; --muted: #5b6676; --line: #d6dce4;
+  --accent: #2b59c3; --accent-ink: #ffffff; --soft: #e2e9f9;
+  --hot: #c2410c; --warn: #a86a12; --ok: #2f7d55; --hot-bg: #fdebe2; --warn-bg: #fbf0dc; --ok-bg: #e2f3ea;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f141b; --surface: #18202a; --ink: #e6ebf1; --muted: #95a1b1; --line: #2b3542;
+  --accent: #82a5ff; --accent-ink: #0b1020; --soft: #1c2944;
+  --hot: #ff9466; --warn: #e9b85a; --ok: #6fca9c; --hot-bg: #3a2018; --warn-bg: #352a15; --ok-bg: #16302a;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #18202a; --ink: #e6ebf1; --muted: #95a1b1; --line: #2b3542;
+  --accent: #82a5ff; --accent-ink: #0b1020; --soft: #1c2944;
+  --hot: #ff9466; --warn: #e9b85a; --ok: #6fca9c; --hot-bg: #3a2018; --warn-bg: #352a15; --ok-bg: #16302a;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); margin: 0; }
+.app { max-width: 1100px; margin: 0 auto; padding: 28px 16px 64px; display: grid; gap: 18px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 44px); line-height: 1; margin: 0; letter-spacing: -0.02em; }
+.sub { margin: 6px 0 0; color: var(--muted); }
+.sync { font-size: 12px; color: var(--muted); }
+
+.capture { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+.capture textarea { width: 100%; border: 0; background: transparent; resize: vertical; font-size: 18px; min-height: 56px; outline: none; }
+.capture-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: 13px; flex: 1; min-width: 200px; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 7px 13px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.danger { color: var(--hot); }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.stats { display: flex; gap: 8px 22px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.stats b { font-family: var(--mono); color: var(--ink); font-size: 16px; margin-right: 4px; }
+.stats .hot b { color: var(--hot); }
+
+.bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.tabs { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.tabs button { border: 0; background: none; padding: 6px 12px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--soft); color: var(--accent); }
+#search { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 12px; min-width: 0; width: 220px; max-width: 100%; }
+
+.board { display: grid; gap: 26px; }
+.group h2 { font-family: var(--display); font-weight: 600; font-size: 20px; margin: 0 0 2px; display: flex; gap: 8px; align-items: baseline; }
+.group h2 .n { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.group .gsub { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+.group.overdue h2 { color: var(--hot); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 7px; min-width: 0; cursor: pointer; text-align: left; }
+.card:hover { border-color: var(--accent); }
+.card.open { grid-column: 1 / -1; cursor: default; border-color: var(--accent); }
+.card.done .title { text-decoration: line-through; color: var(--muted); }
+.title { font-weight: 600; font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.why { color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--accent); font-weight: 600; white-space: nowrap; }
+.chip.date { font-family: var(--mono); font-weight: 500; background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.chip.p-high { background: var(--hot-bg); color: var(--hot); }
+.chip.p-medium { background: var(--warn-bg); color: var(--warn); }
+.chip.p-low { background: var(--ok-bg); color: var(--ok); }
+.chip.ghost { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+.progress { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.progress .track { flex: 1; height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.progress .fill { height: 100%; background: var(--ok); }
+.sorting { font-size: 12px; color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .sorting { animation: pulse 1.2s ease-in-out infinite; } }
+@keyframes pulse { 50% { opacity: .4; } }
+
+.editor { display: grid; gap: 12px; margin-top: 6px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.editor label { display: grid; gap: 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.editor input[type=text], .editor input[type=date], .editor select, .editor textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 9px; font-size: 14px; text-transform: none; letter-spacing: 0; font-weight: 400; width: 100%; min-width: 0; color: var(--ink); }
+.editor textarea { resize: vertical; min-height: 60px; }
+.steps { display: grid; gap: 4px; }
+.step { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.step input[type=checkbox] { margin-top: 4px; }
+.step span { flex: 1; overflow-wrap: anywhere; }
+.step.done span { text-decoration: line-through; color: var(--muted); }
+.step .x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.check-inline { display: flex !important; align-items: center; gap: 6px; text-transform: none !important; letter-spacing: 0 !important; font-size: 14px !important; color: var(--ink) !important; font-weight: 500 !important; }
+
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 28px 20px; text-align: center; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
+.empty strong { color: var(--ink); font-family: var(--display); font-size: 20px; font-weight: 600; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Idea Sorter</h1>
+      <p class="sub">Dump an idea. It gets a when, a why and a how.</p>
+    </div>
+    <span id="sync" class="sync mono">Loading…</span>
+  </header>
+
+  <form id="capture" class="capture" autocomplete="off">
+    <label for="idea-input" class="sr">New idea</label>
+    <textarea id="idea-input" rows="2" placeholder="e.g. Finish the chess AI by Friday so I can show my friends"></textarea>
+    <div class="capture-row">
+      <label class="toggle" for="ai-toggle"><input type="checkbox" id="ai-toggle" checked> Sort with Claude</label>
+      <span class="hint">Mention a time like "tomorrow", "Friday", "next week" or "someday". Ctrl/⌘ + Enter adds it.</span>
+      <button type="submit" class="btn primary" id="add-btn">Add &amp; sort</button>
+    </div>
+  </form>
+
+  <section class="stats" id="stats" aria-label="Summary"></section>
+
+  <div class="bar">
+    <div class="tabs" role="tablist" aria-label="Sort by">
+      <button type="button" role="tab" data-view="when" aria-selected="true">When</button>
+      <button type="button" role="tab" data-view="category" aria-selected="false">Category</button>
+      <button type="button" role="tab" data-view="priority" aria-selected="false">Priority</button>
+    </div>
+    <label for="search" class="sr">Search ideas</label>
+    <input id="search" type="search" placeholder="Search ideas">
+  </div>
+
+  <main id="board" class="board"></main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const board = $("#board");
+  let ideas = [];
+  let view = "when";
+  let query = "";
+  let openId = null;
+  const sortingIds = new Set();
+  let store = null;           // { save() }
+  let sample = null;          // Claude sampling, when available
+
+  // ---------- dates ----------
+  const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const parseD = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const midnight = () => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); };
+  const addDays = (n) => { const t = midnight(); return fmt(new Date(t.getFullYear(), t.getMonth(), t.getDate() + n)); };
+  const diffDays = (s) => Math.round((parseD(s) - midnight()) / 86400000);
+  const isDate = (s) => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(parseD(s));
+  function niceDate(s) {
+    const d = diffDays(s);
+    if (d === 0) return "Today";
+    if (d === 1) return "Tomorrow";
+    if (d === -1) return "Yesterday";
+    const dt = parseD(s);
+    const opts = { weekday: "short", month: "short", day: "numeric" };
+    if (dt.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+    return dt.toLocaleDateString(undefined, opts);
+  }
+
+  // ---------- quick rules (used instantly, and when Claude is unavailable) ----------
+  const CATS = [
+    ["Projects", /\b(build|game|app|website|code|coding|make|create|youtube|video|channel|design|chess)\b/],
+    ["School", /\b(school|homework|exam|test|study|class|teacher|essay|quiz)\b/],
+    ["Work", /\b(work|boss|meeting|client|job|office|report|shift)\b/],
+    ["Money", /\b(buy|pay|money|bank|sell|save|budget|price|cash)\b/],
+    ["Health", /\b(gym|run|doctor|workout|sleep|eat|health|dentist|train)\b/],
+    ["Home", /\b(clean|room|house|fix|laundry|groceries|cook|tidy)\b/],
+    ["People", /\b(mom|dad|friend|friends|call|birthday|gift|party|text|family)\b/],
+    ["Learning", /\b(learn|read|book|course|practice|language|tutorial)\b/],
+  ];
+  function quickSort(text) {
+    const t = text.toLowerCase();
+    const today = new Date().getDay();
+    let when = null, m;
+    const someday = /\b(someday|one day|eventually|sometime|maybe)\b/.test(t);
+    if (/\b(today|tonight)\b/.test(t)) when = addDays(0);
+    else if (/\btomorrow\b/.test(t)) when = addDays(1);
+    else if ((m = t.match(/\bin (\d+) (days?|weeks?|months?)\b/))) {
+      const n = +m[1]; when = addDays(m[2][0] === "d" ? n : m[2][0] === "w" ? n * 7 : n * 30);
+    }
+    else if (/\bnext week\b/.test(t)) when = addDays(7);
+    else if (/\bthis week\b/.test(t)) when = addDays(Math.max(0, 5 - today));
+    else if (/\bweekend\b/.test(t)) when = addDays((6 - today + 7) % 7);
+    else if (/\bnext month\b/.test(t)) { const d = midnight(); when = fmt(new Date(d.getFullYear(), d.getMonth() + 1, 1)); }
+    else if (/\bthis month\b/.test(t)) { const d = midnight(); when = fmt(new Date(d.getFullYear(), d.getMonth() + 1, 0)); }
+    else if ((m = t.match(/\b(\d{4})-(\d{2})-(\d{2})\b/)) && isDate(m[0])) when = m[0];
+    else if ((m = t.match(/\b(\d{1,2})\/(\d{1,2})\b/))) {
+      const d = midnight(); let dt = new Date(d.getFullYear(), +m[1] - 1, +m[2]);
+      if (dt < d) dt = new Date(d.getFullYear() + 1, +m[1] - 1, +m[2]);
+      if (!isNaN(dt)) when = fmt(dt);
+    }
+    else if ((m = t.match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/))) {
+      when = addDays((DAYS.indexOf(m[1]) - today + 7) % 7 || 7);
+    }
+    let priority = "medium";
+    if (/\b(urgent|asap|important|must|deadline|need to)\b|!!/.test(t)) priority = "high";
+    else if (someday || /\b(could|if i have time|would be cool|fun)\b/.test(t)) priority = "low";
+    let effort = "medium";
+    if (/\b(quick|call|text|email|buy|book|pay|send|reply)\b/.test(t)) effort = "quick";
+    else if (/\b(build|create|learn|write|plan|project|game|app|business|start)\b/.test(t)) effort = "big";
+    const cat = (CATS.find(([, re]) => re.test(t)) || ["Ideas"])[0];
+    const first = text.trim().split(/\n|(?<=[.!?])\s/)[0];
+    const title = (first.charAt(0).toUpperCase() + first.slice(1)).slice(0, 80);
+    const why = (text.match(/\b(?:so (?:that )?|because |to help )(.+)$/i) || [])[1] || "";
+    return { title, when, someday: someday && !when, priority, effort, category: cat, why: why.replace(/[.!]+$/, ""), how: [] };
+  }
+
+  // ---------- Claude sorting ----------
+  async function claudeSort(text) {
+    if (!sample) return null;
+    const known = [...new Set(ideas.map((i) => i.category).filter(Boolean))].slice(0, 20).join(", ") || "none yet";
+    const now = new Date();
+    const prompt = `You turn a person's rough idea into a small plan. Today is ${DAYS[now.getDay()]}, ${fmt(now)}.
+Idea: """${text}"""
+Categories already in use: ${known}. Reuse one when it fits; otherwise make a short new one (1-2 words).
+Reply with only this JSON object:
+{"title": "short action title, max 60 chars",
+ "when": "YYYY-MM-DD or null",
+ "someday": true or false,
+ "why": "one sentence on why this matters to them (infer it if not stated)",
+ "how": ["2 to 5 short, concrete steps"],
+ "category": "string",
+ "priority": "high" | "medium" | "low",
+ "effort": "quick" | "medium" | "big"}
+Use any time the idea mentions for "when". If it mentions none, pick a sensible date from its priority and effort, or use null with "someday": true for long-term or maybe ideas.`;
+    const r = await sample.json(prompt, { modelTier: "quick" });
+    if (!r || typeof r !== "object") return null;
+    const pick = (v, list, d) => (list.includes(v) ? v : d);
+    return {
+      title: String(r.title || "").slice(0, 80) || null,
+      when: isDate(r.when) ? r.when : null,
+      someday: !!r.someday && !isDate(r.when),
+      why: String(r.why || "").slice(0, 300),
+      how: Array.isArray(r.how) ? r.how.slice(0, 8).map((s) => String(s).slice(0, 160)).filter(Boolean) : [],
+      category: String(r.category || "").slice(0, 30) || null,
+      priority: pick(r.priority, ["high", "medium", "low"], "medium"),
+      effort: pick(r.effort, ["quick", "medium", "big"], "medium"),
+    };
+  }
+
+  async function runClaude(id) {
+    const idea = ideas.find((i) => i.id === id);
+    if (!idea || !sample) return false;
+    sortingIds.add(id); render();
+    try {
+      const r = await claudeSort(idea.text);
+      const cur = ideas.find((i) => i.id === id);
+      if (r && cur) {
+        cur.title = r.title || cur.title;
+        cur.when = r.when; cur.someday = r.someday;
+        cur.why = r.why || cur.why;
+        if (r.how.length) cur.how = r.how.map((t) => ({ t, done: false }));
+        cur.category = r.category || cur.category;
+        cur.priority = r.priority; cur.effort = r.effort;
+        cur.ai = true;
+        save();
+      }
+      return !!r;
+    } catch (e) {
+      if (e && e.code === "not_granted") { sample = null; aiToggle.checked = false; aiToggle.disabled = true; }
+      toast("Claude couldn't sort this one, so quick rules were used. You can edit it by hand.");
+      return false;
+    } finally {
+      sortingIds.delete(id); render();
+    }
+  }
+
+  // ---------- grouping ----------
+  const WHEN_GROUPS = [
+    ["overdue", "Overdue", "Past its date"],
+    ["today", "Today", ""],
+    ["tomorrow", "Tomorrow", ""],
+    ["week", "This week", "Next 7 days"],
+    ["month", "This month", "Within about a month"],
+    ["later", "Later", "More than a month away"],
+    ["someday", "Someday", "No deadline. Pick one up when you have time"],
+    ["nodate", "Needs a date", "Open one and set when"],
+    ["done", "Done", ""],
+  ];
+  function whenKey(i) {
+    if (i.done) return "done";
+    if (i.when) {
+      const d = diffDays(i.when);
+      return d < 0 ? "overdue" : d === 0 ? "today" : d === 1 ? "tomorrow" : d <= 7 ? "week" : d <= 31 ? "month" : "later";
+    }
+    return i.someday ? "someday" : "nodate";
+  }
+  const PRI = { high: 0, medium: 1, low: 2 };
+  const byPlan = (a, b) => (a.when || "9999").localeCompare(b.when || "9999") || PRI[a.priority] - PRI[b.priority] || b.created - a.created;
+
+  function groups(list) {
+    if (view === "when") {
+      return WHEN_GROUPS.map(([k, label, sub]) => ({ k, label, sub, items: list.filter((i) => whenKey(i) === k).sort(byPlan) }));
+    }
+    const open = list.filter((i) => !i.done), done = list.filter((i) => i.done);
+    let out;
+    if (view === "priority") {
+      out = [["high", "High priority", "Do these first"], ["medium", "Medium", ""], ["low", "Low", "Nice to have"]]
+        .map(([k, label, sub]) => ({ k, label, sub, items: open.filter((i) => i.priority === k).sort(byPlan) }));
+    } else {
+      const cats = [...new Set(open.map((i) => i.category || "Ideas"))].sort();
+      out = cats.map((c) => ({ k: "c-" + c, label: c, sub: "", items: open.filter((i) => (i.category || "Ideas") === c).sort(byPlan) }));
+    }
+    out.push({ k: "done", label: "Done", sub: "", items: done.sort(byPlan) });
+    return out;
+  }
+
+  // ---------- render ----------
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function cardHTML(i) {
+    const open = i.id === openId;
+    const stepsDone = i.how.filter((s) => s.done).length;
+    const chips = [
+      i.when ? `<span class="chip date">${esc(niceDate(i.when))}</span>` : i.someday ? `<span class="chip ghost">Someday</span>` : `<span class="chip ghost">No date</span>`,
+      `<span class="chip p-${i.priority}">${i.priority}</span>`,
+      `<span class="chip">${esc(i.category || "Ideas")}</span>`,
+      `<span class="chip ghost">${i.effort === "quick" ? "Quick" : i.effort === "big" ? "Big job" : "Medium job"}</span>`,
+    ].join("");
+    let html = `<article class="card${open ? " open" : ""}${i.done ? " done" : ""}" data-id="${i.id}" ${open ? "" : `tabindex="0" role="button" aria-expanded="false"`}>
+      <div class="title">${esc(i.title)}</div>
+      <div class="chips">${chips}</div>
+      ${i.why ? `<div class="why"><b>Why:</b> ${esc(i.why)}</div>` : ""}
+      ${i.how.length && !open ? `<div class="progress"><span class="mono">${stepsDone}/${i.how.length} steps</span><span class="track"><span class="fill" style="width:${(stepsDone / i.how.length) * 100}%"></span></span></div>` : ""}
+      ${sortingIds.has(i.id) ? `<div class="sorting">Claude is sorting this…</div>` : ""}`;
+    if (open) html += editorHTML(i);
+    return html + "</article>";
+  }
+
+  function editorHTML(i) {
+    const id = i.id;
+    const opt = (v, cur, label) => `<option value="${v}"${v === cur ? " selected" : ""}>${label}</option>`;
+    const cats = [...new Set(["Ideas", ...CATS.map((c) => c[0]), ...ideas.map((x) => x.category).filter(Boolean)])];
+    return `<div class="editor">
+      <div class="fields">
+        <label for="t-${id}">Title<input type="text" id="t-${id}" data-f="title" value="${esc(i.title)}"></label>
+        <label for="w-${id}">When<input type="date" id="w-${id}" data-f="when" value="${i.when || ""}"></label>
+        <label for="c-${id}">Category<input type="text" id="c-${id}" data-f="category" list="cats-${id}" value="${esc(i.category)}"><datalist id="cats-${id}">${cats.map((c) => `<option value="${esc(c)}">`).join("")}</datalist></label>
+        <label for="p-${id}">Priority<select id="p-${id}" data-f="priority">${opt("high", i.priority, "High")}${opt("medium", i.priority, "Medium")}${opt("low", i.priority, "Low")}</select></label>
+        <label for="e-${id}">Effort<select id="e-${id}" data-f="effort">${opt("quick", i.effort, "Quick")}${opt("medium", i.effort, "Medium job")}${opt("big", i.effort, "Big job")}</select></label>
+      </div>
+      <label class="check-inline" for="s-${id}"><input type="checkbox" id="s-${id}" data-f="someday"${i.someday ? " checked" : ""}> Someday (no deadline)</label>
+      <label for="y-${id}">Why it matters<textarea id="y-${id}" data-f="why" placeholder="What does this get you?">${esc(i.why)}</textarea></label>
+      <div>
+        <label>How: steps</label>
+        <div class="steps">${i.how.map((s, n) => `<div class="step${s.done ? " done" : ""}"><input type="checkbox" id="st-${id}-${n}" data-step="${n}"${s.done ? " checked" : ""} aria-label="Step done"><span>${esc(s.t)}</span><button type="button" class="x" data-act="rm-step" data-step="${n}" aria-label="Remove step">×</button></div>`).join("")}</div>
+        <input type="text" id="ns-${id}" data-act="new-step" placeholder="Add a step and press Enter" style="margin-top:6px">
+      </div>
+      <div class="why"><b>Original note:</b> ${esc(i.text)}</div>
+      <div class="actions">
+        <button type="button" class="btn primary" data-act="done">${i.done ? "Mark not done" : "Mark done"}</button>
+        ${sample ? `<button type="button" class="btn" data-act="resort"${sortingIds.has(id) ? " disabled" : ""}>Re-sort with Claude</button>` : ""}
+        <button type="button" class="btn" data-act="close">Close</button>
+        <button type="button" class="btn danger" data-act="delete">Delete</button>
+      </div>
+    </div>`;
+  }
+
+  function render() {
+    const q = query.trim().toLowerCase();
+    const list = q ? ideas.filter((i) => [i.title, i.text, i.why, i.category, ...i.how.map((s) => s.t)].join(" ").toLowerCase().includes(q)) : ideas;
+
+    const open = ideas.filter((i) => !i.done);
+    const count = (k) => open.filter((i) => whenKey(i) === k).length;
+    const od = count("overdue");
+    $("#stats").innerHTML = ideas.length ? `
+      ${od ? `<span class="hot"><b>${od}</b>overdue</span>` : ""}
+      <span><b>${count("today")}</b>today</span>
+      <span><b>${count("tomorrow") + count("week")}</b>this week</span>
+      <span><b>${open.length}</b>open</span>
+      <span><b>${ideas.length - open.length}</b>done</span>` : "";
+
+    if (!ideas.length) {
+      board.innerHTML = `<div class="empty"><strong>No ideas yet</strong>
+        <span>Type anything above: a plan, a chore, a someday dream. It gets sorted into Today, This week, Someday and so on.</span>
+        <button type="button" class="btn" data-act="examples">Load 3 example ideas</button></div>`;
+      return;
+    }
+    const gs = groups(list).filter((g) => g.items.length);
+    board.innerHTML = gs.length ? gs.map((g) => `<section class="group ${g.k}">
+        <h2>${esc(g.label)} <span class="n">${g.items.length}</span></h2>
+        ${g.sub ? `<p class="gsub">${esc(g.sub)}</p>` : ""}
+        <div class="cards">${g.items.map(cardHTML).join("")}</div></section>`).join("")
+      : `<div class="empty"><span>Nothing matches "${esc(query)}".</span></div>`;
+  }
+
+  // ---------- actions ----------
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  function addIdea(text, useClaude) {
+    const q = quickSort(text);
+    const idea = { id: uid(), text, created: Date.now(), done: false, ai: false, ...q, how: q.how.map((t) => ({ t, done: false })) };
+    ideas.unshift(idea);
+    save();
+    if (useClaude && sample) runClaude(idea.id);
+    else render();
+    return idea;
+  }
+
+  const ideaOf = (el) => { const c = el.closest(".card"); return c && ideas.find((i) => i.id === c.dataset.id); };
+  let delArm = null;
+
+  board.addEventListener("click", (e) => {
+    const t = e.target;
+    if (t.closest("[data-act=examples]")) { loadExamples(); return; }
+    const idea = ideaOf(t);
+    if (!idea) return;
+    const act = t.closest("[data-act]")?.dataset.act;
+    if (!act && idea.id !== openId) { openId = idea.id; render(); document.getElementById("t-" + idea.id)?.focus(); return; }
+    if (act === "close") { openId = null; render(); }
+    else if (act === "done") { idea.done = !idea.done; if (idea.done) openId = null; save(); render(); toast(idea.done ? "Marked done" : "Moved back to open"); }
+    else if (act === "resort") runClaude(idea.id);
+    else if (act === "rm-step") { idea.how.splice(+t.dataset.step, 1); save(); render(); }
+    else if (act === "delete") {
+      if (delArm === idea.id) { ideas = ideas.filter((i) => i !== idea); openId = null; delArm = null; save(); render(); toast("Deleted"); }
+      else { delArm = idea.id; t.textContent = "Tap again to delete"; setTimeout(() => { if (delArm === idea.id) { delArm = null; if (t.isConnected) t.textContent = "Delete"; } }, 3000); }
+    }
+  });
+
+  board.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches(".card[role=button]")) { e.preventDefault(); e.target.click(); }
+    if (e.key === "Enter" && e.target.matches("[data-act=new-step]")) {
+      e.preventDefault();
+      const idea = ideaOf(e.target); const v = e.target.value.trim();
+      if (idea && v) { idea.how.push({ t: v, done: false }); save(); render(); document.getElementById("ns-" + idea.id)?.focus(); }
+    }
+    if (e.key === "Escape" && openId) { openId = null; render(); }
+  });
+
+  board.addEventListener("change", (e) => {
+    const t = e.target, idea = ideaOf(t);
+    if (!idea) return;
+    if (t.dataset.step != null && t.type === "checkbox") { idea.how[+t.dataset.step].done = t.checked; save(); render(); return; }
+    const f = t.dataset.f;
+    if (!f) return;
+    if (f === "someday") { idea.someday = t.checked; if (t.checked) idea.when = null; }
+    else if (f === "when") { idea.when = isDate(t.value) ? t.value : null; if (idea.when) idea.someday = false; }
+    else if (f === "title") idea.title = t.value.trim() || idea.title;
+    else idea[f] = t.value.trim();
+    save(); render();
+  });
+
+  const input = $("#idea-input"), aiToggle = $("#ai-toggle");
+  $("#capture").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    addIdea(text, aiToggle.checked);
+    input.value = "";
+    try { localStorage.removeItem("ideas-draft"); } catch {}
+    toast(aiToggle.checked && sample ? "Added. Claude is sorting it…" : "Added and sorted");
+  });
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("#capture").requestSubmit(); });
+  input.addEventListener("input", () => { try { localStorage.setItem("ideas-draft", input.value); } catch {} });
+  aiToggle.addEventListener("change", () => { try { localStorage.setItem("ideas-ai", aiToggle.checked ? "1" : "0"); } catch {} });
+
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+    view = b.dataset.view;
+    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    try { localStorage.setItem("ideas-view", view); } catch {}
+    render();
+  }));
+  $("#search").addEventListener("input", (e) => { query = e.target.value; render(); });
+
+  function loadExamples() {
+    [
+      "Example: Finish the chess AI by Friday so I can show my friends",
+      "Example: Call grandma tomorrow because it's her birthday",
+      "Example: Someday start a YouTube channel about game dev",
+    ].forEach((t) => addIdea(t, false));
+    toast("Loaded 3 examples. Delete them whenever you like.");
+  }
+
+  let toastT;
+  function toast(msg) {
+    const el = $("#toast"); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => (el.hidden = true), 3200);
+  }
+
+  // ---------- storage ----------
+  const clean = (list) => (Array.isArray(list) ? list : []).filter((i) => i && i.id && i.text).map((i) => ({
+    id: String(i.id), text: String(i.text), title: String(i.title || i.text).slice(0, 120), created: +i.created || Date.now(),
+    done: !!i.done, ai: !!i.ai, when: isDate(i.when) ? i.when : null, someday: !!i.someday,
+    priority: PRI[i.priority] != null ? i.priority : "medium", effort: ["quick", "medium", "big"].includes(i.effort) ? i.effort : "medium",
+    category: String(i.category || "Ideas"), why: String(i.why || ""),
+    how: Array.isArray(i.how) ? i.how.filter((s) => s && s.t).map((s) => ({ t: String(s.t), done: !!s.done })) : [],
+  }));
+
+  let saveT, savePending = false;
+  function save() {
+    savePending = true; clearTimeout(saveT);
+    saveT = setTimeout(() => { savePending = false; if (store) store.save(); }, 400);
+  }
+
+  const localStore = {
+    save() { try { localStorage.setItem("ideas-v1", JSON.stringify(ideas)); setSync("Saved in this browser only"); } catch { setSync("Not saved: browser storage is blocked"); } },
+  };
+  const setSync = (s) => { $("#sync").textContent = s; };
+
+  function loadLocal() {
+    try { return clean(JSON.parse(localStorage.getItem("ideas-v1") || "[]")); } catch { return []; }
+  }
+
+  async function connectDb() {
+    if (!window.claude || !window.claude.use) return false;
+    const [db, user, smp] = await Promise.all(["db", "user", "sample"].map((n) => window.claude.use(n).catch(() => null)));
+    if (smp && typeof smp.json === "function") { sample = smp; render(); }
+    const id = user ? await user.id().catch(() => null) : null;
+    if (!db || !id) return false;
+    let ref;
+    try { ref = db.doc("data/users/" + id + "/board"); } catch { return false; }
+    let saving = false, again = false, lastJSON = null, first = true;
+    store = {
+      async save() {
+        if (saving) { again = true; return; }
+        saving = true; setSync("Saving…");
+        const body = JSON.stringify(ideas);
+        try { await ref.set({ ideas: JSON.parse(body), updated: Date.now() }); lastJSON = body; setSync("Saved to your account"); }
+        catch (e) { setSync("Not saved"); toast(e && e.code === "quota_exceeded" ? "Storage is full. Delete some done ideas." : "Couldn't save. Check your connection and try again."); }
+        saving = false;
+        if (again) { again = false; store.save(); }
+      },
+    };
+    ref.onSnapshot((snap) => {
+      if (snap.metadata.hasPendingWrites) return;
+      const remote = snap.exists ? clean(snap.data().ideas) : null;
+      if (first) {
+        first = false;
+        if (!remote || !remote.length) { if (ideas.length) store.save(); else setSync("Saved to your account"); return; }
+      }
+      if (!remote) return;
+      const body = JSON.stringify(remote);
+      if (body !== lastJSON && !saving && !savePending) { ideas = remote; lastJSON = body; render(); setSync("Saved to your account"); }
+    }, () => setSync("Sync stopped. Reload to reconnect"));
+    return true;
+  }
+
+  // ---------- boot ----------
+  try {
+    const v = localStorage.getItem("ideas-view");
+    if (v === "category" || v === "priority") document.querySelector(`.tabs button[data-view=${v}]`).click();
+    if (localStorage.getItem("ideas-ai") === "0") aiToggle.checked = false;
+    input.value = localStorage.getItem("ideas-draft") || "";
+  } catch {}
+  ideas = loadLocal();
+  store = localStore;
+  setSync(ideas.length ? "Saved in this browser only" : "");
+  render();
+  connectDb().then((ok) => { if (!ok) setSync(ideas.length ? "Saved in this browser only" : "Saves in this browser"); })
+    .catch(() => setSync("Saves in this browser"));
+})();
+</script>

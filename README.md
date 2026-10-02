@@ -6,6 +6,10 @@ share one connected, cross-shaped board.
 > Also in this repo: [`dashboard/`](dashboard/) — an "AI OS" personal
 > command center for connecting mail, calendar, and other tools. See
 > [`dashboard/README.md`](dashboard/README.md).
+>
+> And [`ideas/`](ideas/): **Idea Sorter**. Type any idea and it gets sorted
+> by when (Today, This week, Someday…), with a why, how-to steps, category,
+> priority and effort. Open `ideas/index.html` in a browser.
 
 ## Play
 
