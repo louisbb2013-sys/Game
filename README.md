@@ -6,6 +6,10 @@ share one connected, cross-shaped board.
 > Also in this repo: [`dashboard/`](dashboard/) — an "AI OS" personal
 > command center for connecting mail, calendar, and other tools. See
 > [`dashboard/README.md`](dashboard/README.md).
+>
+> And: [`michelangelo/`](michelangelo/) — a redesigned, animated 3D website
+> concept for Le Michelangelo (Italian restaurant, Québec). Serve the folder
+> with any static server (e.g. `python3 -m http.server`) and open it.
 
 ## Play
 
