@@ -340,4 +340,13 @@ export function initFluid(canvas, { reduced = false } = {}) {
     render(now / 1000);
   }
   requestAnimationFrame(frame);
+
+  return {
+    // Scrolling sloshes the wine: push the surface along the scroll direction.
+    slosh(v) {
+      if (reduced || !visible || Math.abs(v) < 2) return;
+      const f = Math.max(-40, Math.min(40, v));
+      queue.push([0.35 + Math.random() * 0.6, 0.3 + Math.random() * 0.5, (Math.random() - 0.5) * 200, f * 6, 0.01, 0.004]);
+    },
+  };
 }

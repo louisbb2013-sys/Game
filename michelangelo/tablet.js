@@ -92,6 +92,40 @@ export async function initTablet(canvas, { reduced = false } = {}) {
   size();
   window.addEventListener('resize', size);
 
+  // Dust motes drifting through the candlelight; they glow only near the flame.
+  const DUST = 260;
+  const dpos = new Float32Array(DUST * 3), dseed = new Float32Array(DUST);
+  for (let i = 0; i < DUST; i++) {
+    dpos[i * 3] = (Math.random() - 0.5) * 7;
+    dpos[i * 3 + 1] = (Math.random() - 0.5) * 3.6;
+    dpos[i * 3 + 2] = 0.25 + Math.random() * 2.4;
+    dseed[i] = Math.random();
+  }
+  const dgeo = new THREE.BufferGeometry();
+  dgeo.setAttribute('position', new THREE.BufferAttribute(dpos, 3));
+  dgeo.setAttribute('seed', new THREE.BufferAttribute(dseed, 1));
+  const dmat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uLight: { value: new THREE.Vector3() }, uPx: { value: renderer.getPixelRatio() } },
+    vertexShader: `
+      attribute float seed; uniform float uTime, uPx; uniform vec3 uLight; varying float vA;
+      void main() {
+        vec3 p = position;
+        p.y = mod(p.y + uTime * (0.03 + seed * 0.05) + 1.8, 3.6) - 1.8;
+        p.x += sin(uTime * 0.3 + seed * 30.0) * 0.15;
+        p.z += cos(uTime * 0.25 + seed * 20.0) * 0.1;
+        float d = distance(p, uLight);
+        vA = (0.25 + 0.75 * abs(sin(uTime * (0.5 + seed) + seed * 50.0))) / (1.0 + d * d * 0.9);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = (1.5 + seed * 2.5) * uPx * (9.0 / -mv.z);
+      }`,
+    fragmentShader: `
+      varying float vA;
+      void main() { float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(1.0, 0.82, 0.55, smoothstep(0.5, 0.0, d) * vA); }`,
+  });
+  scene.add(new THREE.Points(dgeo, dmat));
+
   let visible = false;
   new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(canvas);
 
@@ -109,11 +143,18 @@ export async function initTablet(canvas, { reduced = false } = {}) {
     cur.y += (target.y - cur.y) * 0.06;
     candle.position.set(cur.x * 2.6, cur.y * 1.4, 3.2);
     candle.intensity = 22 + (reduced ? 0 : Math.sin(t * 7.1) * 0.6 + Math.sin(t * 13.7) * 0.4);
-    group.rotation.y = cur.x * 0.12;
-    group.rotation.x = -cur.y * 0.08;
+    // Entrance: the slab swings up from below and settles as it scrolls into view.
     const r = canvas.getBoundingClientRect();
+    const enter = reduced ? 1 : THREE.MathUtils.clamp((window.innerHeight - r.top) / (window.innerHeight * 0.85), 0, 1);
+    const e = 1 - Math.pow(1 - enter, 3);
     const p = THREE.MathUtils.clamp(1 - (r.top + r.height / 2) / window.innerHeight, 0, 1);
-    group.position.y = (0.5 - p) * 0.25;
+    group.rotation.y = cur.x * 0.12 + (1 - e) * 0.35;
+    group.rotation.x = -cur.y * 0.08 - (1 - e) * 1.1;
+    group.rotation.z = (1 - e) * -0.08;
+    group.position.y = (0.5 - p) * 0.25 - (1 - e) * 0.8;
+    group.position.z = -(1 - e) * 2.5;
+    dmat.uniforms.uTime.value = reduced ? 0 : t;
+    dmat.uniforms.uLight.value.copy(candle.position);
     renderer.render(scene, camera);
   }
   requestAnimationFrame(frame);

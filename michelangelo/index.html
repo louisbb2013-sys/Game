@@ -16,6 +16,7 @@
 </head>
 <body>
   <div class="curtain" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
 
   <header class="nav" id="nav">
     <a href="#top" class="nav__logo">Le Michelangelo</a>
@@ -35,7 +36,7 @@
 
   <main id="top">
     <!-- HERO: live wine simulation -->
-    <section class="hero">
+    <section class="hero" data-bg="#0b0706">
       <canvas id="wine" class="hero__wine" aria-hidden="true"></canvas>
       <div class="hero__content">
         <p class="hero__eyebrow fade" style="--d:1.6s" data-i18n="hero.eyebrow">Ristorante · Québec · depuis 1973</p>
@@ -51,8 +52,14 @@
       <p class="hero__hint fade" style="--d:3s"><span class="hint-dot"></span><span data-i18n="hero.hint">Remuez le vin — bougez la souris</span></p>
     </section>
 
+    <!-- Scroll-driven word bands -->
+    <div class="bands" aria-hidden="true">
+      <div class="band" data-dir="1"><span>Cucina <i>✦</i> Vino <i>✦</i> Famiglia <i>✦</i> Tradizione <i>✦</i> Passione <i>✦</i>&nbsp;</span></div>
+      <div class="band band--outline" data-dir="-1"><span>Pasta fresca <i>✦</i> Grandi vini <i>✦</i> Dal 1973 <i>✦</i> Québec <i>✦</i>&nbsp;</span></div>
+    </div>
+
     <!-- STORY: engraved marble tablet -->
-    <section class="story" id="histoire">
+    <section class="story" id="histoire" data-bg="#0b0706">
       <div class="wrap">
         <div class="story__head">
           <p class="label" data-reveal data-i18n="story.label">Histoire</p>
@@ -68,15 +75,25 @@
           <p data-reveal data-i18n="story.p2">Sous un même toit : salle à manger, salon avec bar, alcôves semi-privées, salons privés, salle de réception et cave à vin. La créativité en cuisine, la rigueur du service et la passion des grands vins n'ont jamais cessé.</p>
         </div>
         <ol class="timeline">
-          <li data-reveal><span class="timeline__year">1973</span><p data-i18n="tl.1973">Nicola Cortina ouvre le Michelangelo au centre-ville de Québec.</p></li>
-          <li data-reveal style="--d:.1s"><span class="timeline__year">1993</span><p data-i18n="tl.1993">Déménagement au 3111, chemin Saint-Louis, dans un édifice signé Giovanni Maur.</p></li>
+          <li data-reveal><span class="timeline__year" data-year="1973">1973</span><p data-i18n="tl.1973">Nicola Cortina ouvre le Michelangelo au centre-ville de Québec.</p></li>
+          <li data-reveal style="--d:.1s"><span class="timeline__year" data-year="1993">1993</span><p data-i18n="tl.1993">Déménagement au 3111, chemin Saint-Louis, dans un édifice signé Giovanni Maur.</p></li>
           <li data-reveal style="--d:.2s"><span class="timeline__year" data-i18n="tl.nowY">Aujourd'hui</span><p data-i18n="tl.now">Plus de cinquante ans plus tard, une destination incontournable de la cuisine italienne à Québec.</p></li>
         </ol>
       </div>
     </section>
 
+    <!-- MANIFESTO: words light up as you scroll -->
+    <section class="manifesto" data-bg="#140809">
+      <div class="manifesto__sticky">
+        <div class="wrap">
+          <p class="label" data-i18n="man.label">Notre conviction</p>
+          <p class="manifesto__text" data-fill data-i18n="man.text">Depuis 1973, une même conviction&nbsp;: la cuisine italienne mérite la créativité d'un artiste, la rigueur d'un grand service et la générosité d'une famille — accompagnée des plus beaux vins du monde.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- EXPERIENCES: four Italian marbles -->
-    <section class="exp" id="experiences">
+    <section class="exp" id="experiences" data-bg="#0b0706">
       <div class="wrap">
         <p class="label" data-reveal data-i18n="exp.label">Expériences</p>
         <h2 class="big" data-words data-i18n="exp.title">Quatre façons de <em>vivre l'Italie.</em></h2>
@@ -113,7 +130,7 @@
     </section>
 
     <!-- EVENTS -->
-    <section class="events" id="evenements">
+    <section class="events" id="evenements" data-bg="#2a0a10">
       <div class="wrap">
         <p class="label" data-reveal data-i18n="ev.label">Événements privés</p>
         <div class="events__grid">
@@ -130,7 +147,7 @@
     </section>
 
     <!-- AWARDS -->
-    <section class="awards" id="distinctions">
+    <section class="awards" id="distinctions" data-bg="#0f0c0a">
       <div class="wrap">
         <p class="label" data-reveal data-i18n="aw.label">Distinctions</p>
         <h2 class="big" data-words data-i18n="aw.title">Reconnu, <em>année après année.</em></h2>
@@ -144,7 +161,7 @@
     </section>
 
     <!-- VISIT -->
-    <section class="visit" id="visite">
+    <section class="visit" id="visite" data-bg="#0b0706">
       <div class="wrap">
         <p class="label" data-reveal data-i18n="v.label">Nous joindre</p>
         <h2 class="giant" data-words data-i18n="v.title">À table.</h2>
