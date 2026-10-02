@@ -7,8 +7,10 @@ share one connected, cross-shaped board.
 > command center for connecting mail, calendar, and other tools. See
 > [`dashboard/README.md`](dashboard/README.md).
 >
-> And: [`michelangelo/`](michelangelo/) — a redesigned, animated 3D website
-> concept for Le Michelangelo (Italian restaurant, Québec). Serve the folder
+> And: [`michelangelo/`](michelangelo/) — a redesigned website
+> concept for Le Michelangelo (Italian restaurant, Québec): a live red-wine
+> fluid simulation hero, an engraved marble tablet in 3D, and procedural
+> Italian marbles. Serve the folder
 > with any static server (e.g. `python3 -m http.server`) and open it.
 
 ## Play
