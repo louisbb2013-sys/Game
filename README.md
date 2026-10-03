@@ -10,8 +10,9 @@ share one connected, cross-shaped board.
 > And [`ideas/`](ideas/): **Idea Sorter**. Type any idea and it gets sorted
 > by when (Today, This week, Someday…), with a why, how-to steps, category,
 > priority and effort. Each idea has **Make it happen** buttons that use
-> connectors: add it to your Outlook calendar, write a Gmail draft, or check
-> website names on GoDaddy (these work on the claude.ai link). Open
+> connectors: find a free time and add it to Outlook, write a Gmail or
+> Outlook email draft, find a website name on GoDaddy, build a site on Wix,
+> or start a Claude Code session to code it (these work on the claude.ai link). Open
 > `ideas/index.html` in a browser to use it locally.
 
 ## Play
