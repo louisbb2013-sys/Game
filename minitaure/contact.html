@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact — Minitaure</title>
+  <meta name="description" content="Écris à l'équipe Minitaure : questions, commandes, idées de créatures.">
+  <meta name="theme-color" content="#1b1060">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='22' r='15' fill='%236b3fd6'/%3E%3Ccircle cx='15' cy='21' r='2.5' fill='%23fff'/%3E%3Ccircle cx='25' cy='21' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,600..800,100,1;1,9..144,600..800,100,1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="contact">
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow reveal"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Un petit mot?</div>
+        <h1 class="reveal">Écris-nous une <em class="accent">lettre</em> d'étoiles.</h1>
+        <p class="lead reveal">Une question sur ta commande, une idée de nouvelle créature ou juste envie de dire bonjour? Les Minitaures lisent tous les messages (avec un peu d'aide).</p>
+      </div>
+    </section>
+    <section class="section" style="padding-top:10px">
+      <div class="container contact-grid">
+        <div class="panel reveal">
+          <form id="form" novalidate>
+            <div class="field-row">
+              <div class="field"><label for="nom">Ton nom</label><input id="nom" name="nom" autocomplete="name" required><span class="err">Dis-nous comment t'appeler!</span></div>
+              <div class="field"><label for="courriel">Courriel</label><input id="courriel" name="courriel" type="email" autocomplete="email" required><span class="err">Ce courriel ne semble pas valide.</span></div>
+            </div>
+            <div class="field"><label for="sujet">Sujet</label>
+              <select id="sujet" name="sujet" required>
+                <option value="">Choisis un sujet…</option>
+                <option>Ma commande</option><option>Une idée de créature</option><option>Boutiques et revendeurs</option><option>Juste dire bonjour</option>
+              </select><span class="err">Choisis un sujet.</span></div>
+            <div class="field"><label for="msg">Ton message</label><textarea id="msg" name="msg" required minlength="10"></textarea><span class="err">Écris au moins quelques mots (10 lettres).</span></div>
+            <button class="btn btn-block" type="submit">Envoyer mon message <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </form>
+          <div class="sent" id="sent">
+            <img data-portrait="plumo" data-size="360" alt="Plumo saute de joie">
+            <h2>Message envoyé!</h2>
+            <p class="lead" style="margin-inline:auto">Plumo l'apporte à l'équipe. Nous te répondrons en 1 à 2 jours. Merci!</p>
+            <button class="btn btn-ghost" id="again">Écrire un autre message</button>
+          </div>
+        </div>
+        <div>
+          <a class="contact-card reveal" href="mailto:bonjour@minitaure.ca"><span class="ci" style="background:#ffe0ef">✉️</span><span><small>Courriel</small><b>bonjour@minitaure.ca</b></span></a>
+          <a class="contact-card reveal" href="https://instagram.com/minitaure.ca" target="_blank" rel="noopener"><span class="ci" style="background:#e5e0ff">📸</span><span><small>Instagram</small><b>@minitaure.ca</b></span></a>
+          <div class="contact-card reveal"><span class="ci" style="background:#d9fff3">📍</span><span><small>Atelier</small><b>Imaginé au Québec, Canada</b></span></div>
+          <div class="contact-card reveal"><span class="ci" style="background:#fff3c4">🕘</span><span><small>Réponse</small><b>En 1 à 2 jours ouvrables</b></span></div>
+          <h3 class="reveal" style="margin:34px 0 14px">Questions fréquentes</h3>
+          <div class="faq reveal">
+            <details><summary>Combien coûte un Minitaure?</summary><p>Une créature à l'unité coûte 6 $, un sachet mystère 7 $ et le trio constellation 19 $. Taxes en sus.</p></details>
+            <details><summary>Quand ma commande va-t-elle arriver?</summary><p>La livraison standard prend 3 à 5 jours ouvrables au Québec, et l'express 1 à 2 jours. Elle est gratuite dès 35 $!</p></details>
+            <details><summary>Pour quel âge sont les Minitaures?</summary><p>Ils sont pensés pour les enfants de 3 ans et plus… et pour les grands qui ont gardé leur cœur d'enfant.</p></details>
+            <details><summary>Est-ce que je peux échanger un double?</summary><p>Bien sûr! Les doubles sont parfaits pour échanger avec tes amis et compléter ta collection.</p></details>
+            <details><summary>C'est quoi un Minitaure cosmique?</summary><p>Une créature très rare dont le pelage scintille comme une galaxie. Environ 7 % des sachets mystère en cachent un!</p></details>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/vendor/three.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/creature3d.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/cart.js"></script>
+  <script>
+    document.addEventListener("ui:ready", function () {
+      var form = document.getElementById("form"), sent = document.getElementById("sent");
+      function check(el) {
+        var ok = el.checkValidity() && (el.type !== "email" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(el.value));
+        if (el.tagName === "TEXTAREA") ok = el.value.trim().length >= 10;
+        if (el.id === "nom") ok = el.value.trim().length > 0;
+        el.closest(".field").classList.toggle("invalid", !ok);
+        return ok;
+      }
+      form.querySelectorAll("input, select, textarea").forEach(function (el) {
+        el.addEventListener("blur", function () { check(el); });
+        el.addEventListener("input", function () { if (el.closest(".field").classList.contains("invalid")) check(el); });
+      });
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var all = Array.prototype.map.call(form.querySelectorAll("input, select, textarea"), check);
+        if (all.indexOf(false) >= 0) { form.querySelector(".invalid input, .invalid select, .invalid textarea").focus(); return; }
+        form.style.display = "none"; sent.classList.add("show");
+        Mini3D.fillPortraits(sent); UI.burst(sent, 40);
+      });
+      document.getElementById("again").addEventListener("click", function () { form.reset(); form.style.display = ""; sent.classList.remove("show"); });
+    });
+  </script>
+</body>
+</html>

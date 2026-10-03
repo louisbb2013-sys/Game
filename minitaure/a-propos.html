@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>À propos — Minitaure</title>
+  <meta name="description" content="L'histoire de Minitaure : des créatures imaginées avec tendresse au Québec.">
+  <meta name="theme-color" content="#1b1060">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='22' r='15' fill='%236b3fd6'/%3E%3Ccircle cx='15' cy='21' r='2.5' fill='%23fff'/%3E%3Ccircle cx='25' cy='21' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,600..800,100,1;1,9..144,600..800,100,1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="apropos">
+  <main>
+    <section class="page-hero">
+      <div class="container split">
+        <figure class="story-art reveal-pop" style="margin:0">
+          <div class="window"><div class="moon"></div><div class="hill"></div><img data-portrait="bloop" data-size="360" alt="Bloop qui regarde par la fenêtre"></div>
+          <figcaption>Tout a commencé par un petit croquis<br>dans un carnet, un soir de pluie.</figcaption>
+        </figure>
+        <div class="reveal">
+          <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Notre petite histoire</div>
+          <h1 style="font-size:clamp(2.6rem,5.5vw,4.6rem)">Des mains pleines d'<em class="accent">étincelles.</em></h1>
+          <p class="lead">Nous imaginons des créatures qui n'existaient pas hier, mais qui semblent avoir toujours eu une place quelque part. Dans une poche, sur une étagère ou au creux d'une histoire du soir.</p>
+          <p class="lead">Chaque Minitaure porte une humeur, une étrange habitude et l'envie de devenir le début d'une aventure. Pas besoin d'être grand pour faire naître de grandes idées.</p>
+          <div class="signature">minitaure ✦</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" style="margin-top:60px">
+      <svg class="wave-top" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0h1440v20c-160 30-320 30-480 10S640 0 480 20 160 40 0 20z" fill="var(--sky)"/></svg>
+      <div class="container">
+        <div class="stat-row">
+          <div class="stat-box reveal"><strong data-count="12">0</strong><span>créatures dans la Série 01</span></div>
+          <div class="stat-box reveal" style="--d:.1s"><strong data-count="1">0</strong><span>planète de mousse</span></div>
+          <div class="stat-box reveal" style="--d:.2s"><strong data-count="100" data-suffix=" %">0</strong><span>imaginé au Québec</span></div>
+          <div class="stat-box reveal" style="--d:.3s"><strong>∞</strong><span>câlins possibles</span></div>
+        </div>
+      </div>
+      <svg class="wave-bottom" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60V40c160-30 320-30 480-10s320 30 480 10 320-30 480 0V60z" fill="var(--sky)"/></svg>
+    </section>
+
+    <section class="section">
+      <div class="container split" style="align-items:start">
+        <div>
+          <div class="section-head reveal">
+            <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Fais connaissance</div>
+            <h2>Touche, tourne, <em class="accent">écrase!</em></h2>
+            <p class="lead">Nos Minitaures sont ronds, doux et un peu squishy. Glisse ton doigt pour les faire tourner et touche-les pour les voir rebondir.</p>
+          </div>
+          <div class="timeline">
+            <div class="tl-item reveal"><div class="year">Un soir de pluie</div><h3>Le premier croquis</h3><p>Une petite boule avec deux cornes apparaît dans un carnet. Elle s'appelle Minotaure.</p></div>
+            <div class="tl-item reveal"><div class="year">Les mois suivants</div><h3>La bande s'agrandit</h3><p>Des oreilles de lapin, des ailes de papillon, des bois de faon… chaque créature gagne un petit bout d'animal.</p></div>
+            <div class="tl-item reveal"><div class="year">2026</div><h3>La Série 01</h3><p>Douze Minitaures quittent leur planète de mousse pour rejoindre les étagères des collectionneurs.</p></div>
+            <div class="tl-item reveal"><div class="year">Bientôt ✦</div><h3>La Série 02</h3><p>Des créatures des océans d'étoiles se préparent en secret… Chut!</p></div>
+          </div>
+        </div>
+        <div class="reveal" style="position:sticky;top:calc(var(--header-h) + 20px)">
+          <div class="viewer-box" id="viewer"><div class="hint">✦ Glisse pour tourner · touche pour écraser ✦</div></div>
+          <div class="viewer-tabs" id="vtabs"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0">
+      <div class="container">
+        <div class="section-head center reveal">
+          <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Ce qui nous tient à cœur</div>
+          <h2>Petits, mais pleins de <em class="accent">valeurs.</em></h2>
+        </div>
+        <div class="values">
+          <div class="value reveal" style="background:#ffe0ef"><span class="big">🧸</span><h3>Doux pour tous</h3><p>Des créatures rondes, sans coins piquants, pensées pour les petites et les grandes mains.</p></div>
+          <div class="value reveal" style="background:#d9fff3;--d:.1s"><span class="big">🌱</span><h3>Inspiré de la nature</h3><p>Chaque Minitaure emprunte un trait à un vrai animal pour donner envie de découvrir le vivant.</p></div>
+          <div class="value reveal" style="background:#fff3c4;--d:.2s"><span class="big">⚜️</span><h3>Fait d'ici</h3><p>Imaginé, dessiné et rêvé au Québec, avec beaucoup de tendresse et un peu de poussière d'étoiles.</p></div>
+          <div class="value reveal" style="background:#e5e0ff;--d:.3s"><span class="big">🔭</span><h3>Le goût du mystère</h3><p>Ouvrir un sachet, c'est comme regarder le ciel : on ne sait jamais quelle étoile va briller.</p></div>
+        </div>
+        <div style="text-align:center;margin-top:50px" class="reveal"><a class="btn" href="creatures.html">Rencontrer toute la bande <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/vendor/three.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/creature3d.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/cart.js"></script>
+  <script>
+    document.addEventListener("ui:ready", function () {
+      var box = document.getElementById("viewer"), tabs = document.getElementById("vtabs"), v = null;
+      var ids = ["minotaure", "lapinou", "croq", "lumy", "cerfeuil", "nebula"];
+      function show(id) {
+        if (v) v.dispose();
+        v = Mini3D.viewer(box, MINI.creature(id), { hops: true, onSquish: function () { UI.burst(box, 14); } });
+        box.style.setProperty("background", "radial-gradient(circle at 50% 80%, " + MINI.creature(id).accent + "aa, transparent 55%), linear-gradient(180deg, #1d1268, #3b1f8f)");
+        tabs.querySelectorAll(".chip").forEach(function (c) { c.classList.toggle("on", c.dataset.id === id); });
+      }
+      tabs.innerHTML = ids.map(function (id) { return '<button class="chip" data-id="' + id + '">' + MINI.creature(id).nom + '</button>'; }).join("");
+      tabs.addEventListener("click", function (e) { var b = e.target.closest(".chip"); if (b) show(b.dataset.id); });
+      show(ids[0]);
+      // compteurs animés
+      var io = new IntersectionObserver(function (en) {
+        en.forEach(function (e) {
+          if (!e.isIntersecting) return; io.unobserve(e.target);
+          var el = e.target, end = +el.dataset.count, suf = el.dataset.suffix || "", t0 = performance.now();
+          (function tick(now) { var k = Math.min(1, (now - t0) / 1400); el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3))) + suf; if (k < 1) requestAnimationFrame(tick); })(t0);
+        });
+      });
+      document.querySelectorAll("[data-count]").forEach(function (el) { io.observe(el); });
+    });
+  </script>
+</body>
+</html>

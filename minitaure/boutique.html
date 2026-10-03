@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boutique — Minitaure</title>
+  <meta name="description" content="Achète tes Minitaures à l'unité, en sachet mystère, et leurs cartes à collectionner.">
+  <meta name="theme-color" content="#1b1060">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='22' r='15' fill='%236b3fd6'/%3E%3Ccircle cx='15' cy='21' r='2.5' fill='%23fff'/%3E%3Ccircle cx='25' cy='21' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,600..800,100,1;1,9..144,600..800,100,1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="boutique">
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow reveal"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> La boutique des petites merveilles</div>
+        <h1 class="reveal">Trouve ton <em class="accent">Minitaure.</em></h1>
+        <p class="lead reveal">Choisis ta créature préférée à l'unité ou laisse les étoiles décider avec un sachet mystère. Livraison gratuite dès 35 $!</p>
+      </div>
+    </section>
+
+    <section id="sachets" style="padding-bottom:50px">
+      <div class="container">
+        <div class="mystery split reveal product-hero">
+          <div class="orbit-stage" style="max-width:380px">
+            <div class="orbit-ring"><i></i></div>
+            <div class="orbit-ring r2"><i></i></div>
+            <div class="bag-art" id="featBag"></div>
+          </div>
+          <div>
+            <span class="badge" style="position:static;display:inline-block;margin-bottom:14px">⭐ Le plus populaire</span>
+            <h2>Sachet <em class="accent">mystère</em></h2>
+            <p class="lead">Une créature surprise de la Série 01 + sa carte à collectionner. Une chance sur 14 de tomber sur un Minitaure <b>cosmique</b>!</p>
+            <div class="big-price"><strong>7 $</strong><small>par sachet<br>taxes en sus</small></div>
+            <div class="hero-ctas" style="margin-top:0;gap:14px">
+              <div class="qty" style="margin:0;padding:6px"><button type="button" id="fqDec" aria-label="Moins">−</button><span id="fq">1</span><button type="button" id="fqInc" aria-label="Plus">+</button></div>
+              <button class="btn" id="featAdd">Ajouter au panier <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:20px">
+      <div class="container">
+        <div class="toolbar reveal">
+          <div class="chips" id="chips" role="group" aria-label="Filtrer">
+            <button class="chip on" data-f="all">Tout</button>
+            <button class="chip" data-f="creature">Créatures</button>
+            <button class="chip" data-f="sachet">Sachets mystère</button>
+            <button class="chip" data-f="extra">Cartes &amp; accessoires</button>
+          </div>
+          <div class="chips">
+            <input class="search" id="q" type="search" placeholder="Chercher…" aria-label="Chercher un produit">
+            <select class="select" id="sort" aria-label="Trier">
+              <option value="pop">Populaires</option>
+              <option value="asc">Prix croissant</option>
+              <option value="desc">Prix décroissant</option>
+              <option value="nom">Nom (A–Z)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-4" id="grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/vendor/three.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/creature3d.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/cart.js"></script>
+  <script>
+    document.addEventListener("ui:ready", function () {
+      var grid = document.getElementById("grid"), f = "all";
+      document.getElementById("featBag").innerHTML = UI.bagSVG("feat");
+      var q = 1, fq = document.getElementById("fq");
+      document.getElementById("fqDec").onclick = function () { q = Math.max(1, q - 1); fq.textContent = q; };
+      document.getElementById("fqInc").onclick = function () { q = Math.min(20, q + 1); fq.textContent = q; };
+      document.getElementById("featAdd").onclick = function (e) { Cart.add("sachet", q, e.currentTarget); };
+      function draw() {
+        var term = document.getElementById("q").value.trim().toLowerCase();
+        var list = MINI.PRODUITS.filter(function (p) {
+          var okF = f === "all" || (f === "extra" ? (p.type === "cartes" || p.type === "accessoire") : p.type === f);
+          var c = p.creature && MINI.creature(p.creature);
+          var hay = (p.nom + " " + p.sous + (c ? " " + c.espece + " " + c.habitat : "")).toLowerCase();
+          return okF && (!term || hay.indexOf(term) >= 0);
+        });
+        var s = document.getElementById("sort").value;
+        if (s === "asc") list.sort(function (a, b) { return a.prix - b.prix; });
+        if (s === "desc") list.sort(function (a, b) { return b.prix - a.prix; });
+        if (s === "nom") list.sort(function (a, b) { return a.nom.localeCompare(b.nom, "fr"); });
+        if (s === "pop") list.sort(function (a, b) { return (b.badge ? 1 : 0) - (a.badge ? 1 : 0); });
+        grid.innerHTML = list.length ? list.map(function (p, i) { return UI.productCard(p, { cls: "reveal-pop", d: Math.min(i, 8) * 0.05 }); }).join("")
+          : '<div class="no-results"><h3>Aucun Minitaure ici…</h3><p>Essaie un autre mot magique!</p></div>';
+        UI.reveals(grid); UI.tilt(grid); Mini3D.fillPortraits(grid);
+      }
+      document.getElementById("chips").addEventListener("click", function (e) {
+        var b = e.target.closest(".chip"); if (!b) return;
+        this.querySelectorAll(".chip").forEach(function (c) { c.classList.toggle("on", c === b); });
+        f = b.dataset.f; draw();
+      });
+      document.getElementById("q").addEventListener("input", draw);
+      document.getElementById("sort").addEventListener("change", draw);
+      draw();
+    });
+  </script>
+</body>
+</html>

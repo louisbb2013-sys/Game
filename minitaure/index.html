@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minitaure — Collectionne une petite merveille</title>
+  <meta name="description" content="Minitaure donne vie à de petites créatures toutes douces à collectionner. Imaginé au Québec.">
+  <meta name="theme-color" content="#1b1060">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='22' r='15' fill='%236b3fd6'/%3E%3Ccircle cx='15' cy='21' r='2.5' fill='%23fff'/%3E%3Ccircle cx='25' cy='21' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,600..800,100,1;1,9..144,600..800,100,1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="accueil" data-dark="1">
+  <main>
+    <!-- Héros 3D -->
+    <section class="hero" aria-label="Bienvenue">
+      <canvas class="scene" aria-label="Une petite planète couverte de mousse où vivent des Minitaures. Touche-les!"></canvas>
+      <div class="hero-fallback" aria-hidden="true"><img data-portrait="minotaure" data-size="480" alt=""></div>
+      <div class="hero-inner">
+        <div class="container">
+          <div class="hero-copy">
+            <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Les petits trésors du grand imaginaire</div>
+            <h1>
+              <span class="line"><span style="--d:.15s">Collectionne une</span></span>
+              <span class="line"><span class="accent-sun" style="--d:.35s">petite merveille.</span></span>
+            </h1>
+            <p class="lead reveal" style="--d:.5s">Minitaure donne vie à de petites créatures toutes douces et rebondissantes, venues d'une planète de mousse au bout de la galaxie. Laquelle va te trouver?</p>
+            <div class="hero-ctas reveal" style="--d:.65s">
+              <a class="btn" href="boutique.html">Explorer la collection <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+              <a class="link-arrow" href="creatures.html">Rencontrer la bande <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            </div>
+            <div class="hero-checks reveal" style="--d:.8s">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg> 12 créatures à collectionner</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg> Créé au Québec</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg> Ultra moelleux</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1V4.5a1.5 1.5 0 0 1 3 0V11m0-4.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.6a6 6 0 0 1-4.6-2.2L3.5 15a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg> Touche un Minitaure!</div>
+      <div class="scroll-cue" aria-hidden="true"></div>
+      <svg class="wave-bottom" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60V30l60-14 50 18 70-24 60 20 80-22 60 18 70-16 60 20 80-24 70 22 60-18 70 16 80-20 60 18 70-22 60 20 80-16 60 18 70-20 60 18V60z" fill="var(--sky)"/></svg>
+    </section>
+
+    <!-- Bandeau -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track" id="marquee"></div>
+    </div>
+
+    <!-- La bande -->
+    <section class="section">
+      <div class="container">
+        <div class="head-row">
+          <div class="section-head reveal" style="margin-bottom:0">
+            <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Série 01 · La bande au complet</div>
+            <h2>Rencontre la <em class="accent">bande.</em></h2>
+            <p class="lead">Chaque Minitaure a une humeur, une étrange habitude et un petit bout d'animal bien à lui. Touche une carte pour le voir en 3D!</p>
+          </div>
+          <div class="band-controls reveal">
+            <button class="round-btn" id="bandPrev" aria-label="Précédent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button class="round-btn" id="bandNext" aria-label="Suivant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+          </div>
+        </div>
+        <div class="band-scroller reveal" id="band"></div>
+      </div>
+    </section>
+
+    <!-- Formats -->
+    <section class="section" style="padding-top:0">
+      <div class="container split">
+        <div class="orbit-stage reveal-pop">
+          <div class="orbit-ring"><i></i></div>
+          <div class="orbit-ring r2"><i></i></div>
+          <div class="bag-art" id="bagArt"></div>
+          <span class="orbit-label" style="top:6%;left:4%">Série 01</span>
+          <span class="orbit-label" style="bottom:6%;right:2%;transform:rotate(-6deg)">À collectionner</span>
+        </div>
+        <div class="reveal">
+          <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Une collection qui grandit avec toi</div>
+          <h2>Petites créatures, <em class="accent">grandes</em> histoires.</h2>
+          <p class="lead">Commence par une créature à l'unité, ajoute sa carte ou tente le sachet mystère. Chaque format donne une nouvelle façon de faire grandir ta bande.</p>
+          <ul class="feature-list">
+            <li>Créatures à l'unité</li><li>Cartes à collectionner</li>
+            <li>Variantes cosmiques</li><li>Album du collectionneur</li>
+          </ul>
+          <div class="big-price"><strong>7 $</strong><small>sachet mystère<br>taxes en sus</small></div>
+          <div class="hero-ctas" style="margin-top:0">
+            <a class="btn btn-dark" href="boutique.html">Voir la collection <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="creatures.html">Rencontrer les créatures <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sachet mystère interactif -->
+    <section class="section" style="padding-top:0">
+      <div class="container">
+        <div class="mystery split reveal">
+          <div class="mystery-stage">
+            <button class="mystery-bag" id="mysteryBag" aria-label="Ouvrir le sachet mystère"></button>
+            <div class="reveal-card" id="mysteryReveal" aria-live="polite"></div>
+          </div>
+          <div>
+            <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> À toi de jouer</div>
+            <h2>Quel Minitaure va te <em class="accent">trouver?</em></h2>
+            <p class="lead">Touche le sachet pour l'ouvrir! Chaque sachet cache une créature surprise et sa carte. Certaines sont très, très rares…</p>
+            <a class="btn btn-dark" href="boutique.html#sachets">Choisir un sachet <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rareté -->
+    <section class="section dark-section">
+      <svg class="wave-top" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0h1440v20c-160 30-320 30-480 10S640 0 480 20 160 40 0 20z" fill="var(--sky)"/></svg>
+      <div class="container">
+        <div class="section-head center reveal">
+          <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Le secret des étoiles</div>
+          <h2>Plus c'est rare, plus ça <span class="accent-sun">brille.</span></h2>
+          <p class="lead" style="margin-inline:auto">Dans chaque sachet, une étoile décide quelle créature t'attend. Les Minitaures cosmiques scintillent pour vrai!</p>
+        </div>
+        <div class="grid grid-4" id="rarities"></div>
+      </div>
+      <svg class="wave-bottom" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60V40c160-30 320-30 480-10s320 30 480 10 320-30 480 0V60z" fill="var(--sky)"/></svg>
+    </section>
+
+    <!-- Étapes -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head center reveal">
+          <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Comment ça marche</div>
+          <h2>Trois petits bonds <em class="accent">magiques.</em></h2>
+        </div>
+        <div class="steps">
+          <div class="step reveal" style="--d:0s"><div class="ico" style="background:#ffe0ef">🔭</div><h3>Choisis</h3><p>Une créature précise que tu adores, ou un sachet mystère pour l'aventure.</p></div>
+          <div class="step reveal" style="--d:.12s"><div class="ico" style="background:#d9fff3">✨</div><h3>Ouvre</h3><p>Découvre ton Minitaure tout doux et sa carte avec son humeur et son habitude.</p></div>
+          <div class="step reveal" style="--d:.24s"><div class="ico" style="background:#fff3c4">🌙</div><h3>Collectionne</h3><p>Coche-le dans ta collection en ligne et pars à la chasse aux plus rares!</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/vendor/three.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/creature3d.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/cart.js"></script>
+  <script src="assets/js/home.js"></script>
+  <script>
+    document.addEventListener("ui:ready", function () {
+      // bandeau défilant
+      var names = MINI.CREATURES.map(function (c) { return c.nom; });
+      var star = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>';
+      var half = '<span>' + names.map(function (n) { return n + " " + star; }).join(" ") + '</span>';
+      document.getElementById("marquee").innerHTML = half + half;
+      document.getElementById("bagArt").innerHTML = UI.bagSVG("orbit");
+      // raretés
+      var demo = { commun: "pipo", rare: "gribou", tresrare: "croq", cosmique: "nebula" };
+      document.getElementById("rarities").innerHTML = Object.keys(MINI.RARETES).map(function (k, i) {
+        var r = MINI.RARETES[k], c = MINI.creature(demo[k]);
+        return '<article class="card tilt reveal" style="--accent:' + c.accent + ';--d:' + i * 0.1 + 's">' +
+          '<span class="badge ' + k + '">' + "★".repeat(r.stars) + " " + r.label + '</span>' +
+          '<div class="card-media" data-open="' + c.id + '" role="button" tabindex="0" aria-label="Voir ' + c.nom + '"><img data-portrait="' + c.id + '" data-size="360" alt="' + c.nom + '"></div>' +
+          '<div class="card-body"><div class="card-kicker">Exemple : ' + c.nom + '</div><h3>' + r.label + '</h3><p class="sub">' + r.chance + ' % des sachets mystère</p></div></article>';
+      }).join("");
+    });
+  </script>
+</body>
+</html>

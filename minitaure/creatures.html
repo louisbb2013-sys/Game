@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Les créatures — Minitaure</title>
+  <meta name="description" content="Le bestiaire complet des Minitaures : 12 créatures toutes douces à découvrir en 3D.">
+  <meta name="theme-color" content="#1b1060">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='22' r='15' fill='%236b3fd6'/%3E%3Ccircle cx='15' cy='21' r='2.5' fill='%23fff'/%3E%3Ccircle cx='25' cy='21' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,600..800,100,1;1,9..144,600..800,100,1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="creatures">
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow reveal"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> Le grand bestiaire · Série 01</div>
+        <h1 class="reveal">Toutes les <em class="accent">créatures.</em></h1>
+        <p class="lead reveal">Douze petites boules de poils venues d'une planète de mousse. Chacune a un morceau d'animal bien à elle : des cornes, des oreilles de lapin, des ailes de chauve-souris… Touche une créature pour la faire tourner en 3D!</p>
+      </div>
+    </section>
+    <section class="section" style="padding-top:10px">
+      <div class="container">
+        <div class="toolbar reveal">
+          <div class="chips" id="chips" role="group" aria-label="Filtrer par rareté">
+            <button class="chip on" data-r="all">Toutes</button>
+            <button class="chip" data-r="commun">★ Commun</button>
+            <button class="chip" data-r="rare">★★ Rare</button>
+            <button class="chip" data-r="tresrare">★★★ Très rare</button>
+            <button class="chip" data-r="cosmique">★★★★ Cosmique</button>
+            <button class="chip" data-r="mine">♥ Ma collection</button>
+          </div>
+          <div class="chips">
+            <input class="search" id="q" type="search" placeholder="Nom, animal, habitat…" aria-label="Chercher une créature">
+          </div>
+        </div>
+        <div class="collection-meter reveal" style="width:max-content;max-width:100%;margin-bottom:28px">
+          <span>Ma collection</span><div class="bar"><i id="colBar"></i></div><span id="colTxt">0 / 12</span>
+        </div>
+        <div class="grid grid-4" id="grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/vendor/three.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/creature3d.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/cart.js"></script>
+  <script>
+    document.addEventListener("ui:ready", function () {
+      var grid = document.getElementById("grid"), r = "all";
+      function card(c, i) {
+        var own = UI.getCollection().indexOf(c.id) >= 0;
+        return '<article class="card tilt reveal-pop" style="--accent:' + c.accent + ';--d:' + Math.min(i, 8) * 0.05 + 's">' + UI.rarityBadge(c) +
+          '<button class="fav ' + (own ? "on" : "") + '" data-fav="' + c.id + '" aria-pressed="' + own + '" aria-label="' + c.nom + ' est dans ma collection">' + UI.I.heart + '</button>' +
+          '<div class="card-media" data-open="' + c.id + '" role="button" tabindex="0" aria-label="Voir ' + c.nom + ' en 3D"><img data-portrait="' + c.id + '" data-size="360" alt="' + c.nom + '"></div>' +
+          '<div class="card-body"><div class="card-kicker">N° ' + c.num + ' · ' + c.habitat + '</div><h3>' + c.nom + '</h3><p class="sub">' + c.espece + '</p>' +
+          '<p class="sub" style="margin-top:8px;color:var(--ink-2)">« ' + c.habitude + ' »</p>' +
+          '<div class="card-foot"><button class="btn btn-ghost btn-sm" data-open="' + c.id + '">Voir en 3D</button><button class="btn btn-dark btn-sm" data-add="' + c.id + '">6 $ ' + UI.I.bag + '</button></div></div></article>';
+      }
+      function meter() {
+        var n = UI.getCollection().length;
+        document.getElementById("colBar").style.width = (n / MINI.CREATURES.length) * 100 + "%";
+        document.getElementById("colTxt").textContent = n + " / " + MINI.CREATURES.length + (n === MINI.CREATURES.length ? " 🏆" : "");
+      }
+      function draw() {
+        var term = document.getElementById("q").value.trim().toLowerCase(), mine = UI.getCollection();
+        var list = MINI.CREATURES.filter(function (c) {
+          var ok = r === "all" || (r === "mine" ? mine.indexOf(c.id) >= 0 : c.rarete === r);
+          var hay = (c.nom + " " + c.espece + " " + c.habitat + " " + c.humeur).toLowerCase();
+          return ok && (!term || hay.indexOf(term) >= 0);
+        });
+        grid.innerHTML = list.length ? list.map(card).join("") : '<div class="no-results"><h3>' + (r === "mine" ? "Ta collection est encore vide" : "Aucune créature trouvée") + '</h3><p>' + (r === "mine" ? "Touche le cœur d'une créature que tu possèdes!" : "Essaie un autre mot magique!") + '</p></div>';
+        UI.reveals(grid); UI.tilt(grid); Mini3D.fillPortraits(grid); meter();
+      }
+      grid.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-fav]"); if (!b) return;
+        var on = UI.toggleCollection(b.dataset.fav);
+        b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+        if (on) UI.toast(MINI.creature(b.dataset.fav).nom + " rejoint ta collection!", Mini3D.portrait(MINI.creature(b.dataset.fav), 360));
+        if (on && UI.getCollection().length === MINI.CREATURES.length) UI.confetti();
+        if (r === "mine") draw(); else meter();
+      });
+      document.addEventListener("collection:change", function () { if (r !== "mine") grid.querySelectorAll("[data-fav]").forEach(function (b) { var on = UI.getCollection().indexOf(b.dataset.fav) >= 0; b.classList.toggle("on", on); }); meter(); });
+      document.getElementById("chips").addEventListener("click", function (e) {
+        var b = e.target.closest(".chip"); if (!b) return;
+        this.querySelectorAll(".chip").forEach(function (c) { c.classList.toggle("on", c === b); });
+        r = b.dataset.r; draw();
+      });
+      document.getElementById("q").addEventListener("input", draw);
+      draw();
+      var h = location.hash.slice(1);
+      if (MINI.creature(h)) setTimeout(function () { UI.openCreature(h); }, 400);
+    });
+  </script>
+</body>
+</html>
