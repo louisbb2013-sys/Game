@@ -261,13 +261,14 @@ main { display: block; overflow-x: clip; }
 .card:hover { box-shadow: var(--shadow-lg); }
 .card-media {
   position: relative; aspect-ratio: 1 / 0.9; display: grid; place-items: center; overflow: hidden;
+  /* fond « studio photo » gris doux, comme les photos des créatures */
   background:
-    radial-gradient(circle at 50% 110%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 65%),
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.9), transparent 50%),
-    linear-gradient(160deg, color-mix(in srgb, var(--accent) 22%, #f4f1ff), color-mix(in srgb, var(--accent) 40%, #e6e0ff));
+    radial-gradient(ellipse 60% 18% at 50% 88%, rgba(40, 30, 30, 0.18), transparent 70%),
+    radial-gradient(circle at 50% 35%, #efedea, transparent 70%),
+    linear-gradient(180deg, #e2dfdb, #c9c5c0);
 }
 .card-media::before {
-  content: ""; position: absolute; inset: 0; opacity: 0.6;
+  content: ""; position: absolute; inset: 0; opacity: 0;
   background-image: radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent), radial-gradient(1px 1px at 70% 20%, #fff, transparent), radial-gradient(2px 2px at 85% 60%, #fff, transparent), radial-gradient(1px 1px at 40% 70%, #fff, transparent);
 }
 .card-media img { width: 92%; height: 92%; object-fit: contain; opacity: 0; transform: translateY(10px) scale(0.92); transition: opacity 0.6s, transform 0.6s cubic-bezier(.3, 1.6, .5, 1); position: relative; filter: drop-shadow(0 16px 18px rgba(30, 10, 90, 0.35)); }

@@ -44,6 +44,10 @@
     uniform float uSpots;
     uniform float uDensity;
     uniform float uSparkle;
+    uniform vec3 uTip;
+    uniform float uTipAmt;
+    uniform vec3 uPatch;
+    uniform float uPatchAmt;
     uniform float uTime;
     uniform vec3 uLight;
     uniform vec3 uRim;
@@ -69,15 +73,21 @@
     }
     void main() {
       vec3 q = vObjPos * uDensity;
-      float strand = vnoise(q) * 0.62 + vnoise(q * 2.3 + 7.1) * 0.38;
-      if (vShell > 0.001 && strand < vShell * 0.82 + 0.1) discard;
+      // poils en mèches : bruit fin + grosses touffes
+      float clump = vnoise(vObjPos * 7.0 + 2.0);
+      float strand = vnoise(q) * 0.5 + vnoise(q * 2.3 + 7.1) * 0.22 + clump * 0.28;
+      if (vShell > 0.001 && strand < vShell * 0.8 + 0.1) discard;
 
       float spot = smoothstep(0.42, 0.62, vnoise(vObjPos * 2.4 + 3.0)) * uSpots;
       vec3 col = mix(uColA, uColB, spot);
       float belly = smoothstep(0.25, 0.85, vObjNormal.z) * smoothstep(0.75, -0.35, vObjNormal.y);
       col = mix(col, uBelly, belly * uBellyAmt * 0.9);
+      float patchN = vnoise(vObjPos * 3.3 + 11.0) * 0.7 + vnoise(vObjPos * 7.0 + 5.0) * 0.3;
+      col = mix(col, uPatch, smoothstep(0.6, 0.68, patchN) * uPatchAmt);
+      col = mix(col, uTip, smoothstep(0.45, 1.0, vShell) * uTipAmt * (0.4 + 0.6 * clump));
+      col *= 0.84 + 0.32 * vnoise(q * 0.45 + 3.0);
 
-      col *= mix(0.5, 1.15, vShell);
+      col *= mix(0.45, 1.15, vShell);
       float diff = max(dot(vNormalW, uLight), 0.0) * 0.55 + 0.62;
       float rim = pow(1.0 - max(dot(vNormalW, vViewDir), 0.0), 2.2);
       col = col * diff + uRim * rim * (0.25 + 0.45 * vShell);
@@ -109,6 +119,10 @@
         uSpots: { value: o.spots || 0 },
         uDensity: { value: o.density || 42 },
         uSparkle: { value: o.sparkle || 0 },
+        uTip: { value: col(o.tip || o.b || o.a) },
+        uTipAmt: { value: o.tipAmt || 0 },
+        uPatch: { value: col(o.patch || "#ffffff") },
+        uPatchAmt: { value: o.patchAmt || 0 },
         uRim: { value: col(o.rim || "#ffffff") },
       },
       vertexShader: FUR_VS,
@@ -159,6 +173,89 @@
 
   /* ---------- Parties animales ---------- */
   const PARTS = {
+
+    bodyLeaves(p, ctx) {
+      const g = new T.Group();
+      const lg = new T.SphereGeometry(0.17, 14, 10); lg.scale(0.55, 0.14, 1.3);
+      const mats = [std(p.color, { side: T.DoubleSide }), std("#7fd36b", { side: T.DoubleSide }), std("#2e8a5a", { side: T.DoubleSide })];
+      for (let i = 0; i < 34; i++) {
+        const y = 1 - (i / 33) * 1.6, r = Math.sqrt(Math.max(0, 1 - y * y)), th = i * 2.399963;
+        const d = new T.Vector3(Math.cos(th) * r, y, Math.sin(th) * r);
+        if (d.z > 0.55 && d.y < 0.45) continue; // garde le visage dégagé
+        const m = new T.Mesh(lg, mats[i % 3]);
+        m.position.copy(d.clone().multiplyScalar(1 + ctx.fur.len * 0.9));
+        m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d);
+        m.rotateY(th * 3); m.rotateX(0.5);
+        g.add(m);
+      }
+      return g;
+    },
+    topFlowers(p, ctx) {
+      const g = new T.Group();
+      const spots = [[0.1, 1, 0.35], [-0.3, 0.95, 0.25], [0.35, 0.9, 0.2], [-0.05, 1, -0.1], [0.5, 0.75, 0.4], [-0.5, 0.78, 0.35]];
+      spots.forEach((f, i) => {
+        const fl = new T.Group();
+        fl.add(new T.Mesh(new T.SphereGeometry(0.035, 10, 8), std("#ffe9a8")));
+        for (let k = 0; k < 5; k++) {
+          const a = (k / 5) * Math.PI * 2;
+          const pg = new T.SphereGeometry(0.045, 10, 8); pg.scale(1, 0.35, 1.5);
+          const pm = new T.Mesh(pg, std(i % 2 ? p.color : "#ffc7dd"));
+          pm.position.set(Math.cos(a) * 0.055, 0, Math.sin(a) * 0.055); pm.rotation.y = -a + Math.PI / 2;
+          fl.add(pm);
+        }
+        const pos = surface(f[0], f[1], f[2], 1 + ctx.fur.len * 0.85);
+        fl.position.copy(pos);
+        fl.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), pos.clone().normalize());
+        fl.scale.setScalar(1.6);
+        g.add(fl);
+      });
+      return g;
+    },
+    stubHorns(p) {
+      return mirror((s) => {
+        const g = taperTube([[0.35 * s, 0.78, 0.1], [0.55 * s, 1.0, 0.08], [0.6 * s, 1.18, 0.0], [0.5 * s, 1.28, -0.05]], 0.085, 0.01, 18, 10);
+        return new T.Mesh(g, std(p.color, { roughness: 0.45 }));
+      });
+    },
+    roundEars(p, ctx) {
+      return mirror((s) => {
+        const g = new T.SphereGeometry(0.17, 20, 14); g.scale(1, 1, 0.6);
+        const m = furMesh(g, { a: p.color, b: ctx.fur.b, len: 0.06, shells: 9, tip: ctx.fur.tip, tipAmt: ctx.fur.tipAmt });
+        m.position.copy(surface(0.85 * s, 0.55, 0.0, 1.0));
+        m.rotation.z = -0.6 * s;
+        ctx.anim.push((t) => { m.rotation.z = (-0.6 + Math.sin(t * 2.6 + s) * 0.08) * s; });
+        return m;
+      });
+    },
+    tuft(p, ctx) {
+      const g = new T.Group();
+      const n = p.count || 7;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const lean = 0.26 + (i % 3) * 0.09;
+        const geo = taperTube([[0, 0, 0], [Math.cos(a) * 0.08, 0.22, Math.sin(a) * 0.08], [Math.cos(a + 0.7) * lean, 0.5, Math.sin(a + 0.7) * lean - 0.05], [Math.cos(a + 1.4) * (lean + 0.18), 0.52, Math.sin(a + 1.4) * (lean + 0.18) - 0.1]], 0.14, 0.02, 16, 10);
+        const m = furMesh(geo, { a: p.color, b: p.tip || p.color, tip: p.tip || "#ffffff", tipAmt: 0.8, len: 0.07, shells: 9, gravity: new T.Vector3(0, -0.2, 0) });
+        g.add(m);
+      }
+      g.position.set(0, 0.9 + ctx.fur.len * 0.4, -0.1);
+      ctx.anim.push((t) => { g.rotation.z = Math.sin(t * 2.2) * 0.08; g.rotation.x = Math.cos(t * 1.7) * 0.06; });
+      return g;
+    },
+    featherWings(p, ctx) {
+      return mirror((s) => {
+        const holder = new T.Group();
+        for (let k = 0; k < 4; k++) {
+          const fg = new T.SphereGeometry(0.16, 16, 10); fg.scale(0.45, 0.12, 1.6 - k * 0.2);
+          const m = furMesh(fg, { a: p.color, b: "#ffffff", tip: "#fff6ee", tipAmt: 0.7, len: 0.04, shells: 7 });
+          m.position.set(0.12 * s * k, 0.12 * k, -0.15 * k);
+          m.rotation.set(-0.5 - k * 0.15, 0.4 * s, 0.4 * s);
+          holder.add(m);
+        }
+        holder.position.set(0.95 * s, 0.3, -0.2);
+        ctx.anim.push((t) => { holder.rotation.z = (0.15 + Math.sin(t * 5) * 0.12) * s; });
+        return holder;
+      });
+    },
     horns(p) {
       return mirror((s) => {
         const g = taperTube([[0.45 * s, 0.62, 0.15], [0.8 * s, 0.85, 0.1], [0.95 * s, 1.15, 0.05], [0.82 * s, 1.38, 0.0]], 0.13, 0.01);
@@ -455,7 +552,9 @@
       hi.position.set(-0.05 * s - 0.03, 0.06, r * 0.82);
       const hi2 = new T.Mesh(new T.SphereGeometry(r * 0.14, 8, 8), whiteMat);
       hi2.position.set(0.05, -0.05, r * 0.9);
-      e.add(ball, hi, hi2);
+      const rim = new T.Mesh(new T.SphereGeometry(r * 1.16, 24, 18), std("#fffdf8", { roughness: 0.3 }));
+      rim.position.z = -r * 0.32;
+      e.add(rim, ball, hi, hi2);
       if (frog) e.position.set(0.42 * s, 0.98, 0.52);
       else e.position.copy(surface(0.34 * s, 0.14, 0.93, 1 + len * 0.42));
       g.add(e); eyes.push(e);
@@ -500,8 +599,9 @@
     const f = data.fur;
     const bodyGeo = new T.SphereGeometry(1, opts.segments || 64, opts.segments ? Math.round(opts.segments * 0.75) : 48);
     const fur = furMesh(bodyGeo, {
-      a: f.a, b: f.b, belly: f.belly, bellyAmt: 1, len: f.len, spots: f.spots,
+      a: f.a, b: f.b, belly: f.belly, bellyAmt: f.bellyAmt == null ? 1 : f.bellyAmt, len: f.len, spots: f.spots,
       shells: opts.shells || 22, sparkle: f.sparkle || 0, rim: data.accent || "#ffffff",
+      tip: f.tip, tipAmt: f.tipAmt, patch: f.patch, patchAmt: f.patchAmt, density: f.density || 34,
     });
     body.add(fur);
     body.add(face(ctx, data));
@@ -573,7 +673,7 @@
   /* ---------- Portraits (images générées une seule fois) ---------- */
   let pr = null;
   const cache = {};
-  const VERSION = "v5";
+  const VERSION = "v9";
   function portrait(data, size) {
     size = size || 360;
     const key = `mini-portrait-${VERSION}-${data.id}-${size}`;
