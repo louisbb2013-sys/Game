@@ -306,7 +306,7 @@
     modal.innerHTML = `<div class="modal-backdrop" data-close></div>
       <div class="modal-card" style="--accent:${c.accent}" aria-labelledby="mTitle">
         <button class="icon-btn close" data-close aria-label="Fermer">${I.close}</button>
-        <div class="modal-3d" id="m3d"><div class="mini-stars">${stars}</div><div class="hint">✦ Glisse pour tourner · touche pour écraser ✦</div></div>
+        <div class="modal-3d" id="m3d"><div class="mini-stars">${stars}</div><div class="hint">Glisse pour tourner · clique pour écraser</div></div>
         <div class="modal-info">
           <span class="badge ${c.rarete}" style="position:static;display:inline-block;margin-bottom:12px">${"★".repeat(r.stars)} ${r.label}</span>
           <div class="card-kicker">N° ${c.num} · ${c.habitat}</div>

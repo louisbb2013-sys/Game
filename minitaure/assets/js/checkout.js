@@ -216,7 +216,7 @@
             ${Object.entries(SHIP).map(([k, s]) => `<label class="choice"><input type="radio" name="ship" value="${k}" ${k === state.ship ? "checked" : ""}><span class="grow"><b>${s.label}</b><small>${s.sub}</small></span><span class="tag" data-ship-price="${k}"></span></label>`).join("")}
             <small id="pickupNote" style="color:var(--coral);font-weight:600"></small>
             <label class="choice" style="margin-top:18px"><input type="checkbox" id="gift"><span class="grow"><b>🎁 Emballage cadeau étoilé</b><small>Papier de nuit, ruban doré et petit mot</small></span><span class="tag">+2 $</span></label>
-            <div class="field" id="giftMsgWrap" style="display:none"><label for="giftMsg">Petit mot pour le cadeau</label><input id="giftMsg" maxlength="120" placeholder="Bonne fête, petite étoile!"></div>
+            <div class="field" id="giftMsgWrap" style="display:none"><label for="giftMsg">Petit mot pour le cadeau</label><input id="giftMsg" maxlength="120" placeholder="Bonne fête!"></div>
             <div class="pane-nav"><button class="btn btn-ghost btn-sm" type="button" data-next="2">${UI.I.left} Retour</button><button class="btn" type="button" data-next="4">Passer au paiement ${UI.I.arrow}</button></div>
           </section>
           <section class="step-pane" data-pane="4">

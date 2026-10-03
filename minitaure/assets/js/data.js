@@ -124,7 +124,7 @@
       id: "plumo", num: "011", nom: "Plumo",
       espece: "Poussin des soleils",
       fur: { a: "#ffc21a", b: "#ffe066", belly: "#fff8d6", len: 0.29, tip: "#fff6c8", tipAmt: 0.6, spots: 0.15 },
-      parts: [{ type: "beak", color: "#ff8a3d" }, { type: "tinyWings", color: "#ffb000" }, { type: "crest", color: "#ff6b3d" }],
+      parts: [{ type: "tinyWings", color: "#ffb000" }, { type: "crest", color: "#ff6b3d" }],
       habitat: "Prairie des comètes", rarete: "rare",
       humeur: "Bavard et rigolo",
       habitude: "Il chante le matin pour réveiller le soleil.",

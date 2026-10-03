@@ -197,7 +197,7 @@
     // --- interactions ---
     const ray = new T.Raycaster(), ptr = new T.Vector2(), look = new T.Vector2();
     let hover = null;
-    const sayings = ["Boing!", "Hihi!", "Coucou!", "Encore!", "Pouet!", "Wiii!", "Squish!", "Miaou?", "Bonjour!"];
+    const sayings = ["Squish!", "Boing!", "Encore!", "Trop doux.", "Rare? Peut-être…", "Échange-moi!", "+1 pour ta bande", "Attrape-moi!"];
     function pick(e) {
       const r = canvas.getBoundingClientRect();
       ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);

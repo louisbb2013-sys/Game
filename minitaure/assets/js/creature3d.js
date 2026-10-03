@@ -83,7 +83,7 @@
       float belly = smoothstep(0.25, 0.85, vObjNormal.z) * smoothstep(0.75, -0.35, vObjNormal.y);
       col = mix(col, uBelly, belly * uBellyAmt * 0.9);
       float patchN = vnoise(vObjPos * 3.3 + 11.0) * 0.7 + vnoise(vObjPos * 7.0 + 5.0) * 0.3;
-      col = mix(col, uPatch, smoothstep(0.6, 0.68, patchN) * uPatchAmt);
+      float pm = smoothstep(0.6, 0.68, patchN) * uPatchAmt;
       col = mix(col, uTip, smoothstep(0.45, 1.0, vShell) * uTipAmt * (0.4 + 0.6 * clump));
       col *= 0.84 + 0.32 * vnoise(q * 0.45 + 3.0);
 
@@ -91,6 +91,7 @@
       float diff = max(dot(vNormalW, uLight), 0.0) * 0.55 + 0.62;
       float rim = pow(1.0 - max(dot(vNormalW, vViewDir), 0.0), 2.2);
       col = col * diff + uRim * rim * (0.25 + 0.45 * vShell);
+      col = mix(col, uPatch * (0.7 + 0.4 * vShell) * (0.8 + 0.25 * diff), pm * 0.85);
 
       if (uSparkle > 0.0) {
         float s = step(0.965, hash(floor(vObjPos * 26.0)));
@@ -536,57 +537,6 @@
     },
   };
 
-  /* ---------- Visage ---------- */
-  function face(ctx, data) {
-    const g = new T.Group();
-    const len = data.fur.len;
-    const frog = data.parts.some((p) => p.type === "frogEyes");
-    const eyeMat = std("#07051a", { roughness: 0.08, metalness: 0.2 });
-    const whiteMat = new T.MeshBasicMaterial({ color: "#ffffff" });
-    const eyes = [];
-    [1, -1].forEach((s) => {
-      const e = new T.Group();
-      const r = frog ? 0.16 : 0.18;
-      const ball = new T.Mesh(new T.SphereGeometry(r, 24, 18), eyeMat);
-      const hi = new T.Mesh(new T.SphereGeometry(r * 0.32, 12, 10), whiteMat);
-      hi.position.set(-0.05 * s - 0.03, 0.06, r * 0.82);
-      const hi2 = new T.Mesh(new T.SphereGeometry(r * 0.14, 8, 8), whiteMat);
-      hi2.position.set(0.05, -0.05, r * 0.9);
-      const rim = new T.Mesh(new T.SphereGeometry(r * 1.16, 24, 18), std("#fffdf8", { roughness: 0.3 }));
-      rim.position.z = -r * 0.32;
-      e.add(rim, ball, hi, hi2);
-      if (frog) e.position.set(0.42 * s, 0.98, 0.52);
-      else e.position.copy(surface(0.34 * s, 0.14, 0.93, 1 + len * 0.42));
-      g.add(e); eyes.push(e);
-    });
-    const blushMat = new T.MeshBasicMaterial({ color: "#ff7fa8", transparent: true, opacity: 0.55, depthWrite: false });
-    [1, -1].forEach((s) => {
-      const b = new T.Mesh(new T.CircleGeometry(0.1, 20), blushMat);
-      const pos = surface(0.55 * s, -0.12, 0.83, 1 + len * 0.62);
-      b.position.copy(pos);
-      b.lookAt(pos.clone().multiplyScalar(2));
-      b.scale.set(1.3, 0.8, 1);
-      g.add(b);
-    });
-    if (!data.parts.some((p) => p.type === "beak")) {
-      const mouth = new T.Mesh(new T.TorusGeometry(0.075, 0.02, 8, 20, Math.PI), std("#2a1530"));
-      const mp = surface(0, -0.12, 1, 1 + len * 0.5);
-      mouth.position.copy(mp);
-      mouth.rotation.z = Math.PI;
-      g.add(mouth);
-    }
-    // clignement
-    let next = 1 + Math.random() * 3;
-    ctx.anim.push((t) => {
-      const ph = t - next;
-      let sy = 1;
-      if (ph > 0 && ph < 0.16) sy = Math.max(0.08, Math.abs(ph - 0.08) / 0.08);
-      else if (ph >= 0.16) next = t + 2 + Math.random() * 4;
-      eyes.forEach((e) => { e.scale.y = sy; });
-    });
-    return g;
-  }
-
   /* ---------- Créature complète ---------- */
   function createCreature(data, opts) {
     opts = opts || {};
@@ -604,7 +554,6 @@
       tip: f.tip, tipAmt: f.tipAmt, patch: f.patch, patchAmt: f.patchAmt, density: f.density || 34,
     });
     body.add(fur);
-    body.add(face(ctx, data));
     data.parts.forEach((p) => {
       const fn = PARTS[p.type];
       if (fn) body.add(fn(p, ctx));
@@ -673,7 +622,7 @@
   /* ---------- Portraits (images générées une seule fois) ---------- */
   let pr = null;
   const cache = {};
-  const VERSION = "v9";
+  const VERSION = "v12";
   function portrait(data, size) {
     size = size || 360;
     const key = `mini-portrait-${VERSION}-${data.id}-${size}`;
