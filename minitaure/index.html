@@ -161,7 +161,6 @@
       document.getElementById("rarities").innerHTML = Object.keys(MINI.RARETES).map(function (k, i) {
         var r = MINI.RARETES[k], c = MINI.creature(demo[k]);
         return '<article class="card tilt reveal" style="--accent:' + c.accent + ';--d:' + i * 0.1 + 's">' +
-          '<span class="badge ' + k + '">' + "★".repeat(r.stars) + " " + r.label + '</span>' +
           '<div class="card-media" data-open="' + c.id + '" role="button" tabindex="0" aria-label="Voir ' + c.nom + '"><img data-portrait="' + c.id + '" data-size="360" alt="' + c.nom + '"></div>' +
           '<div class="card-body"><div class="card-kicker">Exemple : ' + c.nom + '</div><h3>' + r.label + '</h3><p class="sub">' + r.chance + ' % des sachets mystère</p></div></article>';
       }).join("");

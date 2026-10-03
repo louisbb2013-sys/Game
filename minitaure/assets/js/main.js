@@ -96,14 +96,10 @@
   }
 
   /* ---------- Cartes ---------- */
-  function rarityBadge(c) {
-    const r = M.RARETES[c.rarete];
-    return `<span class="badge ${c.rarete}">${"★".repeat(r.stars)} ${r.label}</span>`;
-  }
   function productCard(p, opts) {
     opts = opts || {};
     const c = p.type === "creature" ? M.creature(p.creature) : null;
-    const badge = c ? rarityBadge(c) : p.badge ? `<span class="badge">${p.badge}</span>` : "";
+    const badge = !c && p.badge ? `<span class="badge">${p.badge}</span>` : "";
     return `<article class="card tilt ${opts.cls || ""}" style="--accent:${productAccent(p)};--d:${opts.d || 0}s" data-id="${p.id}">
       ${badge}
       <div class="card-media" ${c ? `data-open="${c.id}" role="button" tabindex="0" aria-label="Voir ${c.nom} en 3D"` : ""}>${productArt(p)}</div>
@@ -298,7 +294,6 @@
       modal.addEventListener("click", (e) => { if (e.target.closest("[data-close]")) closeCreature(); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal.classList.contains("open")) closeCreature(); });
     }
-    const r = M.RARETES[c.rarete];
     const meter = (n) => Array.from({ length: 5 }, (_, i) => `<i class="${i < n ? "on" : ""}" style="animation-delay:${i * 0.08}s"></i>`).join("");
     const owned = getCollection().includes(c.id);
     let stars = "";
@@ -308,7 +303,6 @@
         <button class="icon-btn close" data-close aria-label="Fermer">${I.close}</button>
         <div class="modal-3d" id="m3d"><div class="mini-stars">${stars}</div><div class="hint">Glisse pour tourner · clique pour écraser</div></div>
         <div class="modal-info">
-          <span class="badge ${c.rarete}" style="position:static;display:inline-block;margin-bottom:12px">${"★".repeat(r.stars)} ${r.label}</span>
           <div class="card-kicker">N° ${c.num} · ${c.habitat}</div>
           <h2 id="mTitle">${c.nom}</h2>
           <div class="species">${c.espece}</div>
@@ -356,7 +350,7 @@
   });
 
   window.UI = {
-    I, LOGO, productCard, productArt, productAccent, rarityBadge, bagSVG, cardsSVG,
+    I, LOGO, productCard, productArt, productAccent, bagSVG, cardsSVG,
     toast, reveals, tilt, burst, confetti, openCreature, getCollection, toggleCollection, reduced,
   };
 

@@ -54,7 +54,7 @@
       var grid = document.getElementById("grid"), r = "all";
       function card(c, i) {
         var own = UI.getCollection().indexOf(c.id) >= 0;
-        return '<article class="card tilt reveal-pop" style="--accent:' + c.accent + ';--d:' + Math.min(i, 8) * 0.05 + 's">' + UI.rarityBadge(c) +
+        return '<article class="card tilt reveal-pop" style="--accent:' + c.accent + ';--d:' + Math.min(i, 8) * 0.05 + 's">' +
           '<button class="fav ' + (own ? "on" : "") + '" data-fav="' + c.id + '" aria-pressed="' + own + '" aria-label="' + c.nom + ' est dans ma collection">' + UI.I.heart + '</button>' +
           '<div class="card-media" data-open="' + c.id + '" role="button" tabindex="0" aria-label="Voir ' + c.nom + ' en 3D"><img data-portrait="' + c.id + '" data-size="360" alt="' + c.nom + '"></div>' +
           '<div class="card-body"><div class="card-kicker">N° ' + c.num + ' · ' + c.habitat + '</div><h3>' + c.nom + '</h3><p class="sub">' + c.espece + '</p>' +
