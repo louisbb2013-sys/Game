@@ -22,6 +22,7 @@
   color-scheme: dark; }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); margin: 0; }
 .app { max-width: 1100px; margin: 0 auto; padding: 28px 16px 64px; display: grid; gap: 18px; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -100,14 +101,63 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 
 .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 28px 20px; text-align: center; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
 .empty strong { color: var(--ink); font-family: var(--display); font-size: 20px; font-weight: 600; }
 
+.site-head { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.site-head .inner { max-width: 1100px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.brand { font-family: var(--display); font-weight: 800; font-size: 19px; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
+.nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.nav a { text-decoration: none; color: var(--muted); font-weight: 600; font-size: 14px; padding: 6px 11px; border-radius: 8px; }
+.nav a:hover { color: var(--ink); }
+.nav a[aria-current="page"] { background: var(--soft); color: var(--accent); }
+.page { display: grid; gap: 18px; }
+.lede { max-width: 62ch; color: var(--muted); margin: 0; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 18px; margin: 0; }
+
+.conns { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.conn { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.conn p { margin: 0; color: var(--muted); font-size: 14px; }
+.state { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; justify-self: start; }
+.state.on { background: var(--ok-bg); color: var(--ok); }
+.state.ask { background: var(--warn-bg); color: var(--warn); }
+.state.off { background: var(--hot-bg); color: var(--hot); }
+
+.happen { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 10px; }
+.happen-head { font-family: var(--display); font-weight: 600; font-size: 16px; }
+.happen-panel { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; }
+.happen-panel .fields { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.msg { font-size: 13.5px; overflow-wrap: anywhere; }
+.msg.bad { color: var(--hot); }
+.msg.good { color: var(--ok); }
+.msg a, .links a { color: var(--accent); font-weight: 600; }
+.links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.domains { display: grid; gap: 4px; font-size: 14px; }
+.domains div { display: flex; justify-content: space-between; gap: 8px; }
+.domains span { overflow-wrap: anywhere; min-width: 0; }
+
+.steps-how { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.steps-how > div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 6px; }
+.steps-how .k { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+.steps-how p { margin: 0; color: var(--muted); font-size: 14px; }
+
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); }
 </style>
 
+<header class="site-head">
+  <div class="inner">
+    <a class="brand" href="#ideas">Idea Sorter</a>
+    <nav class="nav" aria-label="Pages">
+      <a href="#ideas" data-page="ideas" aria-current="page">My ideas</a>
+      <a href="#connect" data-page="connect">Connectors</a>
+      <a href="#how" data-page="how">How it works</a>
+    </nav>
+  </div>
+</header>
+
 <div class="app">
+<section class="page" id="page-ideas">
   <header class="top">
     <div>
       <h1>Idea Sorter</h1>
-      <p class="sub">Dump an idea. It gets a when, a why and a how.</p>
+      <p class="sub">Dump an idea. It gets a when, a why and a how. Then make it happen.</p>
     </div>
     <span id="sync" class="sync mono">Loading…</span>
   </header>
@@ -135,6 +185,26 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 
   </div>
 
   <main id="board" class="board"></main>
+</section>
+
+<section class="page" id="page-connect" hidden>
+  <h1>Connectors</h1>
+  <p class="lede">Connectors let each idea do something real: put it on your calendar, write an email asking for help, or check if a website name is free. Open any idea and use the <b>Make it happen</b> buttons. Nothing is sent without you clicking.</p>
+  <div class="conns" id="conns"></div>
+  <p class="lede" id="conn-note"></p>
+</section>
+
+<section class="page" id="page-how" hidden>
+  <h1>How it works</h1>
+  <p class="lede">Idea Sorter turns a messy thought into a plan you can act on.</p>
+  <div class="steps-how">
+    <div><span class="k">1 · Capture</span><h3>Type the idea</h3><p>Write it how you'd say it. Mention a time like "Friday", "next week" or "someday" if you have one.</p></div>
+    <div><span class="k">2 · Sort</span><h3>It gets a when, why and how</h3><p>Claude picks a date, writes why it matters and 2–5 steps, and sets a category, priority and size. You can change any of it.</p></div>
+    <div><span class="k">3 · Act</span><h3>Make it happen</h3><p>From an idea, add it to your Outlook calendar, draft a Gmail email to someone who can help, or check website names on GoDaddy.</p></div>
+    <div><span class="k">4 · Finish</span><h3>Tick off steps</h3><p>Check steps as you go and mark the idea done. Overdue ideas float to the top so nothing slips.</p></div>
+  </div>
+  <p class="lede">Your ideas are private to your claude.ai account and sync between your devices.</p>
+</section>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
@@ -149,6 +219,9 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 
   const sortingIds = new Set();
   let store = null;           // { save() }
   let sample = null;          // Claude sampling, when available
+  let mcp = null;             // the viewer's connectors, when available
+  let perms = null;
+  let panel = null;           // open "Make it happen" panel: { id, kind, vals, busy, msg, tone, results }
 
   // ---------- dates ----------
   const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -335,7 +408,8 @@ Use any time the idea mentions for "when". If it mentions none, pick a sensible 
       <div class="chips">${chips}</div>
       ${i.why ? `<div class="why"><b>Why:</b> ${esc(i.why)}</div>` : ""}
       ${i.how.length && !open ? `<div class="progress"><span class="mono">${stepsDone}/${i.how.length} steps</span><span class="track"><span class="fill" style="width:${(stepsDone / i.how.length) * 100}%"></span></span></div>` : ""}
-      ${sortingIds.has(i.id) ? `<div class="sorting">Claude is sorting this…</div>` : ""}`;
+      ${sortingIds.has(i.id) ? `<div class="sorting">Claude is sorting this…</div>` : ""}
+      ${linksHTML(i)}`;
     if (open) html += editorHTML(i);
     return html + "</article>";
   }
@@ -360,6 +434,7 @@ Use any time the idea mentions for "when". If it mentions none, pick a sensible 
         <input type="text" id="ns-${id}" data-act="new-step" placeholder="Add a step and press Enter" style="margin-top:6px">
       </div>
       <div class="why"><b>Original note:</b> ${esc(i.text)}</div>
+      ${happenHTML(i)}
       <div class="actions">
         <button type="button" class="btn primary" data-act="done">${i.done ? "Mark not done" : "Mark done"}</button>
         ${sample ? `<button type="button" class="btn" data-act="resort"${sortingIds.has(id) ? " disabled" : ""}>Re-sort with Claude</button>` : ""}
@@ -402,13 +477,18 @@ Use any time the idea mentions for "when". If it mentions none, pick a sensible 
 
   function addIdea(text, useClaude) {
     const q = quickSort(text);
-    const idea = { id: uid(), text, created: Date.now(), done: false, ai: false, ...q, how: q.how.map((t) => ({ t, done: false })) };
+    const idea = { id: uid(), text, created: Date.now(), done: false, ai: false, ...q, how: q.how.map((t) => ({ t, done: false })), links: {} };
     ideas.unshift(idea);
     save();
     if (useClaude && sample) runClaude(idea.id);
     else render();
     return idea;
   }
+
+  board.addEventListener("input", (e) => {
+    const k = e.target.dataset.pv;
+    if (k && panel) panel.vals[k] = e.target.value;
+  });
 
   const ideaOf = (el) => { const c = el.closest(".card"); return c && ideas.find((i) => i.id === c.dataset.id); };
   let delArm = null;
@@ -419,6 +499,7 @@ Use any time the idea mentions for "when". If it mentions none, pick a sensible 
     const idea = ideaOf(t);
     if (!idea) return;
     const act = t.closest("[data-act]")?.dataset.act;
+    if (act && act.startsWith("hp-")) { happenAction(idea, act.slice(3)); return; }
     if (!act && idea.id !== openId) { openId = idea.id; render(); document.getElementById("t-" + idea.id)?.focus(); return; }
     if (act === "close") { openId = null; render(); }
     else if (act === "done") { idea.done = !idea.done; if (idea.done) openId = null; save(); render(); toast(idea.done ? "Marked done" : "Moved back to open"); }
@@ -497,6 +578,7 @@ Use any time the idea mentions for "when". If it mentions none, pick a sensible 
     priority: PRI[i.priority] != null ? i.priority : "medium", effort: ["quick", "medium", "big"].includes(i.effort) ? i.effort : "medium",
     category: String(i.category || "Ideas"), why: String(i.why || ""),
     how: Array.isArray(i.how) ? i.how.filter((s) => s && s.t).map((s) => ({ t: String(s.t), done: !!s.done })) : [],
+    links: { calendar: safeUrl(i.links && i.links.calendar), email: safeUrl(i.links && i.links.email) },
   }));
 
   let saveT, savePending = false;
@@ -548,6 +630,207 @@ Use any time the idea mentions for "when". If it mentions none, pick a sensible 
     return true;
   }
 
+  // ---------- connectors: make it happen ----------
+  const safeUrl = (u) => (typeof u === "string" && /^https:\/\//.test(u) ? u : "");
+  const CONNECTORS = [
+    { server: "Microsoft 365", name: "Outlook Calendar", tool: "outlook_create_event", does: "Puts an idea on your calendar on its date, with the why and the steps in the event." },
+    { server: "Gmail", name: "Gmail", tool: "create_draft", does: "Writes an email draft about an idea: ask someone for help, remind yourself, or share your plan. It never sends. You send it from Gmail." },
+    { server: "GoDaddy", name: "GoDaddy", tool: "domains_check_availability", does: "Checks if a website name is free, for website, business or channel ideas." },
+  ];
+  const tz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; } })();
+
+  function linksHTML(i) {
+    const l = i.links || {};
+    if (!l.calendar && !l.email) return "";
+    return `<div class="links">${l.calendar ? `<a href="${esc(l.calendar)}" target="_blank" rel="noopener">On your calendar ↗</a>` : ""}${l.email ? `<a href="${esc(l.email)}" target="_blank" rel="noopener">Email draft ↗</a>` : ""}</div>`;
+  }
+
+  const slug = (t) => t.toLowerCase().replace(/^example:\s*/, "").replace(/\b(someday|start|make|build|a|an|the|my|about|to|for|and|of|by|on|in|website|site|next|this|week|weekend|month|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/g, " ").replace(/[^a-z0-9]+/g, "").slice(0, 24) || "myidea";
+
+  function happenHTML(i) {
+    if (!mcp) return `<div class="happen"><div class="happen-head">Make it happen</div><p class="why">Calendar, email and website-name tools work when this page is opened from its claude.ai link with connectors allowed. See the Connectors page.</p></div>`;
+    const p = panel && panel.id === i.id ? panel : null;
+    const btn = (k, label) => `<button type="button" class="btn${p && p.kind === k ? " primary" : ""}" data-act="hp-${k}">${label}</button>`;
+    let body = "";
+    if (p) {
+      const v = p.vals, id = i.id;
+      if (p.kind === "cal") body = `<div class="fields">
+          <label for="cd-${id}">Day<input type="date" id="cd-${id}" data-pv="date" value="${esc(v.date)}"></label>
+          <label for="ct-${id}">Time<input type="time" id="ct-${id}" data-pv="time" value="${esc(v.time)}"></label>
+          <label for="cl-${id}">How long<select id="cl-${id}" data-pv="len">${[["30", "30 min"], ["60", "1 hour"], ["120", "2 hours"]].map(([a, b]) => `<option value="${a}"${v.len === a ? " selected" : ""}>${b}</option>`).join("")}</select></label>
+        </div>
+        <div class="actions"><button type="button" class="btn primary" data-act="hp-cal-go"${p.busy ? " disabled" : ""}>Add to Outlook calendar</button></div>`;
+      if (p.kind === "mail") body = `<div class="fields">
+          <label for="mp-${id}">Email to<select id="mp-${id}" data-pv="purpose">${[["help", "Ask someone for help"], ["share", "Share my plan"], ["remind", "Remind myself"]].map(([a, b]) => `<option value="${a}"${v.purpose === a ? " selected" : ""}>${b}</option>`).join("")}</select></label>
+          <label for="mt-${id}">Their email (optional)<input type="text" id="mt-${id}" data-pv="to" inputmode="email" placeholder="friend@example.com" value="${esc(v.to)}"></label>
+        </div>
+        <div class="actions"><button type="button" class="btn primary" data-act="hp-mail-go"${p.busy ? " disabled" : ""}>Write Gmail draft</button></div>`;
+      if (p.kind === "dom") body = `<div class="fields">
+          <label for="dq-${id}">Website name<input type="text" id="dq-${id}" data-pv="q" value="${esc(v.q)}"></label>
+        </div>
+        <div class="actions"><button type="button" class="btn primary" data-act="hp-dom-go"${p.busy ? " disabled" : ""}>Check on GoDaddy</button></div>
+        ${p.results ? `<div class="domains">${p.results.map((d) => `<div><span class="mono">${esc(d.name)}</span>${d.available ? `<a href="https://www.godaddy.com/domainsearch/find?domainToCheck=${encodeURIComponent(d.name)}" target="_blank" rel="noopener">Free · get it ↗</a>` : `<span class="why">Taken</span>`}</div>`).join("")}</div>` : ""}`;
+      if (p.msg) body += `<div class="msg ${p.tone || ""}">${p.msg}</div>`;
+    }
+    return `<div class="happen"><div class="happen-head">Make it happen</div>
+      <div class="actions">${btn("cal", "Add to calendar")}${btn("mail", "Draft an email")}${btn("dom", "Check website names")}</div>
+      ${body ? `<div class="happen-panel">${body}</div>` : ""}</div>`;
+  }
+
+  function mcpError(e, server, isWrite) {
+    const code = e && e.code;
+    const fix = "claude.ai Settings → Connectors";
+    switch (code) {
+      case "server_not_connected": case "server_not_found": return `${server} isn't connected. Add it in ${fix}, then try again.`;
+      case "needs_reauth": return `${server} needs you to sign in again. Reconnect it in ${fix}.`;
+      case "selection_required": return `You have more than one ${server} account. Pick one when asked, then try again.`;
+      case "not_in_manifest": return `${server} is turned off for this page. Turn it on from the page's Permissions menu.`;
+      case "blocked_by_policy": case "approval_required": return `Your organization doesn't allow this ${server} action here.`;
+      case "tool_error": return `${server} said: ${esc(e.message || "it couldn't do that")}`;
+      case "not_granted": case "capability_disabled": case "capability_removed": return "Connectors aren't available in this view. Open the page from its claude.ai link.";
+      case "consent_required": return `You haven't allowed ${server} for this page yet. Click again to be asked.`;
+      default: return isWrite
+        ? `${server} didn't answer in time. It may still have worked, so check ${server} before trying again.`
+        : `${server} didn't answer. Try again in a moment.`;
+    }
+  }
+
+  async function happenAction(idea, act) {
+    if (["cal", "mail", "dom"].includes(act)) {
+      if (panel && panel.id === idea.id && panel.kind === act) panel = null;
+      else panel = { id: idea.id, kind: act, busy: false, msg: "", vals: {
+        date: idea.when && diffDays(idea.when) >= 0 ? idea.when : addDays(1), time: "17:00", len: "60",
+        purpose: "help", to: "", q: slug(idea.title) + ".com" } };
+      render(); return;
+    }
+    if (!panel || panel.id !== idea.id || panel.busy) return;
+    const p = panel, v = p.vals;
+    const done = (msg, tone) => { p.busy = false; p.msg = msg; p.tone = tone; render(); };
+    p.busy = true; p.msg = "Working…"; p.tone = ""; render();
+    const steps = idea.how.map((s, n) => `${n + 1}. ${s.t}`).join("\n");
+
+    if (act === "cal-go") {
+      if (!isDate(v.date) || !/^\d{2}:\d{2}$/.test(v.time)) return done("Pick a day and a time first.", "bad");
+      const [h, m] = v.time.split(":").map(Number);
+      const start = parseD(v.date); start.setHours(h, m);
+      const end = new Date(start.getTime() + (+v.len || 60) * 60000);
+      const iso = (d) => fmt(d) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":00";
+      try {
+        const r = await mcp.callTool("Microsoft 365", "outlook_create_event", {
+          subject: idea.title.slice(0, 255),
+          start: { dateTime: iso(start), timeZone: tz }, end: { dateTime: iso(end), timeZone: tz },
+          body: [idea.why && "Why: " + idea.why, steps && "Steps:\n" + steps, "Added from Idea Sorter"].filter(Boolean).join("\n\n"),
+          showAs: "busy",
+        });
+        const link = safeUrl(r && r.payload && r.payload.webLink);
+        const cur = ideas.find((x) => x.id === idea.id) || idea;
+        cur.links.calendar = link || cur.links.calendar;
+        if (cur.when !== v.date) { cur.when = v.date; cur.someday = false; }
+        save();
+        done(`Added to your calendar for ${esc(niceDate(v.date))} at ${esc(v.time)}.${link ? ` <a href="${esc(link)}" target="_blank" rel="noopener">Open in Outlook ↗</a>` : ""}`, "good");
+      } catch (e) { done(mcpError(e, "Outlook Calendar", true), "bad"); }
+    }
+
+    else if (act === "mail-go") {
+      const to = v.to.trim();
+      if (to && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return done("That email address doesn't look right. Fix it or leave it empty.", "bad");
+      const goal = { help: "ask the recipient for specific help with it", share: "share the plan with the recipient and invite their thoughts", remind: "remind the writer (sent to themselves) what to do next and why" }[v.purpose];
+      let subject = idea.title, text = "";
+      if (sample) {
+        try {
+          const r = await sample.json(`Write a short, friendly, plain-text email (no markdown) about this personal idea. Purpose: ${goal}.
+Idea: ${idea.title}
+Why: ${idea.why || "not given"}
+Steps: ${steps || "none yet"}
+Target date: ${idea.when || "none"}
+Reply with only JSON: {"subject": "...", "body": "..."}. Keep the body under 120 words. Don't invent names; start with "Hi," and end with "Thanks!".`, { modelTier: "quick" });
+          if (r && r.subject && r.body) { subject = String(r.subject).slice(0, 200); text = String(r.body); }
+        } catch {}
+      }
+      if (!text) {
+        text = v.purpose === "help"
+          ? `Hi,\n\nI'm working on this: ${idea.title}.${idea.why ? "\nWhy: " + idea.why + "." : ""}\n\nCould you help me with it?${steps ? "\n\nMy plan so far:\n" + steps : ""}\n\nThanks!`
+          : v.purpose === "share"
+          ? `Hi,\n\nHere's my plan for: ${idea.title}.${idea.why ? "\nWhy: " + idea.why + "." : ""}${steps ? "\n\n" + steps : ""}\n\nWhat do you think?\n\nThanks!`
+          : `Reminder: ${idea.title}${idea.when ? " (by " + niceDate(idea.when) + ")" : ""}.${idea.why ? "\nWhy: " + idea.why + "." : ""}${steps ? "\n\nNext steps:\n" + steps : ""}`;
+      }
+      try {
+        const input = { subject, body: text };
+        if (to) input.to = [to];
+        const r = await mcp.callTool("Gmail", "create_draft", input);
+        const link = safeUrl(r && r.payload && r.payload.viewUrl);
+        const cur = ideas.find((x) => x.id === idea.id) || idea;
+        cur.links.email = link || cur.links.email;
+        save();
+        done(`Draft saved in Gmail. It hasn't been sent.${link ? ` <a href="${esc(link)}" target="_blank" rel="noopener">Open draft ↗</a>` : ""}`, "good");
+      } catch (e) { done(mcpError(e, "Gmail", true), "bad"); }
+    }
+
+    else if (act === "dom-go") {
+      let q = v.q.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+      if (!/^[a-z0-9-]+(\.[a-z]{2,})+$/.test(q)) return done("Type a name like mygame.com", "bad");
+      try {
+        const r = await mcp.callTool("GoDaddy", "domains_check_availability", { domains: q });
+        const list = (r && r.payload && Array.isArray(r.payload.domains) ? r.payload.domains : [])
+          .filter((d) => d && typeof d.name === "string").slice(0, 8)
+          .map((d) => ({ name: d.name, available: !!d.available }));
+        p.results = list;
+        const exact = list.find((d) => d.name === q);
+        done(list.length ? (exact ? (exact.available ? `${esc(q)} is free.` : `${esc(q)} is taken. Here are some others.`) : "Here's what GoDaddy found.") : "GoDaddy found nothing for that name.", exact && exact.available ? "good" : "");
+      } catch (e) { done(mcpError(e, "GoDaddy", false), "bad"); }
+    }
+  }
+
+  async function renderConns() {
+    const box = $("#conns");
+    let listed = null;
+    if (mcp) { try { listed = (await mcp.listTools()).servers || []; } catch { listed = null; } }
+    const rows = await Promise.all(CONNECTORS.map(async (c) => {
+      let st = "unavailable";
+      if (perms) st = await perms.state("mcp:" + c.server).catch(() => "unavailable");
+      const info = listed && listed.find((s) => s.server === c.server);
+      let label, cls;
+      if (!mcp) { label = "Needs the claude.ai link"; cls = "off"; }
+      else if (info && info.authStatus === "needs_reauth") { label = "Sign in again"; cls = "off"; }
+      else if (st === "denied") { label = "Turned off for this page"; cls = "off"; }
+      else if (st === "granted") { label = "Ready"; cls = "on"; }
+      else { label = "Asks the first time you use it"; cls = "ask"; }
+      return `<div class="conn"><h3>${esc(c.name)}</h3><span class="state ${cls}">${label}</span><p>${esc(c.does)}</p>
+        ${mcp && st === "prompt" ? `<button type="button" class="btn" data-allow="${esc(c.server)}">Allow now</button>` : ""}</div>`;
+    }));
+    const claudeRow = `<div class="conn"><h3>Claude</h3><span class="state ${sample ? "on" : "ask"}">${sample ? "Ready" : "Asks the first time you use it"}</span><p>Sorts each idea into a when, why and how, and writes your email drafts.</p></div>`;
+    box.innerHTML = claudeRow + rows.join("");
+    $("#conn-note").textContent = "Not connected yet? Add Microsoft 365, Gmail or GoDaddy in claude.ai Settings → Connectors, then come back.";
+  }
+  $("#conns").addEventListener("click", async (e) => {
+    const s = e.target.closest("[data-allow]")?.dataset.allow;
+    if (!s || !perms) return;
+    await perms.request(["mcp:" + s]).catch(() => null);
+    renderConns();
+  });
+
+  async function initConnectors() {
+    if (!window.claude || !window.claude.use) return;
+    const [m, pm] = await Promise.all(["mcp", "permissions"].map((n) => window.claude.use(n).catch(() => null)));
+    mcp = m; perms = pm;
+    render();
+    if (currentPage() === "connect") renderConns();
+  }
+
+  // ---------- pages ----------
+  const PAGES = ["ideas", "connect", "how"];
+  const currentPage = () => { const h = location.hash.slice(1); return PAGES.includes(h) ? h : "ideas"; };
+  function showPage() {
+    const pg = currentPage();
+    PAGES.forEach((p) => { document.getElementById("page-" + p).hidden = p !== pg; });
+    document.querySelectorAll(".nav a").forEach((a) => {
+      if (a.dataset.page === pg) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    if (pg === "connect") renderConns();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", showPage);
+
   // ---------- boot ----------
   try {
     const v = localStorage.getItem("ideas-view");
@@ -559,6 +842,8 @@ Use any time the idea mentions for "when". If it mentions none, pick a sensible 
   store = localStore;
   setSync(ideas.length ? "Saved in this browser only" : "");
   render();
+  showPage();
+  initConnectors().catch(() => {});
   connectDb().then((ok) => { if (!ok) setSync(ideas.length ? "Saved in this browser only" : "Saves in this browser"); })
     .catch(() => setSync("Saves in this browser"));
 })();
