@@ -11,17 +11,22 @@
 <meta property="og:site_name" content="Minitaure">
 <meta property="og:title" content="Minitaure · Petites créatures à collectionner, faites au Québec">
 <meta property="og:description" content="Minitaure, petite entreprise québécoise de créatures originales à collectionner. Cinq miniatures douces et mystérieuses à 6 $ chacune, paiement à la livraison.">
-<meta name="theme-color" content="#17163A">
+<meta name="theme-color" content="#07061A">
+<meta name="color-scheme" content="dark">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400&family=Fredoka:wght@400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="modulepreload" href="assets/js/vendor/three.module.js">
+<link rel="modulepreload" href="assets/js/3d/commun.js">
 <script src="assets/js/site.js" defer></script>
+<script type="module" src="assets/js/3d/jardin.js"></script>
+<script type="module" src="assets/js/3d/vitrine.js"></script>
 </head>
 <body>
 <a class="skip" href="#contenu">Aller au contenu</a>
-<header class="header header--nuit">
+<header class="header">
   <div class="wrap header__in">
     <a class="logo" href="index.html" aria-label="Minitaure, accueil"><span class="logo__lune" aria-hidden="true"></span>Minitaure</a>
     <nav class="nav" id="nav" aria-label="Navigation principale">
@@ -44,140 +49,197 @@
 <main id="contenu">
 
 <section class="jardin" aria-labelledby="titre-jardin">
-  <div class="jardin__ciel" aria-hidden="true"></div>
+  <div class="ciel" aria-hidden="true">
+    <div class="nebuleuse nebuleuse--1"></div><div class="nebuleuse nebuleuse--2"></div><div class="nebuleuse nebuleuse--3"></div>
+    <div class="aurore"></div>
+  </div>
   <div class="jardin__sol"><svg viewBox="0 0 1440 420" preserveAspectRatio="none" aria-hidden="true">
-      <defs><linearGradient id="sol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2766"/><stop offset="1" stop-color="#121131"/></linearGradient></defs>
-      <path d="M0 150 C180 90 320 170 520 130 C720 90 860 160 1040 120 C1200 85 1330 130 1440 110 V420 H0Z" fill="#1F1D52"/>
+      <defs><linearGradient id="sol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1D1A52"/><stop offset="1" stop-color="#0B0A24"/></linearGradient></defs>
+      <path d="M0 150 C180 90 320 170 520 130 C720 90 860 160 1040 120 C1200 85 1330 130 1440 110 V420 H0Z" fill="#17154A"/>
       <path d="M0 220 C220 170 380 240 620 205 C860 170 1020 240 1240 200 C1330 185 1400 195 1440 190 V420 H0Z" fill="url(#sol)"/>
-      <g fill="#3B3790">
+      <g fill="#262363">
         <path d="M120 230 c-6-40 4-70 18-90 c-2 30 0 60-6 92Z"/><path d="M140 232 c10-30 30-48 50-56 c-14 22-28 40-40 58Z"/>
         <path d="M700 220 c-4-50 8-80 22-100 c-4 36-4 66-10 102Z"/><path d="M1180 210 c8-36 26-60 48-70 c-16 26-30 48-40 72Z"/>
         <rect x="1010" y="180" width="70" height="56" rx="10"/><rect x="1000" y="172" width="90" height="16" rx="8"/>
-        <path d="M1045 172 c-10-30 -4-56 12-74 c0 26 0 50-6 74Z"/><circle cx="1058" cy="92" r="12" fill="#4A46A8"/>
         <rect x="300" y="196" width="56" height="44" rx="8"/><rect x="292" y="190" width="72" height="13" rx="6"/>
       </g>
-      <g fill="#FFD46B" opacity=".55"><circle cx="210" cy="160" r="3"/><circle cx="560" cy="120" r="2.5"/><circle cx="880" cy="150" r="3"/><circle cx="1320" cy="140" r="2.5"/></g>
+      <g fill="#7CF5D2" opacity=".55"><circle cx="210" cy="200" r="3"/><circle cx="560" cy="180" r="2.5"/><circle cx="880" cy="190" r="3"/><circle cx="1320" cy="185" r="2.5"/></g>
     </svg></div>
   <div class="wrap jardin__texte">
     <p class="surtitre">Collection n° 1 · Le jardin lunaire</p>
-    <h1 id="titre-jardin">Petites créatures, <em>grandes</em> histoires.</h1>
-    <p class="jardin__lead">Promène ta lanterne dans le jardin : cinq créatures s’y cachent. Trouve-les, puis adopte tes préférées.</p>
-    <div class="jardin__actions">
-      <a class="btn btn--lune" href="boutique.html">Voir la boutique</a>
+    <h1 id="titre-jardin" data-split>Petites créatures, <em>grandes</em> histoires.</h1>
+    <p class="jardin__lead apparait" style="--d:.55s">La nuit est tombée sur le jardin. Promène ta lanterne : cinq créatures s’y cachent. Trouve-les, puis adopte tes préférées.</p>
+    <div class="jardin__actions apparait" style="--d:.7s">
+      <a class="btn btn--lune" href="boutique.html" data-aimant>Voir la boutique</a>
       <a class="btn btn--ligne" href="creatures.html">Rencontrer les créatures</a>
     </div>
   </div>
   <div class="lanterne-lueur" aria-hidden="true"></div>
   <div class="voile" aria-hidden="true"></div>
   <div class="lune" aria-hidden="true"></div>
-    <button class="cachette bord-g" type="button" data-id="minotaure" style="--x:14%;--y:80%">
-      <img src="assets/creatures/minotaure.svg" alt="" width="200" height="200">
-      <span class="cachette__bulle"><b>Minotaure <small>N° 001</small></b>Aime collectionner les siestes dans les poches de manteau.</span>
-      <span class="sr-only">Révéler Minotaure</span>
-    </button>
-    <button class="cachette bord-g" type="button" data-id="gribou" style="--x:34%;--y:70%">
-      <img src="assets/creatures/gribou.svg" alt="" width="200" height="200">
-      <span class="cachette__bulle"><b>Gribou <small>N° 002</small></b>Apparaît lorsqu’une personne fredonne très doucement.</span>
-      <span class="sr-only">Révéler Gribou</span>
-    </button>
-    <button class="cachette" type="button" data-id="bloop" style="--x:55%;--y:79%">
-      <img src="assets/creatures/bloop.svg" alt="" width="200" height="200">
-      <span class="cachette__bulle"><b>Bloop <small>N° 003</small></b>Adore les flaques, mais seulement celles qui ressemblent à des ronds de lune.</span>
-      <span class="sr-only">Révéler Bloop</span>
-    </button>
-    <button class="cachette bord-d" type="button" data-id="noki" style="--x:74%;--y:66%">
-      <img src="assets/creatures/noki.svg" alt="" width="200" height="200">
-      <span class="cachette__bulle"><b>Noki <small>N° 004</small></b>Rit si fort qu’on l’entend avant de le voir scintiller.</span>
-      <span class="sr-only">Révéler Noki</span>
-    </button>
-    <button class="cachette bord-d" type="button" data-id="pipo" style="--x:90%;--y:81%">
-      <img src="assets/creatures/pipo.svg" alt="" width="200" height="200">
-      <span class="cachette__bulle"><b>Pipo <small>N° 005</small></b>Connaît le chemin secret derrière chaque pot de fleurs.</span>
-      <span class="sr-only">Révéler Pipo</span>
-    </button>
-  <div class="compteur" aria-live="polite">
+  <button class="cachette" type="button" data-id="minotaure" style="--x:50%;--y:80%;--xm:15%;--ym:80%">
+    <img src="assets/creatures/minotaure.svg" alt="" width="200" height="200">
+    <span class="cachette__bulle"><b>Minotaure <small>N° 001</small></b>Aime collectionner les siestes dans les poches de manteau.</span>
+    <span class="sr-only">Révéler Minotaure</span>
+  </button>
+  <button class="cachette" type="button" data-id="gribou" style="--x:61%;--y:61%;--xm:36%;--ym:70%">
+    <img src="assets/creatures/gribou.svg" alt="" width="200" height="200">
+    <span class="cachette__bulle"><b>Gribou <small>N° 002</small></b>Apparaît lorsqu’une personne fredonne très doucement.</span>
+    <span class="sr-only">Révéler Gribou</span>
+  </button>
+  <button class="cachette" type="button" data-id="bloop" style="--x:72%;--y:81%;--xm:56%;--ym:85%">
+    <img src="assets/creatures/bloop.svg" alt="" width="200" height="200">
+    <span class="cachette__bulle"><b>Bloop <small>N° 003</small></b>Adore les flaques, mais seulement celles qui ressemblent à des ronds de lune.</span>
+    <span class="sr-only">Révéler Bloop</span>
+  </button>
+  <button class="cachette" type="button" data-id="noki" style="--x:83%;--y:62%;--xm:76%;--ym:71%">
+    <img src="assets/creatures/noki.svg" alt="" width="200" height="200">
+    <span class="cachette__bulle"><b>Noki <small>N° 004</small></b>Rit si fort qu’on l’entend avant de le voir scintiller.</span>
+    <span class="sr-only">Révéler Noki</span>
+  </button>
+  <button class="cachette" type="button" data-id="pipo" style="--x:93%;--y:79%;--xm:87%;--ym:84%">
+    <img src="assets/creatures/pipo.svg" alt="" width="200" height="200">
+    <span class="cachette__bulle"><b>Pipo <small>N° 005</small></b>Connaît le chemin secret derrière chaque pot de fleurs.</span>
+    <span class="sr-only">Révéler Pipo</span>
+  </button>
+  <div class="compteur">
     <span class="compteur__points" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-    <span id="compteur-texte">0 / 5 trouvées</span>
+    <span id="compteur-texte" aria-live="polite">0 / 5 trouvées</span>
     <button type="button" id="illuminer">Tout illuminer</button>
+    <button class="son" type="button" data-son aria-pressed="false" aria-label="Son du jardin"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="onde" d="M15.5 9a4 4 0 0 1 0 6M18.3 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
   </div>
+  <a class="defiler" href="#collection"><span aria-hidden="true"></span>Découvrir</a>
 </section>
 
 <section class="section" id="collection" aria-labelledby="titre-collection">
+  <div class="lueur-fond" style="width:50vw;height:30vw;left:-10vw;top:10%;background:#6A4FD6" aria-hidden="true"></div>
   <div class="wrap">
     <div class="titre-section">
-      <h2 id="titre-collection" class="apparait">La collection du jardin lunaire</h2>
-      <p class="apparait" style="--d:.1s">Cinq créatures originales, vendues à l’unité. Chacune a une petite manie, et sûrement une grande histoire à raconter.</p>
+      <h2 id="titre-collection" data-split>La collection du jardin lunaire</h2>
+      <p class="apparait" style="--d:.15s">Cinq créatures originales, vendues à l’unité. Chacune a sa petite manie, et sûrement une grande histoire à raconter.</p>
     </div>
     <div class="collection">
-      <article class="carte t-minotaure apparait" style="--d:0.00s">
-        <div class="carte__scene"><span class="carte__num">N° 001</span><img src="assets/creatures/minotaure.svg" alt="Minotaure, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
-        <div class="carte__corps">
-          <h3><a href="creatures.html#minotaure">Minotaure</a></h3>
-          <p class="carte__lore">Aime collectionner les siestes dans les poches de manteau.</p>
-          <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="minotaure" aria-label="Ajouter Minotaure au panier"><span>Ajouter</span></button></div>
+      <article class="carte t-minotaure apparait" data-tilt style="--d:0.00s">
+        <div class="carte__face">
+          <div class="carte__fond"></div>
+          <div class="carte__cadre"></div>
+          <span class="carte__num">N° 001</span>
+          <div class="carte__creature" data-c3d="minotaure"><img src="assets/creatures/minotaure.svg" alt="Minotaure, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
+          <div class="carte__texte">
+            <h3><a href="creatures.html#minotaure">Minotaure</a></h3>
+            <p class="carte__lore">Aime collectionner les siestes dans les poches de manteau.</p>
+          </div>
+          <div class="carte__holo" aria-hidden="true"></div>
+          <div class="carte__reflet" aria-hidden="true"></div>
         </div>
+        <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="minotaure" aria-label="Ajouter Minotaure au panier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter</span></button></div>
       </article>
-      <article class="carte t-gribou apparait" style="--d:0.07s">
-        <div class="carte__scene"><span class="carte__num">N° 002</span><img src="assets/creatures/gribou.svg" alt="Gribou, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
-        <div class="carte__corps">
-          <h3><a href="creatures.html#gribou">Gribou</a></h3>
-          <p class="carte__lore">Apparaît lorsqu’une personne fredonne très doucement.</p>
-          <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="gribou" aria-label="Ajouter Gribou au panier"><span>Ajouter</span></button></div>
+      <article class="carte t-gribou apparait" data-tilt style="--d:0.08s">
+        <div class="carte__face">
+          <div class="carte__fond"></div>
+          <div class="carte__cadre"></div>
+          <span class="carte__num">N° 002</span>
+          <div class="carte__creature" data-c3d="gribou"><img src="assets/creatures/gribou.svg" alt="Gribou, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
+          <div class="carte__texte">
+            <h3><a href="creatures.html#gribou">Gribou</a></h3>
+            <p class="carte__lore">Apparaît lorsqu’une personne fredonne très doucement.</p>
+          </div>
+          <div class="carte__holo" aria-hidden="true"></div>
+          <div class="carte__reflet" aria-hidden="true"></div>
         </div>
+        <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="gribou" aria-label="Ajouter Gribou au panier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter</span></button></div>
       </article>
-      <article class="carte t-bloop apparait" style="--d:0.14s">
-        <div class="carte__scene"><span class="carte__num">N° 003</span><img src="assets/creatures/bloop.svg" alt="Bloop, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
-        <div class="carte__corps">
-          <h3><a href="creatures.html#bloop">Bloop</a></h3>
-          <p class="carte__lore">Adore les flaques, mais seulement celles qui ressemblent à des ronds de lune.</p>
-          <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="bloop" aria-label="Ajouter Bloop au panier"><span>Ajouter</span></button></div>
+      <article class="carte t-bloop apparait" data-tilt style="--d:0.16s">
+        <div class="carte__face">
+          <div class="carte__fond"></div>
+          <div class="carte__cadre"></div>
+          <span class="carte__num">N° 003</span>
+          <div class="carte__creature" data-c3d="bloop"><img src="assets/creatures/bloop.svg" alt="Bloop, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
+          <div class="carte__texte">
+            <h3><a href="creatures.html#bloop">Bloop</a></h3>
+            <p class="carte__lore">Adore les flaques, mais seulement celles qui ressemblent à des ronds de lune.</p>
+          </div>
+          <div class="carte__holo" aria-hidden="true"></div>
+          <div class="carte__reflet" aria-hidden="true"></div>
         </div>
+        <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="bloop" aria-label="Ajouter Bloop au panier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter</span></button></div>
       </article>
-      <article class="carte t-noki apparait" style="--d:0.21s">
-        <div class="carte__scene"><span class="carte__num">N° 004</span><img src="assets/creatures/noki.svg" alt="Noki, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
-        <div class="carte__corps">
-          <h3><a href="creatures.html#noki">Noki</a></h3>
-          <p class="carte__lore">Rit si fort qu’on l’entend avant de le voir scintiller.</p>
-          <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="noki" aria-label="Ajouter Noki au panier"><span>Ajouter</span></button></div>
+      <article class="carte t-noki apparait" data-tilt style="--d:0.24s">
+        <div class="carte__face">
+          <div class="carte__fond"></div>
+          <div class="carte__cadre"></div>
+          <span class="carte__num">N° 004</span>
+          <div class="carte__creature" data-c3d="noki"><img src="assets/creatures/noki.svg" alt="Noki, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
+          <div class="carte__texte">
+            <h3><a href="creatures.html#noki">Noki</a></h3>
+            <p class="carte__lore">Rit si fort qu’on l’entend avant de le voir scintiller.</p>
+          </div>
+          <div class="carte__holo" aria-hidden="true"></div>
+          <div class="carte__reflet" aria-hidden="true"></div>
         </div>
+        <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="noki" aria-label="Ajouter Noki au panier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter</span></button></div>
       </article>
-      <article class="carte t-pipo apparait" style="--d:0.28s">
-        <div class="carte__scene"><span class="carte__num">N° 005</span><img src="assets/creatures/pipo.svg" alt="Pipo, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
-        <div class="carte__corps">
-          <h3><a href="creatures.html#pipo">Pipo</a></h3>
-          <p class="carte__lore">Connaît le chemin secret derrière chaque pot de fleurs.</p>
-          <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="pipo" aria-label="Ajouter Pipo au panier"><span>Ajouter</span></button></div>
+      <article class="carte t-pipo apparait" data-tilt style="--d:0.32s">
+        <div class="carte__face">
+          <div class="carte__fond"></div>
+          <div class="carte__cadre"></div>
+          <span class="carte__num">N° 005</span>
+          <div class="carte__creature" data-c3d="pipo"><img src="assets/creatures/pipo.svg" alt="Pipo, petite créature ronde et poilue" width="200" height="200" loading="lazy"></div>
+          <div class="carte__texte">
+            <h3><a href="creatures.html#pipo">Pipo</a></h3>
+            <p class="carte__lore">Connaît le chemin secret derrière chaque pot de fleurs.</p>
+          </div>
+          <div class="carte__holo" aria-hidden="true"></div>
+          <div class="carte__reflet" aria-hidden="true"></div>
         </div>
+        <div class="carte__pied"><span class="prix">6 $</span><button class="ajout" type="button" data-ajouter="pipo" aria-label="Ajouter Pipo au panier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter</span></button></div>
       </article>
     </div>
   </div>
 </section>
 
-<section class="section section--nuit" aria-labelledby="titre-etapes">
+<section class="odyssee" data-progress="colle" aria-labelledby="titre-odyssee">
+  <div class="odyssee__scene">
+    <h2 id="titre-odyssee" class="sr-only">Petites créatures, grandes histoires</h2>
+    <div class="odyssee__progress" aria-hidden="true"></div>
+    <div class="odyssee__carte" aria-hidden="true">
+      <svg viewBox="0 0 1000 1000" aria-hidden="true" focusable="false"><defs><mask id="trace-0" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><path class="sentier-trace" d="M500 500 Q 329 587 150 520" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="0" data-trace="0"/></mask><mask id="trace-1" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><path class="sentier-trace" d="M500 500 Q 441 295 250 200" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="0" data-trace="1"/></mask><mask id="trace-2" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><path class="sentier-trace" d="M500 500 Q 417 298 510 100" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="0" data-trace="2"/></mask><mask id="trace-3" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><path class="sentier-trace" d="M500 500 Q 701 409 770 200" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="0" data-trace="3"/></mask><mask id="trace-4" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><path class="sentier-trace" d="M500 500 Q 679 445 840 540" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="0" data-trace="4"/></mask></defs><circle class="anneau-ciel" cx="500" cy="500" r="150"/><circle class="anneau-ciel" cx="500" cy="500" r="280"/><circle class="anneau-ciel" cx="500" cy="500" r="410"/><circle class="etoile-ciel" cx="0" cy="70" r="1.0"/><circle class="etoile-ciel" cx="137" cy="381" r="1.6"/><circle class="etoile-ciel" cx="274" cy="692" r="2.2"/><circle class="etoile-ciel" cx="411" cy="3" r="1.0"/><circle class="etoile-ciel" cx="548" cy="314" r="1.6"/><circle class="etoile-ciel" cx="685" cy="625" r="2.2"/><circle class="etoile-ciel" cx="822" cy="936" r="1.0"/><circle class="etoile-ciel" cx="959" cy="247" r="1.6"/><circle class="etoile-ciel" cx="96" cy="558" r="2.2"/><circle class="etoile-ciel" cx="233" cy="869" r="1.0"/><circle class="etoile-ciel" cx="370" cy="180" r="1.6"/><circle class="etoile-ciel" cx="507" cy="491" r="2.2"/><circle class="etoile-ciel" cx="644" cy="802" r="1.0"/><circle class="etoile-ciel" cx="781" cy="113" r="1.6"/><circle class="etoile-ciel" cx="918" cy="424" r="2.2"/><circle class="etoile-ciel" cx="55" cy="735" r="1.0"/><circle class="etoile-ciel" cx="192" cy="46" r="1.6"/><circle class="etoile-ciel" cx="329" cy="357" r="2.2"/><circle class="etoile-ciel" cx="466" cy="668" r="1.0"/><circle class="etoile-ciel" cx="603" cy="979" r="1.6"/><circle class="etoile-ciel" cx="740" cy="290" r="2.2"/><circle class="etoile-ciel" cx="877" cy="601" r="1.0"/><circle class="etoile-ciel" cx="14" cy="912" r="1.6"/><circle class="etoile-ciel" cx="151" cy="223" r="2.2"/><circle class="etoile-ciel" cx="288" cy="534" r="1.0"/><circle class="etoile-ciel" cx="425" cy="845" r="1.6"/><circle class="etoile-ciel" cx="562" cy="156" r="2.2"/><circle class="etoile-ciel" cx="699" cy="467" r="1.0"/><circle class="etoile-ciel" cx="836" cy="778" r="1.6"/><circle class="etoile-ciel" cx="973" cy="89" r="2.2"/><circle class="etoile-ciel" cx="110" cy="400" r="1.0"/><circle class="etoile-ciel" cx="247" cy="711" r="1.6"/><circle class="etoile-ciel" cx="384" cy="22" r="2.2"/><circle class="etoile-ciel" cx="521" cy="333" r="1.0"/><circle class="etoile-ciel" cx="658" cy="644" r="1.6"/><circle class="etoile-ciel" cx="795" cy="955" r="2.2"/><circle class="etoile-ciel" cx="932" cy="266" r="1.0"/><circle class="etoile-ciel" cx="69" cy="577" r="1.6"/><circle class="etoile-ciel" cx="206" cy="888" r="2.2"/><circle class="etoile-ciel" cx="343" cy="199" r="1.0"/><circle class="etoile-ciel" cx="480" cy="510" r="1.6"/><circle class="etoile-ciel" cx="617" cy="821" r="2.2"/><circle class="etoile-ciel" cx="754" cy="132" r="1.0"/><circle class="etoile-ciel" cx="891" cy="443" r="1.6"/><circle class="etoile-ciel" cx="28" cy="754" r="2.2"/><circle class="etoile-ciel" cx="165" cy="65" r="1.0"/><path class="sentier" d="M500 500 Q 329 587 150 520" mask="url(#trace-0)"/><path class="sentier" d="M500 500 Q 441 295 250 200" mask="url(#trace-1)"/><path class="sentier" d="M500 500 Q 417 298 510 100" mask="url(#trace-2)"/><path class="sentier" d="M500 500 Q 701 409 770 200" mask="url(#trace-3)"/><path class="sentier" d="M500 500 Q 679 445 840 540" mask="url(#trace-4)"/></svg>
+        <div class="repere t-minotaure" style="left:15%;top:52%" data-repere="0"><span class="repere__icone"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 14h28v16a10 10 0 0 1-10 10h-8a10 10 0 0 1-10-10Z" fill="none" stroke="#B9A6FF" stroke-width="2.6" stroke-linejoin="round"/><path d="M10 14h28l-3 8H13Z" fill="#B9A6FF" opacity=".55"/><path d="M15 28h18" stroke="#B9A6FF" stroke-width="1.6" stroke-dasharray="2 3"/></svg></span><span class="repere__nom"><b>La poche de manteau</b>pour les siestes de Minotaure</span></div>
+        <div class="repere t-gribou" style="left:25%;top:20%" data-repere="1"><span class="repere__icone"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 33V11l17-4v21" fill="none" stroke="#FF8F7E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="15" cy="34" rx="5.5" ry="4.2" fill="#FF8F7E"/><ellipse cx="32" cy="29" rx="5.5" ry="4.2" fill="#FF8F7E"/></svg></span><span class="repere__nom"><b>Le fredonnement</b>qui fait apparaître Gribou</span></div>
+        <div class="repere t-bloop" style="left:51%;top:10%" data-repere="2"><span class="repere__icone"><svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="30" rx="19" ry="8" fill="none" stroke="#8FC8FF" stroke-width="2.6"/><circle cx="26" cy="29" r="4.5" fill="#FFE7A3"/><path d="M14 16c2-4 4-6 4-9 0 3 2 5 4 9a4 4 0 0 1-8 0Z" fill="#8FC8FF"/></svg></span><span class="repere__nom"><b>La flaque ronde de lune</b>la seule que Bloop adore</span></div>
+        <div class="repere t-noki" style="left:77%;top:20%" data-repere="3"><span class="repere__icone"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4l3.6 13.4L41 21l-13.4 3.6L24 38l-3.6-13.4L7 21l13.4-3.6Z" fill="#FFD46B"/><circle cx="39" cy="9" r="2" fill="#FFF4CC"/><circle cx="9" cy="36" r="1.6" fill="#FFF4CC"/></svg></span><span class="repere__nom"><b>Le scintillement</b>on entend Noki rire avant</span></div>
+        <div class="repere t-pipo" style="left:84%;top:54%" data-repere="4"><span class="repere__icone"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 26h20l-3 14H17Z" fill="#C86B5A"/><rect x="12" y="23" width="24" height="5" rx="2" fill="#E08A76"/><path d="M24 23V12" stroke="#8EDDBE" stroke-width="2.4"/><circle cx="24" cy="9" r="4" fill="#FF8F7E"/><circle cx="24" cy="9" r="1.6" fill="#FFD46B"/><path d="M24 17c4-4 8-3 9-1-3 3-6 3-9 1Z" fill="#8EDDBE"/></svg></span><span class="repere__nom"><b>Le pot de fleurs</b>et le chemin secret de Pipo</span></div>
+    </div>
+    <div class="odyssee__creature" data-c3d="minotaure" data-c3d-mode="odyssee"><img src="assets/creatures/minotaure.svg" alt="" width="200" height="200" loading="lazy"></div>
+    <div class="odyssee__textes">
+      <p class="odyssee__t" data-fenetre="-1,0.27">Elles sont toutes petites…</p>
+      <p class="odyssee__t" data-fenetre="0.34,0.6">mais chacune est un <em>point de départ</em>.</p>
+      <div class="odyssee__t" data-fenetre="0.68,9"><p>Vers de grandes histoires.</p><a class="btn btn--lune odyssee__cta" href="boutique.html">Commencer ma collection</a></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="titre-etapes">
   <div class="wrap">
     <div class="titre-section">
-      <h2 id="titre-etapes" class="apparait">Commander, c’est tout simple</h2>
-      <p class="apparait" style="--d:.1s">Aucun paiement en ligne. Tu choisis, on confirme, tu paies à la livraison.</p>
+      <h2 id="titre-etapes" data-split>Commander, c’est tout simple</h2>
+      <p class="apparait" style="--d:.15s">Aucun paiement en ligne. Tu choisis, on confirme, tu paies à la livraison.</p>
     </div>
     <ol class="etapes">
       <li class="apparait"><h3>Choisis tes créatures</h3><p>Ajoute une ou plusieurs créatures à ton panier, depuis la boutique ou le jardin.</p></li>
-      <li class="apparait" style="--d:.1s"><h3>Remplis le formulaire</h3><p>Tes créatures y sont déjà. Ajuste les quantités : le total se met à jour tout seul.</p></li>
-      <li class="apparait" style="--d:.2s"><h3>Paie à la livraison</h3><p>On te contacte pour confirmer, puis tu paies à la réception de ta commande.</p></li>
+      <li class="apparait" style="--d:.25s"><h3>Remplis le formulaire</h3><p>Tes créatures y sont déjà. Ajuste les quantités : le total se met à jour tout seul.</p></li>
+      <li class="apparait" style="--d:.5s"><h3>Paie à la livraison</h3><p>On te contacte pour confirmer, puis tu paies à la réception de ta commande.</p></li>
     </ol>
-  </div>
-</section>
-
-<section class="section manifeste" aria-label="Notre philosophie">
-  <div class="wrap">
-    <div class="manifeste__rang" aria-hidden="true"><img src="assets/creatures/minotaure.svg" alt="" width="96" height="96" loading="lazy"><img src="assets/creatures/gribou.svg" alt="" width="96" height="96" loading="lazy"><img src="assets/creatures/bloop.svg" alt="" width="96" height="96" loading="lazy"><img src="assets/creatures/noki.svg" alt="" width="96" height="96" loading="lazy"><img src="assets/creatures/pipo.svg" alt="" width="96" height="96" loading="lazy"></div>
-    <p class="apparait">Nos créatures sont petites, mais chacune est le <span>point de départ</span> d’une grande aventure.</p>
-    <div style="margin-top:2.5rem" class="apparait"><a class="btn btn--plein" href="boutique.html">Commencer ma collection</a></div>
   </div>
 </section>
 </main>
 <footer class="footer">
   <div class="wrap">
-    <p class="footer__grand" aria-hidden="true">Minitaure<span>.</span></p>
+    <div class="appel apparait">
+      <p data-split>Ton aventure commence par une toute petite créature.</p>
+      <a class="btn btn--lune" href="boutique.html" data-aimant>Voir la boutique</a>
+    </div>
+    <p class="footer__grand" aria-hidden="true">Minitaure</p>
     <div class="footer__grille">
       <div style="max-width:32ch">
         <h2>Petites créatures, grandes histoires</h2>
@@ -196,7 +258,10 @@
         </ul>
       </div>
     </div>
-    <div class="footer__bas"><span>© <span id="annee">2026</span> Minitaure · Fait au Québec</span><span>Sous la lune, entre deux pots de fleurs.</span></div>
+    <div class="footer__bas">
+      <span>© <span id="annee">2026</span> Minitaure · Fait au Québec</span>
+      <button class="son" type="button" data-son aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="onde" d="M15.5 9a4 4 0 0 1 0 6M18.3 6.5a7.5 7.5 0 0 1 0 11"/></svg><span>Son du jardin : coupé</span></button>
+    </div>
   </div>
 </footer>
 
@@ -210,7 +275,7 @@
     <div class="tiroir__liste" id="tiroir-liste"></div>
     <div class="tiroir__pied">
       <div class="total"><span>Total</span><output id="tiroir-total">0 $</output></div>
-      <a class="btn btn--plein" id="tiroir-commander" href="commande.html">Passer la commande</a>
+      <a class="btn btn--lune" id="tiroir-commander" href="commande.html">Passer la commande</a>
     </div>
   </aside>
 </div>
