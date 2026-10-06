@@ -1,16 +1,17 @@
-/* Minitaure 3D — pièces partagées : lumières, matières, créatures en fourrure, étincelles.
-   La fourrure utilise la technique des « coquilles » : la même sphère est dessinée en
+/* Minitaure 3D — pièces partagées : lumières, matières, créatures-animaux en fourrure, particules.
+   La fourrure utilise la technique des « coquilles » : la même forme est dessinée en
    N couches de plus en plus grandes, et chaque couche ne garde que la pointe des poils. */
 import * as THREE from "../vendor/three.module.js";
 
 export { THREE };
 
+/* Couleurs vives de chaque créature (racine → pointe des poils, ventre plus clair, pattes, détails). */
 export const PALETTE = {
-  minotaure: { racine: "#3F2A9E", base: "#8C6CF0", pointe: "#D3C6FF" },
-  gribou: { racine: "#B23F2F", base: "#FF8F7E", pointe: "#FFD3C8" },
-  bloop: { racine: "#3A76C2", base: "#8FC8FF", pointe: "#E0F1FF" },
-  noki: { racine: "#C4851C", base: "#FFD46B", pointe: "#FFF4CC" },
-  pipo: { racine: "#2B8D6D", base: "#8EDDBE", pointe: "#DAF8EC" },
+  minotaure: { racine: "#3A1C94", base: "#8A5CFF", pointe: "#B9A0FF", ventre: "#CDB8FF", patte: "#3B2463", oreille: "#FF9FC8", oreille2: "#7448E6", corne: "#FFF0D2", touffe: "#5A33D6" },
+  gribou: { racine: "#A92A16", base: "#FF6A45", pointe: "#FF9E7E", ventre: "#FFD2BC", patte: "#7A2112", oreille: "#FFE6D8", touffe: "#FFF4EA" },
+  bloop: { racine: "#0B66B0", base: "#33B4FF", pointe: "#80D3FF", ventre: "#B5E6FF", patte: "#1673B6", oreille: "#C2EAFF", oreille2: "#2399E6" },
+  noki: { racine: "#C27A00", base: "#FFC21F", pointe: "#FFDD6E", ventre: "#FFEBA6", patte: "#FF8A1F", plume: "#FF9F1C" },
+  pipo: { racine: "#0F8656", base: "#35DA93", pointe: "#7EEDB9", ventre: "#B6F5D5", patte: "#26B377", oreille: "#FFB0C6", oreille2: "#2ECB86", touffe: "#FFFFFF" },
 };
 
 export function webgl2Dispo() {
@@ -29,23 +30,25 @@ export function webgl2Dispo() {
 export function lumieres() {
   return {
     uTime: { value: 0 },
-    uMoonDir: { value: new THREE.Vector3(0.45, 0.8, -0.35).normalize() },
-    uMoonColor: { value: new THREE.Color("#4C5596") },
-    uAmbient: { value: new THREE.Color("#0B0B1E") },
+    uSunDir: { value: new THREE.Vector3(-0.5, 0.6, 0.62).normalize() },
+    uSunColor: { value: new THREE.Color("#FFD2A1") },
+    uSky: { value: new THREE.Color("#7F78D0") },
+    uGround: { value: new THREE.Color("#3D6B2E") },
     uLanternPos: { value: new THREE.Vector3(0, 0.5, 0) },
-    uLanternColor: { value: new THREE.Color("#FFC27A") },
+    uLanternColor: { value: new THREE.Color("#FFE2A0") },
     uLantern: { value: 0 },
-    uRim: { value: new THREE.Color("#2C2668") },
-    uFogColor: { value: new THREE.Color("#0E0C2A") },
+    uRim: { value: new THREE.Color("#FF9E7A") },
+    uFogColor: { value: new THREE.Color("#E9A08E") },
     uFogDensity: { value: 0 },
   };
 }
 
 const LUMIERE = /* glsl */ `
 uniform float uTime;
-uniform vec3 uMoonDir;
-uniform vec3 uMoonColor;
-uniform vec3 uAmbient;
+uniform vec3 uSunDir;
+uniform vec3 uSunColor;
+uniform vec3 uSky;
+uniform vec3 uGround;
 uniform vec3 uLanternPos;
 uniform vec3 uLanternColor;
 uniform float uLantern;
@@ -55,15 +58,16 @@ uniform float uFogDensity;
 
 vec3 eclairer(vec3 base, vec3 N, vec3 W, float wrap) {
   vec3 V = normalize(cameraPosition - W);
-  float m = clamp((dot(N, uMoonDir) + wrap) / (1.0 + wrap), 0.0, 1.0);
-  vec3 col = base * (uAmbient + uMoonColor * m);
+  float s = clamp((dot(N, uSunDir) + wrap) / (1.0 + wrap), 0.0, 1.0);
+  vec3 ambiance = mix(uGround, uSky, N.y * 0.5 + 0.5);
+  vec3 col = base * (ambiance + uSunColor * s);
   vec3 Ld = uLanternPos - W;
   float d2 = dot(Ld, Ld);
   vec3 L = Ld * inversesqrt(max(d2, 1e-4));
   float l = clamp((dot(N, L) + wrap) / (1.0 + wrap), 0.0, 1.0);
   col += base * uLanternColor * (l * uLantern / (1.0 + d2 * 1.8));
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
-  col += uRim * rim * (0.55 + 0.45 * m);
+  col += (base * 0.9 + 0.12) * uRim * rim;
   return col;
 }
 
@@ -78,11 +82,6 @@ float hash13(vec3 p3) {
   p3 = fract(p3 * 0.1031);
   p3 += dot(p3, p3.zyx + 31.32);
   return fract((p3.x + p3.y) * p3.z);
-}
-vec3 hash33(vec3 p3) {
-  p3 = fract(p3 * vec3(0.1031, 0.1030, 0.0973));
-  p3 += dot(p3, p3.yxz + 33.33);
-  return fract((p3.xxy + p3.yxx) * p3.zyx);
 }
 float hash12(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -174,41 +173,49 @@ uniform float uStrands;
 uniform vec3 uRoot;
 uniform vec3 uBase;
 uniform vec3 uTip;
-uniform float uDensity;
 uniform float uGlow;
 uniform float uSeed;
+uniform vec3 uZoneDir;
+uniform vec3 uZoneCol;
+uniform vec3 uZone;
 varying vec3 vN;
 varying vec3 vW;
 varying vec3 vO;
 varying float vS;
 varying float vDepth;
 void main() {
+  vec3 dir = normalize(vO);
   float a = 1.0;
   float h = 0.5;
   if (vS > 0.001) {
-    vec3 dir = normalize(vO);
     // léger gauchissement pour casser la régularité des rangées de poils
     float esp = sqrt(12.566 / uStrands);
-    dir = normalize(dir + esp * (0.7 * sin(dir.yzx * 41.0 + uSeed) + 0.45 * sin(dir.zxy * 97.0 - uSeed * 1.7)));
+    vec3 d2 = normalize(dir + esp * (0.7 * sin(dir.yzx * 41.0 + uSeed) + 0.45 * sin(dir.zxy * 97.0 - uSeed * 1.7)));
     // pôles de la spirale sur les côtés (vus de profil seulement)
-    vec2 poil = poilProche(vec3(dir.y, dir.z, dir.x), uStrands);
+    vec2 poil = poilProche(vec3(d2.y, d2.z, d2.x), uStrands);
     h = hash13(vec3(poil.x * 0.618, uSeed, 3.7));
     float h2 = hash13(vec3(uSeed, poil.x * 0.371, 9.1));
-    float t = vS / (0.68 + 0.32 * h);
+    float t = vS / (0.7 + 0.3 * h);
     if (t > 1.0) discard;
-    float epais = mix(0.62, 0.18, t) * (0.8 + 0.4 * h2);
-    float d = poil.y / esp;
-    a = 1.0 - smoothstep(epais * 0.5, epais, d);
+    float epais = mix(0.72, 0.26, t) * (0.82 + 0.36 * h2);
+    a = 1.0 - smoothstep(epais * 0.5, epais, poil.y / esp);
     if (a < 0.02) discard;
   }
   vec3 N = normalize(vN);
-  vec3 base = mix(uRoot, uBase, smoothstep(0.0, 0.55, vS));
-  base = mix(base, uTip, smoothstep(0.5, 1.0, vS) * 0.75);
-  base *= 0.9 + 0.2 * h;
-  vec3 col = eclairer(base, N, vW, 0.65);
+  // zone plus claire : ventre des animaux, bout de la queue du renard…
+  float zone = smoothstep(uZone.x, uZone.y, dot(dir, uZoneDir)) * uZone.z;
+  vec3 root = mix(uRoot, uZoneCol * 0.8, zone * 0.7);
+  vec3 base = mix(uBase, uZoneCol, zone);
+  vec3 tip = mix(uTip, mix(uZoneCol, vec3(1.0), 0.4), zone);
+  vec3 c = mix(root, base, smoothstep(0.0, 0.55, vS));
+  c = mix(c, tip, smoothstep(0.5, 1.0, vS) * 0.7);
+  c *= 0.92 + 0.16 * h;
+  vec3 col = eclairer(c, N, vW, 0.7);
   col *= mix(0.6, 1.0, vS);
-  vec3 V = normalize(cameraPosition - vW);
-  col += base * uGlow * (0.16 + 0.55 * pow(1.0 - abs(dot(N, V)), 2.0));
+  // couleurs bien vives
+  float lumi = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  col = max(mix(vec3(lumi), col, 1.2), 0.0);
+  col += c * uGlow * 0.18;
   col = mix(uFogColor, col, brume(vDepth));
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -217,16 +224,52 @@ void main() {
 }
 `;
 
-/* ---------------- Matière « solide » (accessoires, décor) ---------------- */
+function pelage(geo, P, L, q, glow, zone = {}) {
+  const g = new THREE.InstancedBufferGeometry();
+  g.index = geo.index;
+  g.setAttribute("position", geo.attributes.position);
+  g.setAttribute("normal", geo.attributes.normal);
+  const couches = new Float32Array(q.couches);
+  for (let i = 0; i < q.couches; i++) couches[i] = i / (q.couches - 1);
+  g.setAttribute("aShell", new THREE.InstancedBufferAttribute(couches, 1));
+  g.instanceCount = q.couches;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      ...L,
+      uRoot: { value: new THREE.Color(P.racine) },
+      uBase: { value: new THREE.Color(P.base) },
+      uTip: { value: new THREE.Color(P.pointe) },
+      uFur: { value: q.fourrure },
+      uStrands: { value: q.poils },
+      uGlow: glow,
+      uGravity: { value: new THREE.Vector3(0, -0.3, 0.0) },
+      uWobble: { value: 0.1 },
+      uSeed: { value: Math.random() * 10 },
+      uZoneDir: { value: new THREE.Vector3(...(zone.dir || [0, -0.35, 1])).normalize() },
+      uZoneCol: { value: new THREE.Color(zone.couleur || P.ventre || P.pointe) },
+      uZone: { value: new THREE.Vector3(zone.debut ?? 0.35, zone.fin ?? 0.85, zone.force ?? 0) },
+    },
+    vertexShader: FOURRURE_VS,
+    fragmentShader: FOURRURE_FS,
+    alphaToCoverage: true,
+  });
+  const m = new THREE.Mesh(g, mat);
+  m.frustumCulled = false;
+  return m;
+}
+
+/* ---------------- Matière « solide » (oreilles, pattes, décor) ---------------- */
 const SOLIDE_VS = /* glsl */ `
 varying vec3 vN;
 varying vec3 vW;
 varying vec3 vCol;
+varying vec3 vObj;
 varying float vDepth;
 varying float vId;
 void main() {
   vec4 p = vec4(position, 1.0);
   vec3 n = normal;
+  vObj = position;
   #ifdef USE_INSTANCING
     p = instanceMatrix * p;
     n = mat3(instanceMatrix) * n;
@@ -250,6 +293,7 @@ void main() {
 
 const SOLIDE_FS = /* glsl */ `
 ${LUMIERE}
+${HASH}
 uniform vec3 uColor;
 uniform float uEmissive;
 uniform float uGlow;
@@ -258,18 +302,28 @@ uniform float uWrap;
 varying vec3 vN;
 varying vec3 vW;
 varying vec3 vCol;
+varying vec3 vObj;
 varying float vDepth;
 varying float vId;
 void main() {
   vec3 N = normalize(vN);
   if (!gl_FrontFacing) N = -N;
   vec3 base = uColor * vCol;
+  #ifdef POIS
+    // pois blancs des champignons
+    vec3 o = normalize(vObj);
+    vec2 g = vec2(atan(o.z, o.x) * 1.9, o.y * 4.2);
+    vec2 f = fract(g) - 0.5;
+    float hp = hash12(floor(g) + vId * 7.0);
+    float tache = (1.0 - smoothstep(0.17, 0.24, length(f + (hp - 0.5) * 0.25))) * step(0.3, hp) * step(0.12, o.y);
+    base = mix(base, vec3(1.0, 0.97, 0.9), tache);
+  #endif
   vec3 col = eclairer(base, N, vW, uWrap);
   float pulse = 1.0;
   #ifdef PULSE
     pulse = 0.55 + 0.45 * sin(uTime * 1.4 + vId * 2.3);
   #endif
-  col += base * (uEmissive * pulse + uGlow * 0.3);
+  col += base * (uEmissive * pulse + uGlow * 0.15);
   float fa = brume(vDepth);
   col = mix(uFogColor, col, fa);
   float alpha = uOpacity;
@@ -286,6 +340,7 @@ export function solide(couleur, L, o = {}) {
   const defines = {};
   if (o.pulse) defines.PULSE = "";
   if (o.fondu) defines.FONDU = "";
+  if (o.pois) defines.POIS = "";
   const opacite = o.opacite ?? 1;
   const uniforms = {
     ...L,
@@ -307,12 +362,13 @@ export function solide(couleur, L, o = {}) {
   });
 }
 
-/* ---------------- Points lumineux (lucioles, étincelles, éclats) ---------------- */
+/* ---------------- Points (lucioles, étincelles, feuilles qui volent) ---------------- */
 const POINTS_VS = /* glsl */ `
 attribute vec3 aColor;
 attribute float aAlpha;
 attribute float aSize;
 attribute vec3 aSeed;
+attribute float aRot;
 uniform float uTime;
 uniform float uPx;
 uniform float uEchelle;
@@ -320,6 +376,7 @@ uniform float uFlotte;
 uniform float uEclat;
 varying vec3 vColor;
 varying float vA;
+varying float vRot;
 void main() {
   vec3 p = position;
   float b = 1.0;
@@ -334,6 +391,7 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   vA = aAlpha * b * uEclat;
   vColor = aColor;
+  vRot = aRot;
   gl_PointSize = aSize * uPx * uEchelle / max(-mv.z, 0.05) * (0.65 + 0.35 * b);
   gl_Position = projectionMatrix * mv;
 }
@@ -343,8 +401,20 @@ const POINTS_FS = /* glsl */ `
 uniform float uForme;
 varying vec3 vColor;
 varying float vA;
+varying float vRot;
 void main() {
   vec2 p = gl_PointCoord * 2.0 - 1.0;
+  if (uForme > 1.5) {
+    // petite feuille qui tournoie
+    float c = cos(vRot), s = sin(vRot);
+    p = mat2(c, -s, s, c) * p;
+    float d = length(vec2(p.x * 1.9, p.y - 0.18 * p.x * p.x));
+    float a = (1.0 - smoothstep(0.78, 0.94, d)) * vA;
+    if (a < 0.02) discard;
+    float nervure = (1.0 - smoothstep(0.0, 0.07, abs(p.x))) * 0.18;
+    gl_FragColor = vec4((vColor * (0.82 + 0.3 * (p.y * 0.5 + 0.5)) + nervure) * a, a);
+    return;
+  }
   float d = length(p);
   if (d > 1.0) discard;
   float halo = exp(-d * d * 5.0) * 0.55 + exp(-d * d * 38.0);
@@ -355,6 +425,7 @@ void main() {
 `;
 
 export function matierePoints(o = {}) {
+  const feuilles = (o.forme ?? 0) > 1.5;
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: o.temps || { value: 0 },
@@ -368,14 +439,14 @@ export function matierePoints(o = {}) {
     fragmentShader: POINTS_FS,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    blending: feuilles ? THREE.NormalBlending : THREE.AdditiveBlending,
     premultipliedAlpha: true,
   });
 }
 
 export function nuageDePoints(liste, mat) {
   const n = liste.length;
-  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), alpha = new Float32Array(n), taille = new Float32Array(n), seed = new Float32Array(n * 3);
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), alpha = new Float32Array(n), taille = new Float32Array(n), seed = new Float32Array(n * 3), rot = new Float32Array(n);
   const c = new THREE.Color();
   liste.forEach((p, i) => {
     pos.set(p.pos, i * 3);
@@ -384,6 +455,7 @@ export function nuageDePoints(liste, mat) {
     alpha[i] = p.alpha ?? 1;
     taille[i] = p.taille;
     seed.set(p.seed || [0, 0, 0], i * 3);
+    rot[i] = p.rot ?? 0;
   });
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -391,48 +463,56 @@ export function nuageDePoints(liste, mat) {
   g.setAttribute("aAlpha", new THREE.BufferAttribute(alpha, 1));
   g.setAttribute("aSize", new THREE.BufferAttribute(taille, 1));
   g.setAttribute("aSeed", new THREE.BufferAttribute(seed, 3));
+  g.setAttribute("aRot", new THREE.BufferAttribute(rot, 1));
   const pts = new THREE.Points(g, mat);
   pts.frustumCulled = false;
   return pts;
 }
 
-/* Étincelles : petit système de particules sur le processeur (pool circulaire). */
+/* Particules sur le processeur (pool circulaire) : étincelles qui montent ou feuilles qui retombent. */
 export class Etincelles {
-  constructor(n, temps) {
+  constructor(n, temps, o = {}) {
     this.n = n;
     this.i = 0;
+    this.feuilles = (o.forme ?? 1) > 1.5;
+    this.gravite = o.gravite ?? 0.15;
     this.vel = new Float32Array(n * 3);
     this.vie = new Float32Array(n);
     this.max = new Float32Array(n).fill(1);
     this.taille0 = new Float32Array(n);
-    this.mat = matierePoints({ temps, forme: 1 });
+    this.spin = new Float32Array(n);
+    this.mat = matierePoints({ temps, forme: o.forme ?? 1 });
     this.points = nuageDePoints(Array.from({ length: n }, () => ({ pos: [0, -99, 0], couleur: "#ffffff", alpha: 0, taille: 0 })), this.mat);
     const g = this.points.geometry;
     this.pos = g.attributes.position;
     this.alpha = g.attributes.aAlpha;
     this.taille = g.attributes.aSize;
     this.col = g.attributes.aColor;
-    [this.pos, this.alpha, this.taille, this.col].forEach((a) => a.setUsage(THREE.DynamicDrawUsage));
+    this.rot = g.attributes.aRot;
+    [this.pos, this.alpha, this.taille, this.col, this.rot].forEach((a) => a.setUsage(THREE.DynamicDrawUsage));
     this.actives = 0;
   }
-  emettre(origine, couleur, nombre = 24, vitesse = 1.2, taille = 0.07) {
-    const c = new THREE.Color(couleur), blanc = new THREE.Color("#fff");
+  emettre(origine, couleurs, nombre = 24, vitesse = 1.2, taille = 0.07) {
+    const palette = (Array.isArray(couleurs) ? couleurs : [couleurs]).map((x) => new THREE.Color(x));
+    const blanc = new THREE.Color("#fff");
     for (let k = 0; k < nombre; k++) {
       const i = this.i;
       this.i = (this.i + 1) % this.n;
       const th = Math.random() * Math.PI * 2, ph = Math.acos(Math.random() * 2 - 1);
       const v = vitesse * (0.4 + Math.random() * 0.8);
       this.vel[i * 3] = Math.sin(ph) * Math.cos(th) * v;
-      this.vel[i * 3 + 1] = Math.abs(Math.cos(ph)) * v * 0.9 + 0.3;
+      this.vel[i * 3 + 1] = Math.abs(Math.cos(ph)) * v * 0.9 + 0.3 * vitesse;
       this.vel[i * 3 + 2] = Math.sin(ph) * Math.sin(th) * v;
       this.pos.setXYZ(i, origine.x, origine.y, origine.z);
-      const m = Math.random() < 0.35 ? blanc : c;
+      const m = !this.feuilles && Math.random() < 0.35 ? blanc : palette[(Math.random() * palette.length) | 0];
       this.col.setXYZ(i, m.r, m.g, m.b);
-      this.max[i] = this.vie[i] = 0.9 + Math.random() * 0.9;
+      this.max[i] = this.vie[i] = (this.feuilles ? 1.4 : 0.9) + Math.random() * 0.9;
       this.taille0[i] = taille * (0.5 + Math.random());
+      this.rot.setX(i, Math.random() * 6.28);
+      this.spin[i] = (Math.random() - 0.5) * 9;
     }
     this.actives = this.n;
-    [this.col].forEach((a) => (a.needsUpdate = true));
+    this.col.needsUpdate = true;
   }
   maj(dt) {
     if (!this.actives) return;
@@ -443,15 +523,19 @@ export class Etincelles {
       const t = Math.max(this.vie[i] / this.max[i], 0);
       vivantes++;
       const j = i * 3;
-      this.vel[j] *= 0.97;
-      this.vel[j + 2] *= 0.97;
-      this.vel[j + 1] = this.vel[j + 1] * 0.97 + 0.15 * dt;
-      this.pos.setXYZ(i, this.pos.getX(i) + this.vel[j] * dt, this.pos.getY(i) + this.vel[j + 1] * dt, this.pos.getZ(i) + this.vel[j + 2] * dt);
+      const frein = this.feuilles ? 0.95 : 0.97;
+      this.vel[j] *= frein;
+      this.vel[j + 2] *= frein;
+      this.vel[j + 1] = this.vel[j + 1] * frein + this.gravite * dt;
+      // les feuilles se balancent en tombant
+      const balance = this.feuilles ? Math.sin(this.vie[i] * 5 + i) * 0.25 * dt : 0;
+      this.pos.setXYZ(i, this.pos.getX(i) + this.vel[j] * dt + balance, this.pos.getY(i) + this.vel[j + 1] * dt, this.pos.getZ(i) + this.vel[j + 2] * dt);
       this.alpha.setX(i, t > 0 ? Math.min(1, t * 1.6) : 0);
-      this.taille.setX(i, this.taille0[i] * (0.4 + 0.6 * t));
+      this.taille.setX(i, this.taille0[i] * (this.feuilles ? 0.7 + 0.3 * t : 0.4 + 0.6 * t));
+      this.rot.setX(i, this.rot.getX(i) + this.spin[i] * dt);
     }
     this.actives = vivantes;
-    this.pos.needsUpdate = this.alpha.needsUpdate = this.taille.needsUpdate = true;
+    this.pos.needsUpdate = this.alpha.needsUpdate = this.taille.needsUpdate = this.rot.needsUpdate = true;
   }
 }
 
@@ -473,6 +557,13 @@ function tubeEffile(points, r0, r1, seg = 28, rad = 10) {
   return geo;
 }
 
+const SPHERE = new THREE.SphereGeometry(1, 20, 14);
+function ellipsoide(sx, sy, sz, seg = 28) {
+  const g = new THREE.SphereGeometry(1, seg, Math.round(seg * 0.7));
+  g.scale(sx, sy, sz);
+  return g;
+}
+
 function goutte() {
   const pts = [];
   for (let i = 0; i <= 18; i++) {
@@ -491,16 +582,17 @@ void main() {
   vec2 p = vUv * 2.0 - 1.0;
   float d = length(p);
   if (d > 1.0) discard;
-  float bord = smoothstep(1.0, 0.75, d);
+  float bord = smoothstep(1.0, 0.78, d);
   float rides = 0.5 + 0.5 * sin(d * 26.0 - uTime * 2.2);
-  vec3 eau = mix(vec3(0.02, 0.06, 0.22), vec3(0.2, 0.45, 1.0), 0.25 + 0.25 * rides * (1.0 - d));
-  // reflet de lune : un rond lumineux et son croissant
-  vec2 c = p - vec2(0.18, -0.12);
-  float lune = smoothstep(0.32, 0.26, length(c)) - smoothstep(0.30, 0.24, length(c - vec2(0.09, 0.05))) * 0.85;
-  vec3 col = eau * (0.3 + min(uMoonColor, vec3(0.5)) * 0.9) + vec3(1.0, 0.95, 0.78) * max(lune, 0.0) * (0.35 + uGlow * 0.6);
+  vec3 eau = mix(vec3(0.02, 0.22, 0.45), vec3(0.25, 0.7, 1.0), 0.3 + 0.3 * rides * (1.0 - d));
+  vec3 col = eau * (0.5 + uSky * 0.8) ;
+  // reflet du ciel et de la lune
+  vec2 c = p - vec2(0.2, -0.15);
+  float lune = smoothstep(0.3, 0.24, length(c)) - smoothstep(0.28, 0.22, length(c - vec2(0.09, 0.05))) * 0.8;
+  col += vec3(1.0, 0.92, 0.75) * max(lune, 0.0) * 0.7;
   vec3 Ld = uLanternPos - vW;
-  col += uLanternColor * uLantern * 0.35 / (1.0 + dot(Ld, Ld) * 2.0);
-  gl_FragColor = vec4(col, bord * 0.75);
+  col += uLanternColor * uLantern * 0.3 / (1.0 + dot(Ld, Ld) * 2.0);
+  gl_FragColor = vec4(col, bord * 0.85);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
@@ -520,20 +612,44 @@ function flaque(L, glow) {
     })
   );
   m.rotation.x = -Math.PI / 2;
-  m.scale.set(0.62, 0.42, 1);
-  m.position.y = 0.006;
+  m.scale.set(0.66, 0.46, 1);
+  m.position.set(0.05, 0.006, 0.08);
   m.renderOrder = 3;
   return m;
 }
 
-/* ---------------- Créature ---------------- */
+/* Ombre douce sous la créature : elle « pose » au sol au lieu de flotter. */
+function ombre() {
+  const m = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 40),
+    new THREE.ShaderMaterial({
+      uniforms: { uForce: { value: 0.42 } },
+      vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+      fragmentShader: "uniform float uForce; varying vec2 vUv; void main(){ float d = length(vUv * 2.0 - 1.0); float a = (1.0 - smoothstep(0.1, 1.0, d)) * uForce; gl_FragColor = vec4(0.02, 0.06, 0.03, a); }",
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+    })
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = 0.004;
+  m.scale.set(0.5, 0.42, 1);
+  m.renderOrder = 2;
+  return m;
+}
+
+/* ---------------- Créature-animal ---------------- */
+// Un petit animal assis : un corps rond, une tête ronde par-dessus (sans visage), des oreilles,
+// une queue et des pattes. La tête se tourne et s'incline avec curiosité.
 let graine = 1;
 export class Creature {
   constructor(id, L, o = {}) {
-    const q = { couches: 28, densite: 64, poils: 14000, fourrure: 0.095, segW: 64, segH: 40, ...o };
+    const q = { couches: 28, poils: 14000, fourrure: 0.075, segW: 64, segH: 40, ...o };
     const P = PALETTE[id];
     this.id = id;
     this.L = L;
+    this.q = q;
     this.R = 0.42;
     this.graine = (graine++ * 1.618) % 10;
     this.glow = { value: o.glow ?? 0 };
@@ -543,8 +659,12 @@ export class Creature {
     this.corps = new THREE.Group();
     this.groupe.add(this.pivot);
     this.pivot.add(this.corps);
-    this.corps.position.y = this.R * 0.92;
-    // saut et ressort d'écrasement
+    this.hauteur = 0.3;
+    this.corps.position.y = this.hauteur;
+    this.tete = new THREE.Group();
+    this.tete.position.set(0, 0.36, 0.1);
+    this.corps.add(this.tete);
+    // saut, ressort d'écrasement, orientation, inclinaison de la tête
     this.y = 0;
     this.vy = 0;
     this.s = 0;
@@ -553,115 +673,222 @@ export class Creature {
     this.pitch = 0;
     this.cibleYaw = 0;
     this.ciblePitch = 0;
+    this.penche = 0;
+    this.ciblePenche = 0;
+    this.prochainPenche = 1 + Math.random() * 3;
+    this.oreilles = [];
+    this.queue = null;
+    this.ailes = [];
+    this.mats = [];
 
-    const sphere = new THREE.SphereGeometry(this.R, q.segW, q.segH);
-    const g = new THREE.InstancedBufferGeometry();
-    g.index = sphere.index;
-    g.setAttribute("position", sphere.attributes.position);
-    g.setAttribute("normal", sphere.attributes.normal);
-    const couches = new Float32Array(q.couches);
-    for (let i = 0; i < q.couches; i++) couches[i] = i / (q.couches - 1);
-    g.setAttribute("aShell", new THREE.InstancedBufferAttribute(couches, 1));
-    g.instanceCount = q.couches;
-    this.matFourrure = new THREE.ShaderMaterial({
-      uniforms: {
-        ...L,
-        uRoot: { value: new THREE.Color(P.racine) },
-        uBase: { value: new THREE.Color(P.base) },
-        uTip: { value: new THREE.Color(P.pointe) },
-        uFur: { value: q.fourrure },
-        uDensity: { value: q.densite },
-        uStrands: { value: q.poils },
-        uGlow: this.glow,
-        uGravity: { value: new THREE.Vector3(0, -0.16, 0.0) },
-        uWobble: { value: 0.12 },
-        uSeed: { value: this.graine },
-      },
-      vertexShader: FOURRURE_VS,
-      fragmentShader: FOURRURE_FS,
-      alphaToCoverage: true,
-    });
-    const fourrure = new THREE.Mesh(g, this.matFourrure);
-    fourrure.frustumCulled = false;
-    this.corps.add(fourrure);
+    // corps et tête en fourrure ; ventre plus clair
+    const corpsGeo = new THREE.SphereGeometry(1, q.segW, q.segH);
+    corpsGeo.scale(0.38, 0.33, 0.35);
+    const corps = pelage(corpsGeo, P, L, q, this.glow, { force: 0.6, debut: 0.55, fin: 0.95, dir: [0, -0.3, 1] });
+    this.mats.push(corps.material);
+    this.corps.add(corps);
+    const teteGeo = new THREE.SphereGeometry(0.27, Math.round(q.segW * 0.8), Math.round(q.segH * 0.8));
+    const qt = { ...q, poils: Math.round(q.poils * 0.6) };
+    const tete = pelage(teteGeo, P, L, qt, this.glow, { force: 0.35, debut: 0.7, fin: 1.0, dir: [0, -0.45, 1] });
+    this.mats.push(tete.material);
+    this.tete.add(tete);
 
-    const pied = solide(P.racine, L, { glow: this.glow, wrap: 0.8 });
-    const geoPied = new THREE.SphereGeometry(0.1, 16, 12);
-    [-1, 1].forEach((sx) => {
-      const m = new THREE.Mesh(geoPied, pied);
-      m.scale.set(1, 0.55, 1.25);
-      m.position.set(0.17 * sx, -0.35, 0.07);
-      this.corps.add(m);
-    });
-
+    this.ombre = ombre();
+    this.groupe.add(this.ombre);
     this.eclats = null;
-    this.accessoires(id, L);
+    this.anatomie(id, P, L);
   }
 
-  accessoires(id, L) {
-    const R = this.R, c = this.corps, glow = this.glow;
-    const vert = solide("#6FCB9F", L, { glow, wrap: 0.7, emissive: 0.05 });
-    const feuille = (x, y, z, rz, ry = 0, s = 1) => {
-      const m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), vert);
-      m.scale.set(0.085 * s, 0.022 * s, 0.045 * s);
-      m.position.set(x, y, z);
+  // morceau solide (oreille, patte…) ajouté à un parent
+  morceau(geo, mat, parent, pos, rot = [0, 0, 0]) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(...pos);
+    m.rotation.set(...rot);
+    parent.add(m);
+    return m;
+  }
+
+  // petit pivot (pour faire bouger oreilles, queue, ailes)
+  articulation(parent, pos, rot = [0, 0, 0]) {
+    const p = new THREE.Group();
+    p.position.set(...pos);
+    p.rotation.set(...rot);
+    p.userData.repos = p.rotation.clone();
+    parent.add(p);
+    return p;
+  }
+
+  // touffe de fourrure (queue en pompon, mèche…)
+  touffe(geo, couleurs, parent, pos, rot = [0, 0, 0], zone) {
+    const qq = { ...this.q, couches: Math.max(12, Math.round(this.q.couches * 0.6)), poils: Math.round(this.q.poils * 0.35), fourrure: this.q.fourrure * 0.9 };
+    const m = pelage(geo, couleurs, this.L, qq, this.glow, zone);
+    m.position.set(...pos);
+    m.rotation.set(...rot);
+    parent.add(m);
+    this.mats.push(m.material);
+    return m;
+  }
+
+  pattes(P, o = {}) {
+    const mat = solide(P.patte, this.L, { glow: this.glow, wrap: 0.8 });
+    const avant = o.avant || [0.07, 0.05, 0.08], arriere = o.arriere || [0.09, 0.05, 0.13];
+    [-1, 1].forEach((sx) => {
+      this.morceau(ellipsoide(...avant, 16), mat, this.corps, [0.11 * sx, -0.29, 0.27]);
+      this.morceau(ellipsoide(...arriere, 16), mat, this.corps, [0.22 * sx, -0.305, 0.05], [0, 0.35 * sx, 0]);
+    });
+  }
+
+  anatomie(id, P, L) {
+    const c = this.corps, h = this.tete, glow = this.glow;
+    const vert = solide("#3FBF5C", L, { glow, wrap: 0.7 });
+    const feuille = (parent, pos, rz, ry = 0, s = 1) => {
+      const m = new THREE.Mesh(SPHERE, vert);
+      m.scale.set(0.08 * s, 0.02 * s, 0.042 * s);
+      m.position.set(...pos);
       m.rotation.set(0, ry, rz);
-      c.add(m);
+      parent.add(m);
     };
+    const peau = (couleur) => solide(couleur, L, { glow, wrap: 0.85 });
+    const interieur = solide(P.oreille || P.ventre, L, { glow, wrap: 0.9 });
+
     if (id === "minotaure") {
-      const corne = solide("#F6E7C8", L, { glow, wrap: 0.6, emissive: 0.04 });
+      // petit veau : cornes, oreilles tombantes, mèche, queue à pompon, sabots
+      this.pattes(P);
+      const corne = solide(P.corne, L, { glow, wrap: 0.6 });
+      const oreille = peau(P.oreille2);
       [-1, 1].forEach((sx) => {
-        const geo = tubeEffile([[0.2 * sx, 0.3, 0.02], [0.31 * sx, 0.44, 0.03], [0.35 * sx, 0.57, 0.0], [0.29 * sx, 0.67, -0.04]], 0.048, 0.012);
-        c.add(new THREE.Mesh(geo, corne));
+        h.add(new THREE.Mesh(tubeEffile([[0.14 * sx, 0.16, 0.03], [0.25 * sx, 0.23, 0.03], [0.32 * sx, 0.33, 0.0], [0.3 * sx, 0.42, -0.05]], 0.042, 0.012), corne));
+        const pv = this.articulation(h, [0.22 * sx, 0.05, 0.0], [0, 0, -0.5 * sx]);
+        this.morceau(ellipsoide(0.12, 0.042, 0.07, 20), oreille, pv, [0.09 * sx, 0, 0]);
+        this.morceau(ellipsoide(0.08, 0.018, 0.046, 16), interieur, pv, [0.1 * sx, 0.012, 0.014]);
+        this.oreilles.push({ pv, axe: "z", sens: sx, amp: 0.35, t: Math.random() * 4, v: 0, x: 0 });
       });
-      feuille(0.03, R + 0.06, 0.06, 0.5, 0.4);
-      feuille(-0.06, R + 0.05, 0.02, -0.4, -0.5, 0.8);
+      this.touffe(ellipsoide(0.12, 0.06, 0.09, 24), { racine: P.racine, base: P.touffe, pointe: P.pointe }, h, [0, 0.22, 0.1], [0.4, 0, 0]);
+      feuille(h, [-0.1, 0.25, -0.04], -0.5, -0.4, 0.8);
+      const pq = this.articulation(c, [0, -0.04, -0.33]);
+      pq.add(new THREE.Mesh(tubeEffile([[0, 0, 0], [0.02, -0.05, -0.11], [0.06, -0.14, -0.17], [0.08, -0.22, -0.19]], 0.024, 0.017, 20, 8), peau(P.oreille2)));
+      this.touffe(new THREE.SphereGeometry(0.06, 20, 14), { racine: P.racine, base: P.touffe, pointe: P.pointe }, pq, [0.08, -0.25, -0.19]);
+      this.queue = { pv: pq, axe: "y", amp: 0.35, vitesse: 2.6 };
     } else if (id === "gribou") {
-      const tige = solide("#5FAF7F", L, { glow, wrap: 0.6, emissive: 0.04 });
-      const geo = tubeEffile([[0, 0.36, 0], [0.01, 0.5, 0.0], [0.05, 0.62, 0.01], [0.12, 0.67, 0.02], [0.17, 0.63, 0.02], [0.15, 0.58, 0.02], [0.11, 0.6, 0.02]], 0.02, 0.009, 40);
-      c.add(new THREE.Mesh(geo, tige));
-      feuille(-0.07, 0.5, 0.0, -0.65, 0.2);
+      // petit renard : oreilles pointues au bout sombre, grosse queue touffue au bout crème
+      this.pattes(P);
+      const oreille = peau(P.base);
+      const pointeO = solide("#5E1A0E", L, { glow, wrap: 0.8 });
+      [-1, 1].forEach((sx) => {
+        const pv = this.articulation(h, [0.14 * sx, 0.19, -0.01], [-0.08, 0, -0.3 * sx]);
+        const cone = new THREE.ConeGeometry(0.08, 0.22, 18);
+        cone.translate(0, 0.11, 0);
+        this.morceau(cone, oreille, pv, [0, 0, 0]);
+        const coneIn = new THREE.ConeGeometry(0.048, 0.15, 14);
+        coneIn.translate(0, 0.075, 0);
+        this.morceau(coneIn, interieur, pv, [0, 0.015, 0.033]);
+        const bout = new THREE.ConeGeometry(0.028, 0.055, 12);
+        bout.translate(0, 0.195, 0);
+        this.morceau(bout, pointeO, pv, [0, 0.001, 0]);
+        this.oreilles.push({ pv, axe: "z", sens: sx, amp: 0.25, t: Math.random() * 4, v: 0, x: 0 });
+      });
+      const pq = this.articulation(c, [0, -0.15, -0.29], [-0.5, 0, 0]);
+      this.touffe(ellipsoide(0.15, 0.33, 0.15, 32), { racine: P.racine, base: P.base, pointe: P.pointe }, pq, [0, 0.26, -0.04], [0, 0, 0], { dir: [0, 1, 0], couleur: P.touffe, debut: 0.45, fin: 0.85, force: 1 });
+      this.queue = { pv: pq, axe: "z", amp: 0.28, vitesse: 2.2 };
+      const tige = solide("#3FA15F", L, { glow, wrap: 0.6 });
+      h.add(new THREE.Mesh(tubeEffile([[0, 0.24, 0.02], [0.01, 0.33, 0.02], [0.05, 0.41, 0.03], [0.11, 0.44, 0.04], [0.15, 0.41, 0.04], [0.13, 0.37, 0.04], [0.09, 0.38, 0.04]], 0.018, 0.008, 40), tige));
+      feuille(h, [-0.06, 0.31, 0.02], -0.65, 0.2, 0.9);
     } else if (id === "bloop") {
-      const eau = solide("#A9D8FF", L, { glow, wrap: 1, emissive: 0.5, opacite: 0.82 });
+      // petite loutre : oreilles rondes, queue plate, pattes palmées, goutte de rosée
+      this.pattes(P, { arriere: [0.11, 0.042, 0.13] });
+      const oreille = peau(P.oreille2);
+      [-1, 1].forEach((sx) => {
+        const pv = this.articulation(h, [0.19 * sx, 0.15, 0.0], [0, 0, -0.35 * sx]);
+        this.morceau(ellipsoide(0.062, 0.054, 0.04, 18), oreille, pv, [0, 0.02, 0]);
+        this.morceau(ellipsoide(0.036, 0.03, 0.018, 14), interieur, pv, [0, 0.022, 0.026]);
+        this.oreilles.push({ pv, axe: "z", sens: sx, amp: 0.3, t: Math.random() * 4, v: 0, x: 0 });
+      });
+      const pq = this.articulation(c, [0, -0.25, -0.31], [0.3, 0, 0]);
+      this.morceau(ellipsoide(0.11, 0.033, 0.19, 24), peau(P.oreille2), pq, [0, 0, -0.11]);
+      this.queue = { pv: pq, axe: "y", amp: 0.4, vitesse: 1.8 };
+      const eau = solide("#9FDBFF", L, { glow, wrap: 1, emissive: 0.35, opacite: 0.85 });
       const m = new THREE.Mesh(goutte(), eau);
-      m.position.set(0, R + 0.02, 0.03);
-      c.add(m);
+      m.position.set(0, 0.26, 0.03);
+      h.add(m);
       this.flaque = flaque(L, glow);
       this.groupe.add(this.flaque);
+      // deux nénuphars sur la flaque
+      const nenuphar = solide("#3DBE6A", L, { glow, wrap: 0.6, double: true });
+      [[0.42, 0.18, 0.3], [-0.38, 0.28, -2.1]].forEach(([x, z, r]) => {
+        const g = new THREE.CircleGeometry(0.075, 20, 0.4, Math.PI * 2 - 0.5);
+        g.rotateX(-Math.PI / 2);
+        const n = new THREE.Mesh(g, nenuphar);
+        n.position.set(x, 0.01, z);
+        n.rotation.y = r;
+        this.groupe.add(n);
+      });
     } else if (id === "noki") {
+      // petite chouette : ailes, aigrette, plumes de queue, pattes orange, scintillements
+      this.pattes(P, { avant: [0.03, 0.024, 0.065], arriere: [0.065, 0.028, 0.09] });
+      const plume = peau(P.plume);
+      [-1, 1].forEach((sx) => {
+        const pv = this.articulation(c, [0.35 * sx, 0.04, -0.02], [0, 0, 0.18 * sx]);
+        this.morceau(ellipsoide(0.055, 0.17, 0.14, 24), plume, pv, [0.03 * sx, -0.06, 0]);
+        this.ailes.push({ pv, sens: sx });
+      });
+      [-0.42, 0, 0.42].forEach((rz, i) => {
+        const pv = this.articulation(h, [rz * 0.07, 0.23, 0.03], [-0.25, 0, rz]);
+        this.morceau(ellipsoide(0.03, 0.1, 0.02, 14), plume, pv, [0, 0.07, 0]);
+        if (i === 1) this.oreilles.push({ pv, axe: "x", sens: 1, amp: 0.25, t: Math.random() * 4, v: 0, x: 0 });
+      });
+      // deux petites aigrettes de chouette
+      [-1, 1].forEach((sx) => {
+        const pv = this.articulation(h, [0.17 * sx, 0.18, 0.0], [0, 0, -0.45 * sx]);
+        const cone = new THREE.ConeGeometry(0.05, 0.13, 14);
+        cone.translate(0, 0.065, 0);
+        this.morceau(cone, plume, pv, [0, 0, 0]);
+        this.oreilles.push({ pv, axe: "z", sens: sx, amp: 0.2, t: Math.random() * 4, v: 0, x: 0 });
+      });
+      [-0.45, 0, 0.45].forEach((ry) => {
+        const pv = this.articulation(c, [ry * 0.09, -0.17, -0.31], [0.5, ry, 0]);
+        this.morceau(ellipsoide(0.038, 0.02, 0.12, 14), plume, pv, [0, 0, -0.09]);
+      });
       this.eclats = nuageDePoints(
         [
-          { pos: [0, R + 0.2, 0], couleur: "#FFF6D8", taille: 0.34 },
-          { pos: [0.5, 0.2, 0], couleur: "#FFFFFF", taille: 0.2 },
-          { pos: [-0.5, 0.0, 0], couleur: "#FFF2C0", taille: 0.16 },
-          { pos: [0.2, -0.1, 0.5], couleur: "#FFFFFF", taille: 0.12 },
+          { pos: [0.5, 0.2, 0], couleur: "#FFFFFF", taille: 0.16 },
+          { pos: [-0.5, 0.0, 0], couleur: "#FFF2C0", taille: 0.12 },
+          { pos: [0.2, -0.1, 0.5], couleur: "#FFFFFF", taille: 0.1 },
         ],
         matierePoints({ temps: L.uTime, forme: 1 })
       );
       c.add(this.eclats);
     } else if (id === "pipo") {
-      const tige = solide("#4FB18D", L, { glow, wrap: 0.6 });
-      c.add(new THREE.Mesh(tubeEffile([[0, 0.36, 0], [0.015, 0.5, 0], [0, 0.6, 0]], 0.018, 0.012, 16), tige));
-      feuille(0.06, 0.5, 0.0, 0.6, 0.3);
-      const petale = solide("#FF8F7E", L, { glow, wrap: 0.8, emissive: 0.08 });
-      const coeur = solide("#FFD46B", L, { glow, wrap: 0.8, emissive: 0.2 });
+      // petit lapin : grandes oreilles (dont une tombante), queue en pompon, grands pieds, fleur
+      this.pattes(P, { arriere: [0.09, 0.045, 0.18] });
+      const oreille = peau(P.oreille2);
+      [[-1, 0.12], [1, -1.05]].forEach(([sx, rz]) => {
+        const pv = this.articulation(h, [0.09 * sx, 0.2, -0.02], [-0.12, 0, rz]);
+        this.morceau(ellipsoide(0.064, 0.23, 0.042, 24), oreille, pv, [0, 0.21, 0]);
+        this.morceau(ellipsoide(0.04, 0.17, 0.018, 18), interieur, pv, [0, 0.21, 0.03]);
+        this.oreilles.push({ pv, axe: "z", sens: sx, amp: sx > 0 ? 0.2 : 0.3, t: Math.random() * 4, v: 0, x: 0 });
+      });
+      this.touffe(new THREE.SphereGeometry(0.085, 22, 16), { racine: "#DDE8E2", base: "#FFFFFF", pointe: "#FFFFFF" }, c, [0, -0.11, -0.35]);
+      const tige = solide("#2FA36F", L, { glow, wrap: 0.6 });
+      h.add(new THREE.Mesh(tubeEffile([[-0.12, 0.18, 0.12], [-0.14, 0.25, 0.13], [-0.15, 0.3, 0.13]], 0.012, 0.009, 12), tige));
+      const petale = solide("#FF4F9A", L, { glow, wrap: 0.8, emissive: 0.05 });
+      const coeur = solide("#FFC21F", L, { glow, wrap: 0.8, emissive: 0.12 });
       const fleur = new THREE.Group();
-      fleur.position.set(0, 0.62, 0);
-      fleur.rotation.x = 0.35;
-      const geo = new THREE.SphereGeometry(1, 16, 10);
+      fleur.position.set(-0.15, 0.32, 0.13);
+      fleur.rotation.set(0.55, 0, 0.3);
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2;
-        const m = new THREE.Mesh(geo, petale);
-        m.scale.set(0.055, 0.02, 0.036);
-        m.position.set(Math.cos(a) * 0.05, 0, Math.sin(a) * 0.05);
+        const m = new THREE.Mesh(SPHERE, petale);
+        m.scale.set(0.042, 0.015, 0.028);
+        m.position.set(Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04);
         m.rotation.y = -a;
         m.rotation.z = 0.25;
         fleur.add(m);
       }
-      const centre = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 12), coeur);
-      centre.position.y = 0.012;
+      const centre = new THREE.Mesh(SPHERE, coeur);
+      centre.scale.setScalar(0.022);
+      centre.position.y = 0.01;
       fleur.add(centre);
-      c.add(fleur);
+      h.add(fleur);
       this.fleur = fleur;
     }
   }
@@ -687,25 +914,67 @@ export class Creature {
     const souffle = Math.sin(t * 2.1 + this.graine) * 0.018;
     const sy = 1 + this.s * 0.22 + souffle, sxz = 1 - this.s * 0.11 - souffle * 0.5;
     this.corps.scale.set(sxz, sy, sxz);
-    this.corps.position.y = this.R * 0.92 * sy + this.y;
-    this.matFourrure.uniforms.uGravity.value.y = -0.16 - this.vy * 0.1;
-    this.matFourrure.uniforms.uWobble.value = 0.1 + Math.min(Math.abs(this.sv) * 0.04, 0.4);
+    this.corps.position.y = this.hauteur * sy + this.y;
+    const grav = -0.3 - this.vy * 0.1, remous = 0.08 + Math.min(Math.abs(this.sv) * 0.04, 0.4);
+    this.mats.forEach((m) => {
+      m.uniforms.uGravity.value.y = grav;
+      m.uniforms.uWobble.value = remous;
+    });
+    // l'ombre rétrécit quand la créature saute
+    const o = Math.max(0.35, 1 - this.y * 2.2);
+    this.ombre.scale.set(0.46 * o, 0.4 * o, 1);
+    this.ombre.material.uniforms.uForce.value = 0.42 * o;
     this.yaw += (this.cibleYaw - this.yaw) * Math.min(1, dt * 5);
     this.pitch += (this.ciblePitch - this.pitch) * Math.min(1, dt * 5);
-    this.pivot.rotation.set(this.pitch, this.yaw, 0);
+    this.pivot.rotation.set(this.pitch * 0.5, this.yaw * 0.6, 0);
+    // la tête suit davantage le regard et s'incline par curiosité, comme un chiot
+    this.prochainPenche -= dt;
+    if (this.prochainPenche < 0) {
+      this.ciblePenche = Math.random() < 0.45 ? 0 : (Math.random() < 0.5 ? -1 : 1) * (0.18 + Math.random() * 0.14);
+      this.prochainPenche = 2 + Math.random() * 4;
+    }
+    this.penche += (this.ciblePenche - this.penche) * Math.min(1, dt * 4);
+    this.tete.rotation.set(this.pitch * 0.6 - this.s * 0.3, this.yaw * 0.5, this.penche);
     this.glow.value += (this.cibleGlow - this.glow.value) * Math.min(1, dt * 2.5);
+
+    // oreilles qui frémissent de temps en temps
+    for (const or of this.oreilles) {
+      or.t -= dt;
+      if (or.t < 0) {
+        or.v += (Math.random() < 0.5 ? -1 : 1) * 9 * or.amp;
+        or.t = 1.5 + Math.random() * 4;
+      }
+      or.v += (-90 * or.x - 7 * or.v) * dt;
+      or.x += or.v * dt;
+      const r = or.pv.userData.repos;
+      if (or.axe === "z") or.pv.rotation.z = r.z + or.x * or.sens;
+      else or.pv.rotation.x = r.x + or.x;
+    }
+    // la queue remue
+    if (this.queue) {
+      const q = this.queue, r = q.pv.userData.repos;
+      const agite = Math.sin(t * q.vitesse + this.graine) * q.amp * (0.4 + Math.min(1, Math.abs(this.sv) * 0.3));
+      if (q.axe === "y") q.pv.rotation.y = r.y + agite;
+      else q.pv.rotation.z = r.z + agite;
+    }
+    // les ailes battent pendant les sauts
+    for (const a of this.ailes) {
+      const r = a.pv.userData.repos;
+      const bat = this.y > 0.005 ? Math.sin(t * 28) * 0.55 : Math.sin(t * 1.6 + this.graine) * 0.05;
+      a.pv.rotation.z = r.z + bat * a.sens;
+    }
     if (this.eclats) {
       const p = this.eclats.geometry.attributes.position;
-      p.setXYZ(1, Math.cos(t * 1.1) * 0.55, 0.15 + Math.sin(t * 1.7) * 0.1, Math.sin(t * 1.1) * 0.55);
-      p.setXYZ(2, Math.cos(t * 0.8 + 2.4) * 0.6, -0.05 + Math.sin(t * 1.3) * 0.12, Math.sin(t * 0.8 + 2.4) * 0.6);
-      p.setXYZ(3, Math.cos(-t * 1.4 + 4) * 0.5, 0.3 + Math.sin(t * 2) * 0.08, Math.sin(-t * 1.4 + 4) * 0.5);
+      p.setXYZ(0, Math.cos(t * 1.1) * 0.55, 0.3 + Math.sin(t * 1.7) * 0.1, Math.sin(t * 1.1) * 0.55);
+      p.setXYZ(1, Math.cos(t * 0.8 + 2.4) * 0.58, 0.1 + Math.sin(t * 1.3) * 0.12, Math.sin(t * 0.8 + 2.4) * 0.58);
+      p.setXYZ(2, Math.cos(-t * 1.4 + 4) * 0.5, 0.45 + Math.sin(t * 2) * 0.08, Math.sin(-t * 1.4 + 4) * 0.5);
       p.needsUpdate = true;
     }
     if (this.fleur) this.fleur.rotation.y = Math.sin(t * 0.9 + this.graine) * 0.35;
   }
 
-  // centre du corps, en coordonnées monde
+  // centre de la créature (entre le corps et la tête), en coordonnées monde
   centre(v) {
-    return this.corps.getWorldPosition(v);
+    return this.corps.localToWorld(v.set(0, 0.15, 0.04));
   }
 }

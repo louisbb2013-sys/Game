@@ -39,27 +39,30 @@ function demarrer() {
     const mode = el.dataset.c3dMode || "carte";
     const scene = new THREE.Scene();
     const L = lumieres();
-    L.uMoonDir.value.set(-0.45, 0.75, 0.6).normalize();
-    L.uMoonColor.value.set("#C9C6F2");
-    L.uAmbient.value.set("#34326A");
-    L.uLanternPos.value.set(1.0, 1.25, 1.5);
-    L.uLanternColor.value.set("#FFD9B0");
-    L.uLantern.value = mode === "odyssee" ? 7 : 6;
-    L.uRim.value.set("#7A6AE0");
+    // lumière de fin d'après-midi : soleil chaud, ciel bleu-violet, rebond vert de l'herbe
+    L.uSunDir.value.set(-0.5, 0.7, 0.55).normalize();
+    L.uSunColor.value.set("#FFE7C7").multiplyScalar(0.85);
+    L.uSky.value.set("#9AA6F0").multiplyScalar(0.42);
+    L.uGround.value.set("#7C8F6A").multiplyScalar(0.35);
+    L.uLanternPos.value.set(1.1, 1.3, 1.6);
+    L.uLanternColor.value.set("#FFF1DC");
+    L.uLantern.value = mode === "odyssee" ? 2.2 : 1.8;
+    L.uRim.value.set("#FFC2A6").multiplyScalar(0.55);
     const c = new Creature(id, L, {
       couches: tactile ? 20 : mode === "odyssee" ? 34 : 30,
       poils: mode === "odyssee" ? 26000 : 16000,
       segW: tactile ? 44 : 64,
       segH: tactile ? 30 : 40,
-      glow: 0.42,
+      glow: 0.1,
     });
     scene.add(c.groupe);
     const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 30);
     camera.position.set(0, 0.64, 3.45);
     camera.lookAt(0, 0.56, 0);
     const etincelles = new Etincelles(90, L.uTime);
-    scene.add(etincelles.points);
-    const v = { el, id, mode, scene, camera, L, c, etincelles, visible: false, apparu: false, pop: reduit ? 1 : 0, mats: [etincelles.mat, c.eclats && c.eclats.material].filter(Boolean) };
+    const feuilles = new Etincelles(60, L.uTime, { forme: 2, gravite: -0.6 });
+    scene.add(etincelles.points, feuilles.points);
+    const v = { el, id, mode, scene, camera, L, c, etincelles, feuilles, visible: false, apparu: false, pop: reduit ? 1 : 0, mats: [etincelles.mat, feuilles.mat, c.eclats && c.eclats.material].filter(Boolean) };
 
     const hote = el.closest("[data-tilt], .fiche, .odyssee__scene") || el;
     hote.addEventListener("pointermove", (e) => {
@@ -86,7 +89,9 @@ function demarrer() {
     vues.forEach((v) => {
       if (v.id !== e.detail.id || !v.visible) return;
       if (!reduit) v.c.sauter(0.9);
-      v.etincelles.emettre(v.c.centre(new THREE.Vector3()), PALETTE[v.id].base, 30, 1.5, 0.08);
+      const ctr = v.c.centre(new THREE.Vector3());
+      v.etincelles.emettre(ctr, [PALETTE[v.id].base, "#FFE27A"], 24, 1.5, 0.08);
+      v.feuilles.emettre(ctr, ["#3DBE5C", "#6BD45E", "#A6E05A"], 14, 1.6, 0.12);
       demander();
     });
   });
@@ -167,7 +172,8 @@ function demarrer() {
       v.L.uTime.value = t;
       v.c.maj(t, reduit ? 0 : dt);
       v.etincelles.maj(dt);
-      if (v.etincelles.actives || Math.abs(v.c.yaw - v.c.cibleYaw) > 0.002 || v.c.y > 0) occupe = true;
+      v.feuilles.maj(dt);
+      if (v.etincelles.actives || v.feuilles.actives || Math.abs(v.c.yaw - v.c.cibleYaw) > 0.002 || v.c.y > 0) occupe = true;
       v.camera.aspect = r.width / r.height;
       v.camera.updateProjectionMatrix();
       const echelle = r.height / (2 * tanDemi);

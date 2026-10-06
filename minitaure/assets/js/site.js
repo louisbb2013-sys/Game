@@ -272,15 +272,17 @@
     aReveler.forEach((el) => io.observe(el));
   } else aReveler.forEach((el) => el.classList.add("vu"));
 
-  /* ====== CIEL : étoiles, lucioles, étoiles filantes ====== */
-  (function ciel() {
+  /* ====== FOND ANIMÉ : pétales et feuilles qui tombent, lucioles ====== */
+  (function fond() {
     const c = document.createElement("canvas");
     c.className = "ciel-gl";
     c.setAttribute("aria-hidden", "true");
     document.body.prepend(c);
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    let w = 0, h = 0, dpr = 1, etoiles = [], lucioles = [], filantes = [], prochaine = 3000, raf = 0, avant = 0;
+    let w = 0, h = 0, dpr = 1, chutes = [], lucioles = [], raf = 0, avant = 0;
+    const PETALES = ["#FF8FC0", "#FFC1DB", "#FFD84D", "#FFFFFF", "#FF9F6B", "#C9B2FF"];
+    const FEUILLES = ["#3FBF5C", "#6BD45E", "#A6E05A", "#2E9E4A"];
     const sprite = (couleur) => {
       const s = document.createElement("canvas");
       s.width = s.height = 64;
@@ -293,7 +295,17 @@
       g.fillRect(0, 0, 64, 64);
       return s;
     };
-    const sprites = [sprite("rgba(255,212,107,A)"), sprite("rgba(124,245,210,A)"), sprite("rgba(255,231,163,A)")];
+    const sprites = [sprite("rgba(255,236,120,A)"), sprite("rgba(214,255,130,A)"), sprite("rgba(255,246,190,A)")];
+    const nouvelle = (partout) => {
+      const feuille = Math.random() < 0.45;
+      const palette = feuille ? FEUILLES : PETALES;
+      return {
+        x: Math.random() * w, y: partout ? Math.random() * h : -20,
+        s: (feuille ? 7 : 5) + Math.random() * 6, vy: 0.012 + Math.random() * 0.02, p: Math.random() * 6.28,
+        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.003, feuille,
+        c: palette[(Math.random() * palette.length) | 0], a: 0.5 + Math.random() * 0.4, prof: 0.5 + Math.random() * 0.8,
+      };
+    };
     function taille() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = innerWidth;
@@ -301,25 +313,54 @@
       c.width = w * dpr;
       c.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.min(260, Math.round((w * h) / 6500));
-      etoiles = Array.from({ length: n }, () => ({ x: Math.random() * w, y: Math.random() * h * 1.6, r: Math.random() * 1.05 + 0.25, a: Math.random() * 0.65 + 0.2, v: Math.random() * 1.6 + 0.4, p: Math.random() * 6.28, prof: Math.random() * 0.7 + 0.15 }));
-      lucioles = Array.from({ length: Math.round(Math.min(24, w / 55)) }, (_, i) => ({ x: Math.random() * w, y: Math.random() * h, p: Math.random() * 6.28, v: 0.4 + Math.random() * 0.6, r: 9 + Math.random() * 14, s: sprites[i % 3] }));
+      chutes = Array.from({ length: Math.round(Math.min(34, (w * h) / 40000) + 6) }, () => nouvelle(true));
+      lucioles = Array.from({ length: Math.round(Math.min(18, w / 70)) }, (_, i) => ({ x: Math.random() * w, y: Math.random() * h, p: Math.random() * 6.28, v: 0.4 + Math.random() * 0.6, r: 9 + Math.random() * 12, s: sprites[i % 3] }));
+    }
+    function dessinerChute(o, t) {
+      const sy = scrollY * 0.06 * o.prof;
+      let y = (o.y - sy) % (h + 40);
+      if (y < -20) y += h + 40;
+      ctx.save();
+      ctx.translate(o.x, y);
+      ctx.rotate(o.rot);
+      ctx.scale(reduit ? 1 : Math.cos(t * 0.0018 + o.p) * 0.85 + 0.15 * Math.sign(Math.cos(t * 0.0018 + o.p) || 1), 1);
+      ctx.globalAlpha = o.a;
+      ctx.fillStyle = o.c;
+      const s = o.s;
+      ctx.beginPath();
+      if (o.feuille) {
+        ctx.moveTo(0, -s);
+        ctx.quadraticCurveTo(s * 0.75, 0, 0, s);
+        ctx.quadraticCurveTo(-s * 0.75, 0, 0, -s);
+        ctx.fill();
+        ctx.globalAlpha = o.a * 0.5;
+        ctx.strokeStyle = "#1E7A3A";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, -s * 0.8);
+        ctx.lineTo(0, s * 0.8);
+        ctx.stroke();
+      } else {
+        ctx.moveTo(0, -s * 0.6);
+        ctx.bezierCurveTo(s * 0.7, -s * 0.6, s * 0.6, s * 0.5, 0, s * 0.6);
+        ctx.bezierCurveTo(-s * 0.6, s * 0.5, -s * 0.7, -s * 0.6, 0, -s * 0.6);
+        ctx.fill();
+      }
+      ctx.restore();
     }
     function image(t) {
       raf = 0;
       const dt = Math.min(t - avant, 50);
       avant = t;
       ctx.clearRect(0, 0, w, h);
-      const sy = scrollY, H = h * 1.6;
-      ctx.fillStyle = "#fff";
-      for (const e of etoiles) {
-        let y = (e.y - sy * e.prof * 0.12) % H;
-        if (y < 0) y += H;
-        if (y > h) continue;
-        ctx.globalAlpha = e.a * (reduit ? 1 : 0.55 + 0.45 * Math.sin(t * 0.001 * e.v + e.p));
-        ctx.beginPath();
-        ctx.arc(e.x, y, e.r, 0, 6.283);
-        ctx.fill();
+      for (const o of chutes) {
+        if (!reduit) {
+          o.y += o.vy * dt * o.prof;
+          o.x += Math.sin(t * 0.0009 + o.p) * 0.35;
+          o.rot += o.vr * dt;
+          if (o.y > h + 20) Object.assign(o, nouvelle(false));
+        }
+        dessinerChute(o, t);
       }
       ctx.globalCompositeOperation = "lighter";
       for (const l of lucioles) {
@@ -333,31 +374,6 @@
         }
         ctx.globalAlpha = reduit ? 0.5 : 0.25 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.0021 * l.v + l.p * 4));
         ctx.drawImage(l.s, l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
-      }
-      if (!reduit) {
-        prochaine -= dt;
-        if (prochaine < 0) {
-          prochaine = 5000 + Math.random() * 9000;
-          const ang = Math.PI * (0.78 + Math.random() * 0.12);
-          filantes.push({ x: w * (0.35 + Math.random() * 0.6), y: h * Math.random() * 0.35, vx: Math.cos(ang) * 0.9, vy: Math.sin(ang) * 0.9, vie: 1 });
-        }
-        filantes = filantes.filter((f) => f.vie > 0);
-        for (const f of filantes) {
-          f.vie -= dt / 900;
-          f.x += f.vx * dt;
-          f.y += f.vy * dt;
-          const lx = f.x - f.vx * 140, ly = f.y - f.vy * 140;
-          const g = ctx.createLinearGradient(f.x, f.y, lx, ly);
-          g.addColorStop(0, `rgba(255,248,225,${0.9 * f.vie})`);
-          g.addColorStop(1, "rgba(255,248,225,0)");
-          ctx.globalAlpha = 1;
-          ctx.strokeStyle = g;
-          ctx.lineWidth = 1.6;
-          ctx.beginPath();
-          ctx.moveTo(f.x, f.y);
-          ctx.lineTo(lx, ly);
-          ctx.stroke();
-        }
       }
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
@@ -494,7 +510,6 @@
   /* ====== JARDIN LUNAIRE ====== */
   const jardin = $(".jardin");
   if (jardin) {
-    const voile = $(".voile", jardin);
     const lueur = $(".lanterne-lueur", jardin);
     const cachettes = $$(".cachette", jardin);
     const points = $$(".compteur__points i", jardin);
@@ -536,7 +551,7 @@
       jardin.classList.add("jardin--illumine");
       cachettes.forEach((c, i) => { API.trouvees.add(c.dataset.id); setTimeout(() => c.classList.add("trouvee"), complet ? 0 : i * 140); });
       points.forEach((p) => p.classList.add("on"));
-      etat.textContent = complet ? "Collection complète !" : "Le jardin est illuminé";
+      etat.textContent = complet ? "Collection complète !" : "Tout le monde est sorti !";
       btnIllum.textContent = "Voir la collection";
       son.arpege();
       signaler("minitaure:illumine");
@@ -562,9 +577,7 @@
       if (API.mode3D) return;
       pos.x += (cible.x - pos.x) * 0.16;
       pos.y += (cible.y - pos.y) * 0.16;
-      voile.style.setProperty("--x", pos.x + "px");
-      voile.style.setProperty("--y", pos.y + "px");
-      voile.style.setProperty("--r", rayon() + "px");
+
       lueur.style.transform = `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%)`;
       if (bouge && !API.illumine) verifier();
       if (Math.abs(cible.x - pos.x) + Math.abs(cible.y - pos.y) > 0.5) raf = requestAnimationFrame(boucle);

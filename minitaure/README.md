@@ -1,23 +1,26 @@
 # Minitaure — site web
 
 Site statique (HTML, CSS, JavaScript) pour Minitaure, petite entreprise québécoise de créatures à collectionner.
-Thème : **nuit mystérieuse, nature et cosmos**.
+Thème : **jardin luxuriant au coucher du soleil, couleurs vives**.
 
-**Concept : le jardin lunaire.** À l’accueil, une vraie scène 3D : un jardin de nuit (herbe qui ondule au vent,
-champignons lumineux, lucioles, arbres dans la brume). Le curseur ou le doigt devient une lanterne qui éclaire la scène
-et réveille les cinq créatures en fourrure cachées dans l’herbe. Un compteur « 0 / 5 trouvées » transforme la découverte
-en mini-collection.
+**Concept : le jardin lunaire.** À l’accueil, une vraie scène 3D : une prairie fleurie au coucher du soleil
+(herbe qui ondule au vent, buissons et arbres feuillus, arbres en fleurs, champignons, lucioles). Les cinq créatures,
+de petits animaux ronds et poilus, se cachent derrière les buissons : on ne voit que leurs oreilles. Le curseur ou le doigt
+guide une luciole qui les fait sortir. Un compteur « 0 / 5 trouvées » transforme la découverte en mini-collection.
 
 ## Ce qui bouge
 - **Jardin 3D** (accueil) : lumière de lanterne réelle, herbe qui s’écarte autour de la lanterne, créatures qui sautent
-  et scintillent quand on les trouve, bouton « Tout illuminer ».
-- **Créatures 3D en fourrure** dans les cartes de la boutique, les portails de la page Créatures et la scène « odyssée ».
+  et scintillent quand on les trouve, bouton « Tout révéler ».
+- **Créatures-animaux en fourrure 3D** : un petit veau (Minotaure), un renard (Gribou), une loutre (Bloop),
+  une chouette (Noki) et un lapin (Pipo), avec oreilles qui frémissent, queue qui remue, tête qui s’incline et ombre au sol.
+  On les retrouve dans les cartes de la boutique, les fenêtres de la page Créatures et la scène « odyssée ».
   Elles se tournent vers le curseur et sautent de joie quand on les ajoute au panier.
 - **Cartes holographiques** : inclinaison 3D et reflets arc-en-ciel au survol (format carte à collectionner).
-- **Odyssée** (accueil) : en défilant, Minotaure rétrécit et une carte du ciel se dessine vers les lieux de chaque créature
+- **Odyssée** (accueil) : en défilant, Minotaure rétrécit et une carte du jardin se dessine vers les lieux de chaque créature
   (poche de manteau, flaque ronde de lune, pot de fleurs…).
-- Ciel étoilé animé sur tout le site (étoiles, lucioles, étoiles filantes), aurore et nébuleuses, lune.
-- Titres qui apparaissent mot par mot, étapes en constellation, luciole qui suit le curseur, boutons aimantés,
+- Pétales et feuilles qui tombent et lucioles sur tout le site, lianes, monsteras, fougères et fleurs qui se balancent,
+  ciel de coucher de soleil avec nuages, oiseaux et lune.
+- Titres qui apparaissent mot par mot, étapes qui poussent (graine, pousse, fleur), luciole qui suit le curseur, boutons aimantés,
   orbe qui vole jusqu’au panier, transitions douces entre les pages.
 - **Son** (désactivé par défaut) : petites notes quand on trouve une créature ou qu’on ajoute au panier.
 

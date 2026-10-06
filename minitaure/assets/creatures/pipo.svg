@@ -1,23 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Pipo">
   <defs>
-    <radialGradient id="g" cx="38%" cy="32%" r="75%">
-      <stop offset="0" stop-color="#CDF3E4"/><stop offset=".55" stop-color="#8EDDBE"/><stop offset="1" stop-color="#4FB18D"/>
+    <radialGradient id="g" cx="38%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#8BEFC0"/><stop offset=".55" stop-color="#35DA93"/><stop offset="1" stop-color="#169A62"/>
     </radialGradient>
     <filter id="fur" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="7" result="n"/>
-      <feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G"/>
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
-    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="doux"><feGaussianBlur stdDeviation="5"/></filter>
   </defs>
-  <ellipse cx="76" cy="168" rx="16" ry="10" fill="#4FB18D"/>
-  <ellipse cx="124" cy="168" rx="16" ry="10" fill="#4FB18D"/>
-  <circle cx="100" cy="112" r="62" fill="url(#g)" filter="url(#fur)"/>
-  <ellipse cx="80" cy="88" rx="22" ry="14" fill="#FFFFFF" opacity=".35" filter="url(#soft)"/>
-  <path d="M100 56 L100 36" stroke="#4FB18D" stroke-width="5" stroke-linecap="round"/>
-  <path d="M100 48 C110 40 120 42 122 48 C114 54 106 54 100 48Z" fill="#6FCB9F"/>
-  <g transform="translate(100 28)">
-    <circle cx="0" cy="-11" r="8" fill="#FF8F7E"/><circle cx="10.5" cy="-3.4" r="8" fill="#FF8F7E"/>
-    <circle cx="6.5" cy="9" r="8" fill="#FF8F7E"/><circle cx="-6.5" cy="9" r="8" fill="#FF8F7E"/>
-    <circle cx="-10.5" cy="-3.4" r="8" fill="#FF8F7E"/><circle r="6.5" fill="#FFD46B"/>
-  </g>
+  <circle cx="152" cy="150" r="13" fill="#FFFFFF" filter="url(#fur)"/>
+  <ellipse cx="62" cy="170" rx="24" ry="8" fill="#23A86E"/>
+  <ellipse cx="138" cy="170" rx="24" ry="8" fill="#23A86E"/>
+  <ellipse cx="100" cy="130" rx="52" ry="45" fill="url(#g)" filter="url(#fur)"/>
+  <ellipse cx="100" cy="146" rx="30" ry="22" fill="#C9F7E2" opacity=".85" filter="url(#doux)"/>
+  <ellipse cx="85" cy="173" rx="12" ry="7" fill="#23A86E"/>
+  <ellipse cx="115" cy="173" rx="12" ry="7" fill="#23A86E"/>
+  <circle cx="100" cy="80" r="37" fill="url(#g)" filter="url(#fur)"/>
+  <ellipse cx="88" cy="68" rx="14" ry="9" fill="#FFFFFF" opacity=".3" filter="url(#doux)"/>
+  <ellipse cx="84" cy="30" rx="10" ry="30" fill="#2ECB86" transform="rotate(-8 84 30)"/>
+  <ellipse cx="84" cy="30" rx="5" ry="22" fill="#FFB0C6" transform="rotate(-8 84 30)"/>
+  <ellipse cx="138" cy="56" rx="30" ry="10" fill="#2ECB86" transform="rotate(28 138 56)"/>
+  <ellipse cx="138" cy="56" rx="22" ry="5" fill="#FFB0C6" transform="rotate(28 138 56)"/>
+  <g transform="translate(76 54)"><circle cx="0" cy="-7" r="5" fill="#FF4F9A"/><circle cx="6.6" cy="-2.2" r="5" fill="#FF4F9A"/><circle cx="4.1" cy="5.7" r="5" fill="#FF4F9A"/><circle cx="-4.1" cy="5.7" r="5" fill="#FF4F9A"/><circle cx="-6.6" cy="-2.2" r="5" fill="#FF4F9A"/><circle r="4" fill="#FFC21F"/></g>
 </svg>
