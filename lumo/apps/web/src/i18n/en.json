@@ -1,6 +1,14 @@
 {
-  "app": { "tagline": "Understand it. Don't just memorize it." },
-  "nav": { "home": "Home", "learn": "Learn", "live": "Live", "league": "League", "profile": "Me" },
+  "app": {
+    "tagline": "Understand it. Don't just memorize it."
+  },
+  "nav": {
+    "home": "Home",
+    "learn": "Learn",
+    "live": "Live",
+    "league": "League",
+    "profile": "Me"
+  },
   "signin": {
     "title": "Welcome to Lumo",
     "subtitle": "Turn your notes into quizzes that help you truly understand.",
@@ -35,8 +43,8 @@
     "streakBroken": "Your streak went out. Let's light a new one!",
     "createTitle": "Make a deck with Lumo",
     "createBody": "Send photos of your notes and tell me about your exam.",
-    "reviewTitle": "Review practice",
-    "reviewBody": "Quick mixed questions on what's due. Refills hearts.",
+    "reviewTitle": "Study a deck",
+    "reviewBody": "Practice, review and fix mistakes — new questions every time.",
     "soon": "Coming soon",
     "level": "Level {{level}}",
     "xpToNext": "{{current}} / {{needed}} XP"
@@ -51,8 +59,14 @@
     "full": "Full"
   },
   "leagues": {
-    "bronze": "Bronze", "silver": "Silver", "gold": "Gold", "sapphire": "Sapphire",
-    "ruby": "Ruby", "emerald": "Emerald", "amethyst": "Amethyst", "diamond": "Diamond"
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "sapphire": "Sapphire",
+    "ruby": "Ruby",
+    "emerald": "Emerald",
+    "amethyst": "Amethyst",
+    "diamond": "Diamond"
   },
   "profile": {
     "title": "My profile",
@@ -90,5 +104,133 @@
     "deleteButton": "Delete forever",
     "cancel": "Cancel"
   },
-  "common": { "loading": "Loading…", "back": "Back", "retry": "Try again" }
+  "common": {
+    "loading": "Loading…",
+    "back": "Back",
+    "retry": "Try again"
+  },
+  "learn": {
+    "title": "My decks",
+    "empty": "No decks yet",
+    "emptyBody": "Soon you’ll make decks by chatting with Lumo. For now, try a sample deck!",
+    "trySample": "Try a sample deck",
+    "concepts_one": "{{count}} concept",
+    "concepts_other": "{{count}} concepts",
+    "due_one": "{{count}} to review",
+    "due_other": "{{count}} to review",
+    "mastered": "{{done}} of {{total}} mastered"
+  },
+  "deck": {
+    "notFound": "This deck doesn’t exist (or isn’t yours).",
+    "practice": "Practice",
+    "practiceBody": "A fresh mix of questions, new every time.",
+    "review": "Review",
+    "reviewBody": "Quick spaced review. Refills hearts.",
+    "reviewDue_one": "{{count}} concept is due",
+    "reviewDue_other": "{{count}} concepts are due",
+    "fix": "Fix mistakes",
+    "fixBody_one": "{{count}} concept to fix",
+    "fixBody_other": "{{count}} concepts to fix",
+    "challenge": "Challenge",
+    "challengeBody": "Wrong answers cost a heart. Show what you know!",
+    "noHearts": "No hearts left — do a Review to refill.",
+    "masteryMap": "Mastery map",
+    "masteryRule": "A concept is mastered when you’ve got it right in 3 different question types, at more than one level of depth.",
+    "formatsPassed_one": "Passed in {{count}} question type",
+    "formatsPassed_other": "Passed in {{count}} question types",
+    "delete": "Delete this deck",
+    "deleteConfirm": "Delete forever?",
+    "deleteYes": "Delete"
+  },
+  "quiz": {
+    "preparing": "Lumo is preparing your questions…",
+    "loadError": "Couldn’t load this quiz.",
+    "exit": "Leave quiz",
+    "check": "Check",
+    "checking": "Checking…",
+    "reply": "Reply to Lumo",
+    "continue": "Continue",
+    "finish": "See results",
+    "correct": "Nice! That’s right.",
+    "correctCombo": "Correct — combo bonus!",
+    "partial": "Almost! {{pct}}% there",
+    "notQuite": "Not quite — let’s learn from it",
+    "mastered": "You mastered this concept!",
+    "correctAnswer": "Correct answer",
+    "missing": "What to add next time",
+    "why": "Why?",
+    "retrySoon": "You’ll see this idea again soon, asked a different way.",
+    "combo": "{{n}} in a row",
+    "comboFlash": "🔥 {{n}} in a row!",
+    "selectAll": "Select all that apply.",
+    "yourAnswer": "Your answer",
+    "typeHere": "Type your answer",
+    "teachPlaceholder": "Explain it to Lumo like a friend…",
+    "explainPlaceholder": "Write it in your own words…",
+    "ownWords": "Your own words count — no need to match the textbook.",
+    "blank": "Blank {{n}}",
+    "true": "True",
+    "false": "False",
+    "whyPlaceholder": "Why? Explain your choice…",
+    "pool": "Items to place",
+    "dragHint": "Drag each item to the right place — or tap it, then tap where it goes.",
+    "allPlaced": "All placed! Tap an item to move it.",
+    "orderHint": "Drag the steps, or use the arrows, to put them in order.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "correctionPlaceholder": "How should it read?",
+    "tapMistakeFirst": "First tap the part that’s wrong",
+    "correction": "Correction",
+    "showWork": "Show your work (optional)",
+    "notANumber": "Enter a number",
+    "followUpLabel": "Your reply to Lumo",
+    "sessionDone": "Session complete!",
+    "sessionDoneBody": "Every question was new — that’s how real understanding grows.",
+    "outOfHearts": "Out of hearts",
+    "outOfHeartsBody": "No worries! Do a Review session to refill hearts — learning never stops.",
+    "accuracy": "Accuracy",
+    "bestCombo": "Best combo",
+    "streakDays_one": "{{count}} day streak",
+    "streakDays_other": "{{count}} day streak",
+    "conceptsPracticed": "Concepts practiced",
+    "backToDeck": "Back to deck",
+    "errors": {
+      "no_hearts": "No hearts left. Try a Review session to refill them.",
+      "stale_question": "This question was already answered.",
+      "session_done": "This session is already finished.",
+      "no_questions": "Couldn’t make questions for this deck.",
+      "invalid_answer": "That answer couldn’t be read. Try again.",
+      "network": "Can’t reach Lumo. Check your connection."
+    }
+  },
+  "formats": {
+    "multiple_choice": "Multiple choice",
+    "multiple_select": "Select all",
+    "type_answer": "Type it",
+    "fill_blank": "Fill the blank",
+    "explain": "Explain it",
+    "true_false_justify": "True or false + why",
+    "matching": "Match",
+    "ordering": "Put in order",
+    "categorize": "Sort into groups",
+    "label_diagram": "Label the diagram",
+    "spot_mistake": "Spot the mistake",
+    "cause_effect": "What happens if…",
+    "apply": "Apply it",
+    "calculation": "Calculate",
+    "compare": "Compare",
+    "teach_back": "Teach Lumo"
+  },
+  "bloom": {
+    "remember": "Recall",
+    "understand": "Understand",
+    "apply": "Apply",
+    "analyze": "Analyze"
+  },
+  "mastery": {
+    "new": "New",
+    "learning": "Learning",
+    "familiar": "Familiar",
+    "mastered": "Mastered"
+  }
 }

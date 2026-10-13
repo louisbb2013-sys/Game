@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 import { CameraIcon, CoinIcon, FlameIcon, HeartIcon } from '../components/icons';
 import { Lumo, type LumoMood } from '../components/Lumo';
 import { useAuth } from '../lib/auth';
@@ -58,7 +59,9 @@ export function Home() {
           body={t('home.createBody')}
           soon={t('home.soon')}
         />
-        <ActionCard icon={<span className="text-2xl">🔁</span>} title={t('home.reviewTitle')} body={t('home.reviewBody')} soon={t('home.soon')} />
+        <Link to="/learn" className="block">
+          <ActionCard icon={<span className="text-2xl">📚</span>} title={t('home.reviewTitle')} body={t('home.reviewBody')} />
+        </Link>
       </section>
 
       <p className="text-center text-xs font-bold text-muted">
@@ -78,7 +81,7 @@ function Tile({ icon, value, label }: { icon: React.ReactNode; value: number; la
   );
 }
 
-function ActionCard({ icon, title, body, soon, accent }: { icon: React.ReactNode; title: string; body: string; soon: string; accent?: boolean }) {
+function ActionCard({ icon, title, body, soon, accent }: { icon: React.ReactNode; title: string; body: string; soon?: string; accent?: boolean }) {
   return (
     <div className={`flex items-center gap-4 rounded-3xl p-4 ring-1 ${accent ? 'bg-amber-glow/15 ring-amber-glow/40' : 'bg-surface ring-line'}`}>
       <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${accent ? 'bg-amber-glow text-night' : 'bg-surface-2'}`}>{icon}</span>
@@ -86,7 +89,7 @@ function ActionCard({ icon, title, body, soon, accent }: { icon: React.ReactNode
         <h2 className="font-black">{title}</h2>
         <p className="text-sm text-muted">{body}</p>
       </div>
-      <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[0.7rem] font-extrabold text-muted">{soon}</span>
+      {soon ? <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[0.7rem] font-extrabold text-muted">{soon}</span> : <span className="shrink-0 text-2xl text-muted">›</span>}
     </div>
   );
 }

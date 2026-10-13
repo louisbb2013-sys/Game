@@ -90,8 +90,8 @@ function Eyes({ mood }: { mood: LumoMood }) {
       <circle cx={72.5} cy={53 + lookUp} r="1.4" fill="#FFF" />
       {mood === 'sad' && (
         <g stroke="#C7D2FE" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M43 43 L55 46" />
-          <path d="M77 43 L65 46" />
+          <path d="M43 46 L55 42" />
+          <path d="M77 46 L65 42" />
         </g>
       )}
     </g>

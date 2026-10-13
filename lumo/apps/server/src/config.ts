@@ -13,8 +13,8 @@ const schema = z.object({
   MAIL_FROM: z.string().default('Lumo <hello@example.com>'),
   RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(300),
   ANTHROPIC_API_KEY: z.string().default(''),
-  AI_MODEL: z.string().default('claude-sonnet-5-5'),
-  AI_FAST_MODEL: z.string().default('claude-haiku-5-5'),
+  AI_MODEL: z.string().default('claude-opus-5-5'),
+  AI_GRADING_MODEL: z.string().default('claude-opus-5-5'),
 });
 
 export type Config = z.infer<typeof schema>;

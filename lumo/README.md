@@ -9,7 +9,12 @@ See [PLAN.md](PLAN.md) for architecture, data model and milestones.
 - ✅ **Milestone 1 — Foundation**: monorepo, core game/learning rules (spaced repetition, mastery, XP & levels,
   streaks, hearts, leagues, safe usernames), Fastify API with Google / email-code / dev sign-in, PWA shell
   (EN/FR, dark mode, dyslexia font, larger text, reduced motion, delete-my-data).
-- ⏳ Milestones 2–6: quiz engine, AI deck builder, game systems, social & Live, extras.
+- ✅ **Milestone 2 — Decks & quiz engine**: 16 question types generated fresh each time from *concepts*
+  (never a fixed bank), server-side grading (typo/synonym tolerant, partial credit, AI grading for open answers
+  with an offline fallback), anti-repeat planner (never the same format twice in a row per concept, Bloom
+  depth that rises with success, retries asked differently), spaced repetition, mastery map, practice /
+  review / fix-mistakes / challenge (hearts) modes, XP + combo, coins, streaks, EN/FR sample decks.
+- ⏳ Milestones 3–6: AI chat deck builder, game systems, social & Live, extras.
 
 ## Requirements
 - Node 22+
@@ -37,7 +42,10 @@ Without any keys, use **Developer sign-in** (dev only) or the email code (printe
 3. Put `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `.env`, restart the server.
 
 ### Anthropic
-Set `ANTHROPIC_API_KEY` in `.env` (server only — it is never sent to the browser). Used from Milestone 2.
+Set `ANTHROPIC_API_KEY` in `.env` (server only — it is never sent to the browser). Without a key, Lumo uses its
+built-in offline question generator and keyword grader, so everything still works.
+`AI_MODEL` (question writing) and `AI_GRADING_MODEL` (open-answer grading) default to `claude-opus-5-5`;
+set `AI_GRADING_MODEL=claude-haiku-5-5` to make grading much cheaper.
 
 ## Tests
 ```bash

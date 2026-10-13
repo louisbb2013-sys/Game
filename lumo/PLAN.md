@@ -109,8 +109,9 @@ score = correctness × (500 + 500 × time-remaining-ratio) × streak bonus. All 
 in Live (open answers are graded by the AI during the reveal phase, with a timeout fallback to local fuzzy grading). 2–50 players.
 
 ## 7. AI (Anthropic Claude)
-- Model: `claude-sonnet-5-5` by default for extraction, generation and grading (configurable per task via env;
-  e.g. `claude-haiku-5-5` for cheap grading).
+- Model: `claude-opus-5-5` by default for extraction, generation and grading, at low effort (configurable per
+  task via `AI_MODEL` / `AI_GRADING_MODEL`, e.g. `claude-haiku-5-5` for cheap grading). Server-side refusal
+  fallback enabled on models that support it.
 - Tool use / structured JSON output, validated with Zod; one automatic repair retry on invalid output.
 - Vision for photos/scans; PDFs sent as document blocks.
 - Cost control: per-user daily quotas (free tier), response cache keyed by (concept, format, bloom, seed),

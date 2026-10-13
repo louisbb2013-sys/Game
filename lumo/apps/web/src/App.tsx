@@ -3,7 +3,10 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { Lumo } from './components/Lumo';
 import { AuthProvider, useAuth } from './lib/auth';
+import { Deck } from './pages/Deck';
 import { Home } from './pages/Home';
+import { Learn } from './pages/Learn';
+import { Quiz } from './pages/Quiz';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { SignIn } from './pages/SignIn';
@@ -46,12 +49,14 @@ function AppRoutes() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Home />} />
-        <Route path="learn" element={<Soon />} />
+        <Route path="learn" element={<Learn />} />
+        <Route path="decks/:id" element={<Deck />} />
         <Route path="live" element={<Soon />} />
         <Route path="league" element={<Soon />} />
         <Route path="me" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
       </Route>
+      <Route path="quiz/:sessionId" element={<Quiz />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

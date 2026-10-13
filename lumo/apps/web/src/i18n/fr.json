@@ -1,6 +1,14 @@
 {
-  "app": { "tagline": "Comprends-le. Ne l'apprends pas juste par cœur." },
-  "nav": { "home": "Accueil", "learn": "Étudier", "live": "Live", "league": "Ligue", "profile": "Moi" },
+  "app": {
+    "tagline": "Comprends-le. Ne l'apprends pas juste par cœur."
+  },
+  "nav": {
+    "home": "Accueil",
+    "learn": "Étudier",
+    "live": "Live",
+    "league": "Ligue",
+    "profile": "Moi"
+  },
   "signin": {
     "title": "Bienvenue sur Lumo",
     "subtitle": "Transforme tes notes en quiz qui t'aident à vraiment comprendre.",
@@ -35,8 +43,8 @@
     "streakBroken": "Ta série s'est éteinte. On en rallume une ?",
     "createTitle": "Crée un paquet avec Lumo",
     "createBody": "Envoie des photos de tes notes et parle-moi de ton examen.",
-    "reviewTitle": "Révision",
-    "reviewBody": "Questions variées sur ce qui est à revoir. Redonne des cœurs.",
+    "reviewTitle": "Étudier un paquet",
+    "reviewBody": "Entraîne-toi, révise et corrige tes erreurs — de nouvelles questions à chaque fois.",
     "soon": "Bientôt",
     "level": "Niveau {{level}}",
     "xpToNext": "{{current}} / {{needed}} XP"
@@ -51,8 +59,14 @@
     "full": "Plein"
   },
   "leagues": {
-    "bronze": "Bronze", "silver": "Argent", "gold": "Or", "sapphire": "Saphir",
-    "ruby": "Rubis", "emerald": "Émeraude", "amethyst": "Améthyste", "diamond": "Diamant"
+    "bronze": "Bronze",
+    "silver": "Argent",
+    "gold": "Or",
+    "sapphire": "Saphir",
+    "ruby": "Rubis",
+    "emerald": "Émeraude",
+    "amethyst": "Améthyste",
+    "diamond": "Diamant"
   },
   "profile": {
     "title": "Mon profil",
@@ -90,5 +104,133 @@
     "deleteButton": "Supprimer pour toujours",
     "cancel": "Annuler"
   },
-  "common": { "loading": "Chargement…", "back": "Retour", "retry": "Réessayer" }
+  "common": {
+    "loading": "Chargement…",
+    "back": "Retour",
+    "retry": "Réessayer"
+  },
+  "learn": {
+    "title": "Mes paquets",
+    "empty": "Aucun paquet pour l’instant",
+    "emptyBody": "Bientôt, tu créeras tes paquets en discutant avec Lumo. En attendant, essaie un paquet d’exemple !",
+    "trySample": "Essayer un paquet d’exemple",
+    "concepts_one": "{{count}} notion",
+    "concepts_other": "{{count}} notions",
+    "due_one": "{{count}} à revoir",
+    "due_other": "{{count}} à revoir",
+    "mastered": "{{done}} sur {{total}} maîtrisées"
+  },
+  "deck": {
+    "notFound": "Ce paquet n’existe pas (ou n’est pas à toi).",
+    "practice": "S’entraîner",
+    "practiceBody": "Un mélange de questions, nouveau à chaque fois.",
+    "review": "Réviser",
+    "reviewBody": "Révision espacée rapide. Redonne des cœurs.",
+    "reviewDue_one": "{{count}} notion à revoir",
+    "reviewDue_other": "{{count}} notions à revoir",
+    "fix": "Corriger mes erreurs",
+    "fixBody_one": "{{count}} notion à corriger",
+    "fixBody_other": "{{count}} notions à corriger",
+    "challenge": "Défi",
+    "challengeBody": "Une mauvaise réponse coûte un cœur. Montre ce que tu sais !",
+    "noHearts": "Plus de cœurs — fais une révision pour les recharger.",
+    "masteryMap": "Carte de maîtrise",
+    "masteryRule": "Une notion est maîtrisée quand tu as réussi 3 types de questions différents, à plus d’un niveau de profondeur.",
+    "formatsPassed_one": "Réussie dans {{count}} type de question",
+    "formatsPassed_other": "Réussie dans {{count}} types de questions",
+    "delete": "Supprimer ce paquet",
+    "deleteConfirm": "Supprimer pour toujours ?",
+    "deleteYes": "Supprimer"
+  },
+  "quiz": {
+    "preparing": "Lumo prépare tes questions…",
+    "loadError": "Impossible de charger ce quiz.",
+    "exit": "Quitter le quiz",
+    "check": "Vérifier",
+    "checking": "Vérification…",
+    "reply": "Répondre à Lumo",
+    "continue": "Continuer",
+    "finish": "Voir les résultats",
+    "correct": "Bravo, c’est ça !",
+    "correctCombo": "Correct — bonus combo !",
+    "partial": "Presque ! {{pct}} %",
+    "notQuite": "Pas tout à fait — apprenons-en",
+    "mastered": "Tu maîtrises cette notion !",
+    "correctAnswer": "Bonne réponse",
+    "missing": "À ajouter la prochaine fois",
+    "why": "Pourquoi ?",
+    "retrySoon": "Tu reverras cette idée bientôt, posée autrement.",
+    "combo": "{{n}} de suite",
+    "comboFlash": "🔥 {{n}} de suite !",
+    "selectAll": "Sélectionne toutes les bonnes réponses.",
+    "yourAnswer": "Ta réponse",
+    "typeHere": "Écris ta réponse",
+    "teachPlaceholder": "Explique-le à Lumo comme à un ami…",
+    "explainPlaceholder": "Écris-le avec tes propres mots…",
+    "ownWords": "Tes propres mots comptent — pas besoin de copier le manuel.",
+    "blank": "Trou {{n}}",
+    "true": "Vrai",
+    "false": "Faux",
+    "whyPlaceholder": "Pourquoi ? Explique ton choix…",
+    "pool": "Éléments à placer",
+    "dragHint": "Glisse chaque élément au bon endroit — ou touche-le, puis touche sa place.",
+    "allPlaced": "Tout est placé ! Touche un élément pour le déplacer.",
+    "orderHint": "Glisse les étapes, ou utilise les flèches, pour les remettre dans l’ordre.",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "correctionPlaceholder": "Comment devrait-on l’écrire ?",
+    "tapMistakeFirst": "Touche d’abord la partie fausse",
+    "correction": "Correction",
+    "showWork": "Montrer ta démarche (facultatif)",
+    "notANumber": "Entre un nombre",
+    "followUpLabel": "Ta réponse à Lumo",
+    "sessionDone": "Séance terminée !",
+    "sessionDoneBody": "Chaque question était nouvelle — c’est comme ça qu’on comprend vraiment.",
+    "outOfHearts": "Plus de cœurs",
+    "outOfHeartsBody": "Pas grave ! Fais une révision pour recharger tes cœurs — on n’arrête jamais d’apprendre.",
+    "accuracy": "Précision",
+    "bestCombo": "Meilleur combo",
+    "streakDays_one": "Série de {{count}} jour",
+    "streakDays_other": "Série de {{count}} jours",
+    "conceptsPracticed": "Notions travaillées",
+    "backToDeck": "Retour au paquet",
+    "errors": {
+      "no_hearts": "Plus de cœurs. Fais une révision pour les recharger.",
+      "stale_question": "Cette question a déjà été répondue.",
+      "session_done": "Cette séance est déjà terminée.",
+      "no_questions": "Impossible de créer des questions pour ce paquet.",
+      "invalid_answer": "Cette réponse n’a pas pu être lue. Réessaie.",
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+    }
+  },
+  "formats": {
+    "multiple_choice": "Choix multiple",
+    "multiple_select": "Plusieurs réponses",
+    "type_answer": "À écrire",
+    "fill_blank": "Texte à trous",
+    "explain": "Explique",
+    "true_false_justify": "Vrai ou faux + pourquoi",
+    "matching": "Associer",
+    "ordering": "Remettre en ordre",
+    "categorize": "Classer",
+    "label_diagram": "Légender le schéma",
+    "spot_mistake": "Trouve l’erreur",
+    "cause_effect": "Que se passe-t-il si…",
+    "apply": "Applique",
+    "calculation": "Calcule",
+    "compare": "Compare",
+    "teach_back": "Enseigne à Lumo"
+  },
+  "bloom": {
+    "remember": "Mémoriser",
+    "understand": "Comprendre",
+    "apply": "Appliquer",
+    "analyze": "Analyser"
+  },
+  "mastery": {
+    "new": "Nouveau",
+    "learning": "En cours",
+    "familiar": "Acquis",
+    "mastered": "Maîtrisé"
+  }
 }
