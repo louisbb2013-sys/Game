@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { CameraIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
-import { api } from '../lib/api';
+import { api, LOCAL } from '../lib/api';
 import type { DeckListItem } from '../lib/quiz';
 
 export function Learn() {
@@ -36,15 +36,17 @@ export function Learn() {
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="font-black">{t('home.createTitle')}</h2>
-          <p className="text-sm text-muted">{t('home.createBody')}</p>
+          <p className="text-sm text-muted">{t(LOCAL ? 'local.createBody' : 'home.createBody')}</p>
         </div>
         <span className="shrink-0 text-2xl text-muted">›</span>
       </Link>
 
+      {!LOCAL && (
       <Link to="/offline" className="flex items-center justify-between rounded-2xl bg-surface px-4 py-2.5 text-sm font-black ring-1 ring-line">
         <span>📥 {t('offline.title')}</span>
         <span className="text-muted">›</span>
       </Link>
+      )}
 
       {decks === null ? (
         <p className="text-center font-bold text-muted">{t('common.loading')}</p>

@@ -5,7 +5,7 @@ import { HeartIcon } from '../components/icons';
 import { StudyPlan } from '../components/StudyPlan';
 import { offlineDeck, saveDeckOffline } from '../lib/offline';
 import { Lumo } from '../components/Lumo';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, LOCAL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { MasteryItem, Mode } from '../lib/quiz';
 
@@ -120,11 +120,14 @@ export function Deck() {
             <span className="block font-black">🎧 {t('deck.audio')}</span>
             <span className="block text-xs text-muted">{t('deck.audioBody')}</span>
           </Link>
+          {!LOCAL && (
           <button onClick={() => void saveOffline()} disabled={offlineState === 'saving'} className="rounded-2xl bg-surface p-3 text-left ring-1 ring-line disabled:opacity-60">
             <span className="block font-black">{offlineState === 'saved' ? '✅' : '📥'} {offlineState === 'saved' ? t('deck.offlineSaved') : t('deck.offline')}</span>
             <span className="block text-xs text-muted">{offlineState === 'failed' ? t('deck.offlineFailed') : t('deck.offlineBody')}</span>
           </button>
+          )}
         </div>
+        {!LOCAL && (
         <Link to={`/live?deck=${data.deck.id}`} className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3.5 text-white">
           <span className="text-2xl">⚡</span>
           <span className="min-w-0 flex-1">
@@ -133,6 +136,7 @@ export function Deck() {
           </span>
           <span className="text-2xl">›</span>
         </Link>
+        )}
         {error && error !== 'deck_not_found' && (
           <p role="alert" className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">
             {t(`quiz.errors.${error}`, { defaultValue: t('signin.errors.network') })}

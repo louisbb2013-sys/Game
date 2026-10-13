@@ -4,7 +4,18 @@ export class ApiError extends Error {
   }
 }
 
+/** Browser-only build: no server, the app's data lives in this browser. */
+export const LOCAL = import.meta.env.VITE_LOCAL === '1';
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  if (LOCAL) {
+    const { localApi, LocalError } = await import('../local/backend');
+    try {
+      return await localApi<T>(init.method ?? 'GET', path, init.body);
+    } catch (e) {
+      throw e instanceof LocalError ? new ApiError(e.status, e.code) : new ApiError(500, 'error');
+    }
+  }
   let res: Response;
   try {
     res = await fetch(path, {

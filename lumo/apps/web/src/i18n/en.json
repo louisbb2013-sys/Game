@@ -893,7 +893,8 @@
       "watch_time": "Watch your time: move on when you're stuck and come back later.",
       "mock_again": "Take another mock exam in 2–3 days to see your progress.",
       "keep_it_up": "Great work. A short review each day until the exam will keep it fresh."
-    }
+    },
+    "handInSure": "Are you sure? Tap again"
   },
   "plan": {
     "title": "Study plan",
@@ -992,5 +993,22 @@
     "exams": "Mock exams",
     "privacy": "Shared by the learner. It only shows study progress, never personal details.",
     "gone": "This link was turned off or doesn't exist."
+  },
+  "local": {
+    "savedHere": "Your decks and progress are saved in this browser only.",
+    "newDeckTitle": "New deck from your notes",
+    "newDeckBody": "Paste your notes and Lumo turns them into a deck and quizzes.",
+    "deckName": "Deck name",
+    "deckNamePlaceholder": "e.g. The water cycle",
+    "language": "Language",
+    "openFile": "Open a .txt file",
+    "notes": "Your notes",
+    "useExample": "Use an example",
+    "notesTip": "Tip: write one idea per line, like “Evaporation is when water turns into vapour.” or “Runoff - water that flows into rivers”. Numbered lists become step-by-step processes, and “For example…” lines become examples.",
+    "makeDeck": "Make my deck",
+    "nothingFound": "Lumo couldn't find ideas in these notes. Try one definition per line, like “Osmosis is …”.",
+    "exampleEn": "# The Water Cycle\n\nEvaporation is when water turns into vapour because of the sun's heat.\nCondensation is the process where water vapour cools and turns into droplets, forming clouds.\nPrecipitation: water falling from clouds as rain, snow or hail.\nFor example, morning dew on grass is condensation.\nIf the temperature drops, more water vapour condenses.\n\nStages of the water cycle:\n1. Water evaporates from oceans\n2. Vapour rises and cools\n3. Clouds form by condensation\n4. Rain falls back to the ground\n\nTranspiration - water released by plants through their leaves\nRunoff - water that flows over the ground into rivers",
+    "exampleFr": "# Le cycle de l’eau\n\nL’évaporation est le passage de l’eau à l’état de vapeur grâce à la chaleur du soleil.\nLa condensation désigne le refroidissement de la vapeur d’eau qui forme des gouttelettes et des nuages.\nPrécipitations : eau qui tombe des nuages sous forme de pluie, neige ou grêle.\nPar exemple, la rosée du matin sur l’herbe est de la condensation.\n\nÉtapes du cycle de l’eau :\n1. L’eau des océans s’évapore\n2. La vapeur monte et se refroidit\n3. Les nuages se forment par condensation\n4. La pluie retombe au sol\n\nTranspiration - eau rejetée par les feuilles des plantes\nRuissellement - eau qui coule sur le sol jusqu’aux rivières",
+    "createBody": "Paste your notes and Lumo turns them into a deck and quizzes."
   }
 }

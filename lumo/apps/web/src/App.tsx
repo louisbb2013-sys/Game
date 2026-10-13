@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { BrowserRouter, MemoryRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { LOCAL } from './lib/api';
 import { Layout } from './components/Layout';
 import { Lumo } from './components/Lumo';
 import { PageLoading } from './components/PageLoading';
@@ -35,14 +36,18 @@ const OfflineReview = lazy(() => import('./pages/Offline').then((m) => ({ defaul
 const Audio = lazy(() => import('./pages/Audio').then((m) => ({ default: m.Audio })));
 const Progress = lazy(() => import('./pages/Progress').then((m) => ({ default: m.Progress })));
 
+// The browser-only build lives inside another page, so it keeps its own in-memory address bar.
+const Router = LOCAL ? MemoryRouter : BrowserRouter;
+const NewDeck = lazy(() => import('./pages/NewDeck').then((m) => ({ default: m.NewDeck })));
+
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <Router>
         <RewardsProvider>
           <AppRoutes />
         </RewardsProvider>
-      </BrowserRouter>
+      </Router>
     </AuthProvider>
   );
 }
@@ -85,7 +90,7 @@ function AppRoutes() {
             <Route index element={<Home />} />
             <Route path="learn" element={<Learn />} />
             <Route path="decks/:id" element={<Deck />} />
-            <Route path="chat" element={<ChatHome />} />
+            <Route path="chat" element={LOCAL ? <NewDeck /> : <ChatHome />} />
             <Route path="chat/:id" element={<Chat />} />
             <Route path="sandbox" element={<Sandbox />} />
             <Route path="sandbox/play/:id" element={<SandboxPlay />} />

@@ -5,12 +5,12 @@ import { clearOffline } from '../lib/offline';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { LanguageSwitch } from '../components/LanguageSwitch';
-import { api, type Settings as S } from '../lib/api';
+import { api, type Settings as S, LOCAL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 export function Settings() {
   const { t } = useTranslation();
-  const { user, update, setUser } = useAuth();
+  const { user, update, setUser, refresh } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState('');
   if (!user) return null;
@@ -21,6 +21,13 @@ export function Settings() {
   const deleteAll = async () => {
     await api('/api/me', { method: 'DELETE' });
     clearOffline();
+    if (LOCAL) {
+      // Browser-only: start again with a fresh learner.
+      setConfirming(false);
+      setTyped('');
+      await refresh();
+      return;
+    }
     setUser(null);
   };
 
@@ -58,15 +65,19 @@ export function Settings() {
         <Toggle label={t('settings.reduceMotion')} checked={!!s.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
       </Card>
 
-      <Reminders />
-      <ShareLinks />
+      {!LOCAL && <Reminders />}
+      {!LOCAL && <ShareLinks />}
 
       <Card title={t('settings.privacy')}>
         <p className="text-sm text-muted">{t('settings.privacyBody')}</p>
-        <a href="/api/me/export" download className="mt-2 block font-extrabold text-brand">
-          ⬇️ {t('settings.export')}
-        </a>
-        <p className="text-xs text-muted">{t('settings.exportHint')}</p>
+        {!LOCAL && (
+          <>
+            <a href="/api/me/export" download className="mt-2 block font-extrabold text-brand">
+              ⬇️ {t('settings.export')}
+            </a>
+            <p className="text-xs text-muted">{t('settings.exportHint')}</p>
+          </>
+        )}
         {!confirming ? (
           <button onClick={() => setConfirming(true)} className="mt-2 font-extrabold text-bad">
             {t('settings.deleteData')}

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { CameraIcon, CoinIcon, FlameIcon, HeartIcon } from '../components/icons';
 import { Lumo, type LumoMood } from '../components/Lumo';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, LOCAL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { play } from '../lib/sound';
 import { PetAvatar, type PetView } from './Pets';
@@ -98,12 +98,16 @@ export function Home() {
           value={user.hearts.current}
           label={minutesToHeart ? t('stats.nextHeart', { minutes: minutesToHeart }) : t('stats.full')}
         />
-        <Link to="/shop">
+        {LOCAL ? (
           <Tile icon={<CoinIcon size={28} />} value={user.coins} label={t('stats.coins')} />
-        </Link>
+        ) : (
+          <Link to="/shop">
+            <Tile icon={<CoinIcon size={28} />} value={user.coins} label={t('stats.coins')} />
+          </Link>
+        )}
       </section>
 
-      {(user.streak.freezes > 0 || repairable) && (
+      {!LOCAL && (user.streak.freezes > 0 || repairable) && (
         <section className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface p-3 text-sm font-bold ring-1 ring-line">
           {user.streak.freezes > 0 && <span>🧊 {t('home.freezes', { count: user.streak.freezes })}</span>}
           {repairable && (
@@ -126,7 +130,7 @@ export function Home() {
         </Link>
       )}
 
-      {ov && (
+      {ov && !LOCAL && (
         <section className="space-y-2 rounded-3xl bg-surface p-4 ring-1 ring-line" aria-labelledby="quests-title">
           <h2 id="quests-title" className="font-black">
             📜 {t('home.quests')}
@@ -169,7 +173,7 @@ export function Home() {
         </section>
       )}
 
-      {ov && (
+      {ov && !LOCAL && (
         <Link to="/pets" className="flex items-center gap-4 rounded-3xl bg-surface p-4 ring-1 ring-line">
           {ov.pet ? <PetAvatar pet={ov.pet} size="sm" /> : <span className="grid size-14 place-items-center rounded-full bg-surface-2 text-3xl">🥚</span>}
           <div className="min-w-0 flex-1">
@@ -182,7 +186,7 @@ export function Home() {
 
       <section className="space-y-3">
         <Link to="/chat" className="block">
-          <ActionCard accent icon={<CameraIcon size={28} />} title={t('home.createTitle')} body={t('home.createBody')} />
+          <ActionCard accent icon={<CameraIcon size={28} />} title={t('home.createTitle')} body={t(LOCAL ? 'local.createBody' : 'home.createBody')} />
         </Link>
         <Link to="/sandbox" className="block">
           <ActionCard icon={<span className="text-2xl">🎨</span>} title={t('home.sandboxTitle')} body={t('home.sandboxBody')} />
@@ -192,9 +196,11 @@ export function Home() {
         </Link>
       </section>
 
-      <Link to="/league" className="block text-center text-xs font-bold text-muted">
-        {t('stats.league')}: {t(`leagues.${user.leagueTier}`)} ›
-      </Link>
+      {!LOCAL && (
+        <Link to="/league" className="block text-center text-xs font-bold text-muted">
+          {t('stats.league')}: {t(`leagues.${user.leagueTier}`)} ›
+        </Link>
+      )}
     </div>
   );
 }

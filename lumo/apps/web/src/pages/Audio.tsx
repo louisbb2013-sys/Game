@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { Lumo } from '../components/Lumo';
-import { api } from '../lib/api';
+import { api, LOCAL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { listenAvailable, listenOnce, stopListening } from '../lib/listen';
 import { offlineDeck, queueReviews, syncOffline, type OfflineDeck, type OfflineReview } from '../lib/offline';
@@ -170,7 +170,7 @@ export function Audio() {
               </button>
             ))}
           </div>
-          {mode === 'quiz' && listenAvailable() && (
+          {mode === 'quiz' && listenAvailable() && !LOCAL && (
             <label className="flex items-center justify-between gap-3 font-bold">
               <span>
                 🎙️ {t('audio.mic')}

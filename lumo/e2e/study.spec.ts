@@ -28,8 +28,8 @@ test('mock exam: timed, no feedback, hand in early, report', async ({ page }) =>
     await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0);
   }
   await page.screenshot({ path: 'e2e/screens/exam-question.png' });
-  page.once('dialog', (d) => void d.accept());
   await page.getByRole('button', { name: 'Hand in' }).click();
+  await page.getByRole('button', { name: 'Are you sure? Tap again' }).click();
   await expect(page).toHaveURL(/\/exam\//);
   await expect(page.getByTestId('exam-percent')).toBeVisible();
   await expect(page.getByText(/not answered/)).toBeVisible();

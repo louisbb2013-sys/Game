@@ -241,6 +241,7 @@ function ExamClock({ endsAt, sessionId }: { endsAt: number; sessionId: string })
   const navigate = useNavigate();
   const [now, setNow] = useState(Date.now());
   const handedIn = useRef(false);
+  const [sure, setSure] = useState(false);
   const left = Math.max(0, endsAt - now);
   const handIn = useCallback(async () => {
     if (handedIn.current) return;
@@ -262,8 +263,13 @@ function ExamClock({ endsAt, sessionId }: { endsAt: number; sessionId: string })
       <span className={`rounded-full px-2.5 py-0.5 font-black tabular-nums ${left < 60_000 ? 'bg-bad text-white' : 'bg-surface-2'}`} role="timer" aria-label={t('exam.timeLeft')}>
         ⏱ {m}:{String(sec).padStart(2, '0')}
       </span>
-      <button onClick={() => confirm(t('exam.handInConfirm')) && void handIn()} className="rounded-full bg-surface px-2.5 py-0.5 text-sm font-black ring-1 ring-line">
-        {t('exam.handIn')}
+      {/* Two taps instead of a browser dialog (dialogs are blocked in some places the app runs). */}
+      <button
+        onClick={() => (sure ? void handIn() : setSure(true))}
+        onBlur={() => setSure(false)}
+        className={`rounded-full px-2.5 py-0.5 text-sm font-black ring-1 ${sure ? 'bg-bad text-white ring-bad' : 'bg-surface ring-line'}`}
+      >
+        {sure ? t('exam.handInSure') : t('exam.handIn')}
       </button>
     </span>
   );

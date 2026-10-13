@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { GearIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, LOCAL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 export function Profile() {
@@ -75,6 +75,7 @@ export function Profile() {
 
       <BadgesSection />
 
+      {!LOCAL && (
       <div className="grid grid-cols-2 gap-3">
         <Link to="/friends" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
           👋 {t('friends.title')}
@@ -89,10 +90,15 @@ export function Profile() {
           🛍️ {t('shop.title')}
         </Link>
       </div>
+      )}
 
-      <button onClick={() => void logout()} className="w-full rounded-2xl py-3 font-extrabold text-bad ring-1 ring-line">
-        {t('profile.logout')}
-      </button>
+      {LOCAL ? (
+        <p className="text-center text-xs text-muted">{t('local.savedHere')}</p>
+      ) : (
+        <button onClick={() => void logout()} className="w-full rounded-2xl py-3 font-extrabold text-bad ring-1 ring-line">
+          {t('profile.logout')}
+        </button>
+      )}
     </div>
   );
 }

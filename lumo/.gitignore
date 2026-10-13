@@ -6,3 +6,4 @@ uploads/
 e2e/screens/
 test-results/
 playwright-report/
+dist-local
