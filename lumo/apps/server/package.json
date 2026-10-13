@@ -28,6 +28,7 @@
     "@types/node": "^22.10.0",
     "@types/nodemailer": "^7.0.0",
     "@types/pg": "^8.23.1",
+    "socket.io-client": "^4.8.4",
     "vitest": "^4.1.11"
   }
 }

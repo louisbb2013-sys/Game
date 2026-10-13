@@ -76,6 +76,12 @@ export function Profile() {
       <BadgesSection />
 
       <div className="grid grid-cols-2 gap-3">
+        <Link to="/friends" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+          👋 {t('friends.title')}
+        </Link>
+        <Link to="/groups" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+          👥 {t('groups.title')}
+        </Link>
         <Link to="/pets" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
           🐾 {t('pets.title')}
         </Link>

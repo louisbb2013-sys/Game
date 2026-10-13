@@ -24,3 +24,4 @@ export * from './sandbox/generate';
 export * from './sandbox/intent';
 export * from './game/items';
 export * from './game/progress';
+export * from './live/game';

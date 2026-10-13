@@ -14,7 +14,8 @@ export type GameEvent =
   | { type: 'chest_opened' }
   | { type: 'pet_fed' }
   | { type: 'league'; tier: LeagueTier }
-  | { type: 'level'; level: number };
+  | { type: 'level'; level: number }
+  | { type: 'live_done'; rank: number; players: number };
 
 export interface Stats {
   answers: number;
@@ -31,10 +32,12 @@ export interface Stats {
   petsFed: number;
   bestTier: LeagueTier;
   level: number;
+  liveGames: number;
+  liveWins: number;
 }
 
 export function emptyStats(): Stats {
-  return { answers: 0, correct: 0, sessions: 0, perfectSessions: 0, mastered: 0, sandboxDone: 0, sandboxKinds: [], decks: 0, bestStreak: 0, bestCombo: 0, chests: 0, petsFed: 0, bestTier: 'bronze', level: 1 };
+  return { answers: 0, correct: 0, sessions: 0, perfectSessions: 0, mastered: 0, sandboxDone: 0, sandboxKinds: [], decks: 0, bestStreak: 0, bestCombo: 0, chests: 0, petsFed: 0, bestTier: 'bronze', level: 1, liveGames: 0, liveWins: 0 };
 }
 
 export function applyStats(s: Stats, e: GameEvent): Stats {
@@ -60,6 +63,8 @@ export function applyStats(s: Stats, e: GameEvent): Stats {
       return { ...n, bestTier: tierIndex(e.tier) > tierIndex(n.bestTier) ? e.tier : n.bestTier };
     case 'level':
       return { ...n, level: Math.max(n.level, e.level) };
+    case 'live_done':
+      return { ...n, liveGames: n.liveGames + 1, liveWins: n.liveWins + (e.rank === 1 && e.players >= 2 ? 1 : 0) };
     default:
       return n;
   }
@@ -158,6 +163,8 @@ export const BADGES: BadgeDef[] = [
   { id: 'gold_league', emoji: '🥇', earned: (s) => atLeastTier(s, 'gold') },
   { id: 'diamond_league', emoji: '💎', earned: (s) => atLeastTier(s, LEAGUE_TIERS[LEAGUE_TIERS.length - 1]!) },
   { id: 'level_10', emoji: '🚀', earned: (s) => s.level >= 10 },
+  { id: 'live_player', emoji: '🎮', earned: (s) => s.liveGames >= 1 },
+  { id: 'live_champion', emoji: '🏆', earned: (s) => s.liveWins >= 1 },
 ];
 
 export function newBadges(before: Stats, after: Stats): string[] {

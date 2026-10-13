@@ -41,7 +41,15 @@ See [PLAN.md](PLAN.md) for architecture, data model and milestones.
   - **Quests**: 3 daily + 2 weekly, different per learner, claim for coins/chests.
   - **Badges**: 17 achievements and lifetime stats on your profile; **streak repair** within 2 days.
   - Celebration pop-ups for level-ups, badges and finished quests.
-- ⏳ Milestones 5–6: friends, groups & Live multiplayer; exam mode, study plan, audio, offline, extras.
+- ✅ **Milestone 5 — Together**:
+  - Friends: add by username, personal link or QR code; requests; friends' streaks, activity and a weekly
+    leaderboard. Other learners never see your email.
+  - Study groups (up to 50): invite code/link/QR, shared decks, a daily group quiz (same deck for everyone, first
+    try counts), weekly ranking.
+  - **Live** quiz games for 2–50 players over Socket.io: lobby with code + QR, the same varied question types as
+    solo, server-owned timer, speed + streak points, reveal with explanation, podium with XP and coins for
+    everyone. Answers are graded on the server; open answers get a short AI check with a built-in fallback.
+- ⏳ Milestone 6: exam mode, study plan, audio, offline, share links, reminders, data export/delete.
 
 ## Requirements
 - Node 22+

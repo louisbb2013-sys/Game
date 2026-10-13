@@ -77,6 +77,8 @@ interface StoredState extends SessionState {
   formats?: Format[];
   teachBack?: { questionId: string; firstText: string; followUp: string };
   heartsLost: number;
+  /** Set when this session is a study group's daily quiz. */
+  groupDaily?: { groupId: string; day: string };
 }
 
 export interface PublicSession {
@@ -146,9 +148,20 @@ export class QuizService {
   async loadDeck(deckId: string, userId: string): Promise<{ deck: DeckRow; concepts: Concept[] }> {
     const { rows } = await this.db.query<DeckRow>('SELECT id, owner_id, title, subject, language, visibility FROM decks WHERE id = $1', [deckId]);
     const deck = rows[0];
-    if (!deck || (deck.owner_id !== userId && deck.visibility !== 'public')) throw new QuizError(404, 'deck_not_found');
+    if (!deck || !(await this.canRead(deck, userId))) throw new QuizError(404, 'deck_not_found');
     const c = await this.db.query<{ id: string; data: Omit<Concept, 'id'> }>('SELECT id, data FROM concepts WHERE deck_id = $1 ORDER BY position, created_at', [deckId]);
     return { deck, concepts: c.rows.map((r) => ({ ...r.data, id: r.id })) };
+  }
+
+  /** Owner, public decks, friends-only decks for friends, and decks shared to one of your groups. */
+  private async canRead(deck: DeckRow, userId: string): Promise<boolean> {
+    if (deck.owner_id === userId || deck.visibility === 'public') return true;
+    const { rowCount } = await this.db.query(
+      `SELECT 1 WHERE EXISTS (SELECT 1 FROM group_decks gd JOIN group_members m ON m.group_id = gd.group_id WHERE gd.deck_id = $1 AND m.user_id = $2)
+          OR ($4 = 'friends' AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'accepted' AND f.user_a = least($2::uuid, $3::uuid) AND f.user_b = greatest($2::uuid, $3::uuid)))`,
+      [deck.id, userId, deck.owner_id, deck.visibility],
+    );
+    return !!rowCount;
   }
 
   async loadStates(userId: string, conceptIds: string[]): Promise<Map<string, ConceptStateView>> {
@@ -184,7 +197,14 @@ export class QuizService {
 
   // ---------- sessions ----------
 
-  async start(user: UserRow, deckId: string, mode: SessionMode, length: number, formats?: Format[]): Promise<{ session: PublicSession; question: PublicQuestion }> {
+  async start(
+    user: UserRow,
+    deckId: string,
+    mode: SessionMode,
+    length: number,
+    formats?: Format[],
+    groupDaily?: StoredState['groupDaily'],
+  ): Promise<{ session: PublicSession; question: PublicQuestion }> {
     const now = Date.now();
     if (mode === 'challenge' && !canStartChallenge({ hearts: user.hearts, updatedAt: user.hearts_updated_at.getTime() }, now)) {
       throw new QuizError(403, 'no_hearts');
@@ -193,7 +213,7 @@ export class QuizService {
     const states = await this.loadStates(user.id, concepts.map((c) => c.id));
     const rng = seededRng(hashString(user.id + now));
     const ids = pickConcepts(concepts, states, length, mode, now, rng);
-    const state: StoredState = { ...newSession(mode, ids), heartsLost: 0, language: deck.language, formats: formats?.length ? formats : undefined };
+    const state: StoredState = { ...newSession(mode, ids), heartsLost: 0, language: deck.language, formats: formats?.length ? formats : undefined, groupDaily };
 
     const { rows } = await this.db.query<{ id: string }>('INSERT INTO quiz_sessions (user_id, deck_id, mode, state) VALUES ($1, $2, $3, $4) RETURNING id', [
       user.id,
@@ -439,6 +459,16 @@ export class QuizService {
         hearts.hearts,
         new Date(hearts.updatedAt),
       ]);
+      if (!alreadyDone && state.groupDaily) {
+        // First finished attempt of the day counts on the group board (no farming).
+        await client.query('INSERT INTO group_daily (group_id, day, user_id, correct, answered) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING', [
+          state.groupDaily.groupId,
+          state.groupDaily.day,
+          user.id,
+          state.correct,
+          state.answered,
+        ]);
+      }
       await client.query("UPDATE quiz_sessions SET status = 'done', current = NULL, state = $2, updated_at = now() WHERE id = $1", [sessionId, JSON.stringify({ ...state, endedReason: state.endedReason ?? 'done' })]);
       const rewards = alreadyDone
         ? emptyRewards()

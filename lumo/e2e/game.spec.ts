@@ -70,7 +70,7 @@ test('shop, chest opening, pets, quests and badges', async ({ page }) => {
   await expect(page.getByRole('link', { name: /Hoot/ })).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/game-home.png', fullPage: true });
   await page.goto('/me');
-  await expect(page.getByRole('heading', { name: /Badges \(\d+\/17\)/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Badges \(\d+\/19\)/ })).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/game-profile.png', fullPage: true });
 });
 

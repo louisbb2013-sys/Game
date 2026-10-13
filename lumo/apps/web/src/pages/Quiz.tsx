@@ -9,6 +9,7 @@ import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { AnswerResponse, AnswerResult, PublicSession, SessionSummary } from '../lib/quiz';
 import { play, setSoundEnabled } from '../lib/sound';
+import { useConfetti } from '../lib/confetti';
 import { useRewards, type Rewards } from '../lib/rewards';
 
 type Phase = 'answering' | 'grading' | 'followup' | 'feedback' | 'summary';
@@ -279,25 +280,7 @@ function Feedback({ result, onContinue, last }: { result: AnswerResult; onContin
 function Summary({ summary, deckId }: { summary: SessionSummary; deckId: string }) {
   const { t } = useTranslation();
   const outOfHearts = summary.endedReason === 'out_of_hearts';
-  useEffect(() => {
-    if (outOfHearts || summary.accuracy < 0.6) return;
-    const colors = ['#F5A524', '#4F46E5', '#F472B6', '#22C55E', '#38BDF8'];
-    const nodes = Array.from({ length: 40 }, (_, i) => {
-      const el = document.createElement('span');
-      el.className = 'confetti';
-      el.style.left = `${Math.random() * 100}vw`;
-      el.style.background = colors[i % colors.length]!;
-      el.style.animationDuration = `${1.6 + Math.random() * 1.6}s`;
-      el.style.animationDelay = `${Math.random() * 0.4}s`;
-      document.body.appendChild(el);
-      return el;
-    });
-    const timer = setTimeout(() => nodes.forEach((n) => n.remove()), 4000);
-    return () => {
-      clearTimeout(timer);
-      nodes.forEach((n) => n.remove());
-    };
-  }, [outOfHearts, summary.accuracy]);
+  useConfetti(!outOfHearts && summary.accuracy >= 0.6);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col items-center px-4 py-8 text-center">

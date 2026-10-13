@@ -101,6 +101,14 @@ export function Deck() {
           disabled={(user?.hearts.current ?? 0) === 0}
           note={(user?.hearts.current ?? 0) === 0 ? t('deck.noHearts') : undefined}
         />
+        <Link to={`/live?deck=${data.deck.id}`} className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3.5 text-white">
+          <span className="text-2xl">⚡</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-black">{t('deck.live')}</span>
+            <span className="block text-sm opacity-85">{t('deck.liveBody')}</span>
+          </span>
+          <span className="text-2xl">›</span>
+        </Link>
         {error && error !== 'deck_not_found' && (
           <p role="alert" className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">
             {t(`quiz.errors.${error}`, { defaultValue: t('signin.errors.network') })}

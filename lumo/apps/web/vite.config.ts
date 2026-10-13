@@ -25,7 +25,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallbackDenylist: [/^\/api/, /^\/socket\.io/],
+        navigateFallbackDenylist: [/^\/api/],
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
@@ -34,8 +34,8 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      '/api': 'http://localhost:3001',
-      '/socket.io': { target: 'http://localhost:3001', ws: true },
+      // ws: Live games use Socket.io under /api/live/socket.
+      '/api': { target: 'http://localhost:3001', ws: true },
     },
   },
 });
