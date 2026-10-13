@@ -1,0 +1,94 @@
+{
+  "app": { "tagline": "Comprends-le. Ne l'apprends pas juste par cœur." },
+  "nav": { "home": "Accueil", "learn": "Étudier", "live": "Live", "league": "Ligue", "profile": "Moi" },
+  "signin": {
+    "title": "Bienvenue sur Lumo",
+    "subtitle": "Transforme tes notes en quiz qui t'aident à vraiment comprendre.",
+    "google": "Continuer avec Google",
+    "or": "ou",
+    "emailLabel": "Courriel",
+    "emailPlaceholder": "toi@ecole.com",
+    "sendCode": "Envoie-moi un code",
+    "codeSent": "On a envoyé un code à 6 chiffres à {{email}}.",
+    "codeLabel": "Code",
+    "verify": "Se connecter",
+    "changeEmail": "Utiliser un autre courriel",
+    "dev": "Connexion développeur",
+    "devHint": "Disponible seulement en développement.",
+    "privacy": "On ne montre jamais ton courriel ni ton vrai nom aux autres élèves.",
+    "errors": {
+      "invalid_email": "Ce courriel n'a pas l'air valide.",
+      "wrong_code": "Ce code est faux ou expiré.",
+      "invalid_code": "Entre les 6 chiffres du courriel.",
+      "google": "La connexion Google n'a pas marché. Réessaie.",
+      "state": "La connexion a expiré. Réessaie.",
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+    }
+  },
+  "home": {
+    "greeting_morning": "Bon matin, {{name}} !",
+    "greeting_afternoon": "Salut {{name}} !",
+    "greeting_evening": "Bonsoir, {{name}} !",
+    "streakNone": "Étudie aujourd'hui pour allumer ta première flamme.",
+    "streakSafe": "Ta série est protégée aujourd'hui. Lumo brille !",
+    "streakAtRisk": "Étudie aujourd'hui pour garder ta série de {{count}} jours !",
+    "streakBroken": "Ta série s'est éteinte. On en rallume une ?",
+    "createTitle": "Crée un paquet avec Lumo",
+    "createBody": "Envoie des photos de tes notes et parle-moi de ton examen.",
+    "reviewTitle": "Révision",
+    "reviewBody": "Questions variées sur ce qui est à revoir. Redonne des cœurs.",
+    "soon": "Bientôt",
+    "level": "Niveau {{level}}",
+    "xpToNext": "{{current}} / {{needed}} XP"
+  },
+  "stats": {
+    "streak": "Jours de suite",
+    "hearts": "Cœurs",
+    "coins": "Pièces",
+    "xp": "XP",
+    "league": "Ligue",
+    "nextHeart": "Prochain cœur dans {{minutes}} min",
+    "full": "Plein"
+  },
+  "leagues": {
+    "bronze": "Bronze", "silver": "Argent", "gold": "Or", "sapphire": "Saphir",
+    "ruby": "Rubis", "emerald": "Émeraude", "amethyst": "Améthyste", "diamond": "Diamant"
+  },
+  "profile": {
+    "title": "Mon profil",
+    "username": "Nom d'utilisateur",
+    "usernameHint": "3 à 20 lettres, chiffres ou _. Pas de vrai nom ni d'année de naissance.",
+    "save": "Enregistrer",
+    "saved": "Enregistré !",
+    "joined": "Membre depuis le {{date}}",
+    "settings": "Réglages",
+    "logout": "Se déconnecter",
+    "errors": {
+      "username_length": "Utilise de 3 à 20 caractères.",
+      "username_characters": "Seulement des lettres, des chiffres et _.",
+      "username_blocked": "Choisis un nom plus gentil, s'il te plaît.",
+      "username_personal_info": "Garde tes infos personnelles (comme ton année de naissance) hors de ton nom.",
+      "username_taken": "Quelqu'un a déjà ce nom."
+    }
+  },
+  "settings": {
+    "title": "Réglages",
+    "language": "Langue",
+    "theme": "Thème",
+    "themeSystem": "Automatique",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "accessibility": "Accessibilité",
+    "dyslexiaFont": "Police adaptée à la dyslexie",
+    "largeText": "Texte plus grand",
+    "reduceMotion": "Réduire les animations",
+    "sound": "Effets sonores",
+    "privacy": "Vie privée",
+    "privacyBody": "Tes fichiers servent seulement à créer tes paquets. Tu peux tout supprimer à tout moment.",
+    "deleteData": "Supprimer mon compte et mes données",
+    "deleteConfirm": "Ça supprime pour toujours ton compte, tes paquets et ta progression. Tape DELETE pour confirmer.",
+    "deleteButton": "Supprimer pour toujours",
+    "cancel": "Annuler"
+  },
+  "common": { "loading": "Chargement…", "back": "Retour", "retry": "Réessayer" }
+}

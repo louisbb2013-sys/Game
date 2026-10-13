@@ -1,0 +1,94 @@
+{
+  "app": { "tagline": "Understand it. Don't just memorize it." },
+  "nav": { "home": "Home", "learn": "Learn", "live": "Live", "league": "League", "profile": "Me" },
+  "signin": {
+    "title": "Welcome to Lumo",
+    "subtitle": "Turn your notes into quizzes that help you truly understand.",
+    "google": "Continue with Google",
+    "or": "or",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@school.com",
+    "sendCode": "Send me a code",
+    "codeSent": "We sent a 6-digit code to {{email}}.",
+    "codeLabel": "Code",
+    "verify": "Sign in",
+    "changeEmail": "Use another email",
+    "dev": "Developer sign-in",
+    "devHint": "Only available while developing.",
+    "privacy": "We never show your email or real name to other students.",
+    "errors": {
+      "invalid_email": "That email doesn't look right.",
+      "wrong_code": "That code is wrong or expired.",
+      "invalid_code": "Enter the 6 digits from the email.",
+      "google": "Google sign-in didn't work. Try again.",
+      "state": "Sign-in expired. Try again.",
+      "network": "Can't reach Lumo. Check your connection."
+    }
+  },
+  "home": {
+    "greeting_morning": "Good morning, {{name}}!",
+    "greeting_afternoon": "Hi {{name}}!",
+    "greeting_evening": "Good evening, {{name}}!",
+    "streakNone": "Study today to light your first streak flame.",
+    "streakSafe": "Your streak is safe today. Lumo is glowing!",
+    "streakAtRisk": "Study today to keep your {{count}}-day streak!",
+    "streakBroken": "Your streak went out. Let's light a new one!",
+    "createTitle": "Make a deck with Lumo",
+    "createBody": "Send photos of your notes and tell me about your exam.",
+    "reviewTitle": "Review practice",
+    "reviewBody": "Quick mixed questions on what's due. Refills hearts.",
+    "soon": "Coming soon",
+    "level": "Level {{level}}",
+    "xpToNext": "{{current}} / {{needed}} XP"
+  },
+  "stats": {
+    "streak": "Day streak",
+    "hearts": "Hearts",
+    "coins": "Coins",
+    "xp": "XP",
+    "league": "League",
+    "nextHeart": "Next heart in {{minutes}} min",
+    "full": "Full"
+  },
+  "leagues": {
+    "bronze": "Bronze", "silver": "Silver", "gold": "Gold", "sapphire": "Sapphire",
+    "ruby": "Ruby", "emerald": "Emerald", "amethyst": "Amethyst", "diamond": "Diamond"
+  },
+  "profile": {
+    "title": "My profile",
+    "username": "Username",
+    "usernameHint": "3–20 letters, numbers or _. No real names or birth years.",
+    "save": "Save",
+    "saved": "Saved!",
+    "joined": "Joined {{date}}",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "errors": {
+      "username_length": "Use 3 to 20 characters.",
+      "username_characters": "Only letters, numbers and _.",
+      "username_blocked": "Please choose a kinder username.",
+      "username_personal_info": "Keep personal info (like birth years) out of your username.",
+      "username_taken": "Someone already has that username."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "themeSystem": "Automatic",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "accessibility": "Accessibility",
+    "dyslexiaFont": "Dyslexia-friendly font",
+    "largeText": "Larger text",
+    "reduceMotion": "Reduce motion",
+    "sound": "Sound effects",
+    "privacy": "Privacy",
+    "privacyBody": "Your uploads are only used to make your decks. You can delete everything at any time.",
+    "deleteData": "Delete my account and data",
+    "deleteConfirm": "This permanently deletes your account, decks and progress. Type DELETE to confirm.",
+    "deleteButton": "Delete forever",
+    "cancel": "Cancel"
+  },
+  "common": { "loading": "Loading…", "back": "Back", "retry": "Try again" }
+}

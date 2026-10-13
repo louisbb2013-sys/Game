@@ -1,0 +1,123 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/nunito';
+@import '@fontsource/opendyslexic/400.css';
+@import '@fontsource/opendyslexic/700.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Design tokens. Components use these via Tailwind utilities like bg-surface / text-ink. */
+@theme {
+  --font-sans: 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+  --font-dyslexic: 'OpenDyslexic', 'Nunito Variable', sans-serif;
+
+  --color-amber-glow: #f5a524;
+  --color-night: #1e1b4b;
+
+  --color-bg: var(--lumo-bg);
+  --color-surface: var(--lumo-surface);
+  --color-surface-2: var(--lumo-surface-2);
+  --color-ink: var(--lumo-ink);
+  --color-muted: var(--lumo-muted);
+  --color-line: var(--lumo-line);
+  --color-brand: var(--lumo-brand);
+  --color-brand-ink: var(--lumo-brand-ink);
+  --color-accent: var(--lumo-accent);
+  --color-good: var(--lumo-good);
+  --color-bad: var(--lumo-bad);
+  --color-heart: #f43f5e;
+}
+
+:root {
+  --lumo-bg: #fff8ec;
+  --lumo-surface: #ffffff;
+  --lumo-surface-2: #fdf0d9;
+  --lumo-ink: #1e1b4b;
+  --lumo-muted: #6b6893;
+  --lumo-line: #eadfca;
+  --lumo-brand: #4f46e5;
+  --lumo-brand-ink: #ffffff;
+  --lumo-accent: #f5a524;
+  --lumo-good: #16a34a;
+  --lumo-bad: #e11d48;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --lumo-bg: #0f0d2b;
+  --lumo-surface: #1a1740;
+  --lumo-surface-2: #252157;
+  --lumo-ink: #f5f3ff;
+  --lumo-muted: #a5a3d1;
+  --lumo-line: #2f2b66;
+  --lumo-brand: #818cf8;
+  --lumo-brand-ink: #0f0d2b;
+  --lumo-accent: #fbbf24;
+  --lumo-good: #4ade80;
+  --lumo-bad: #fb7185;
+  color-scheme: dark;
+}
+
+html {
+  font-size: 100%;
+}
+html[data-large-text='true'] {
+  font-size: 118.75%;
+}
+html[data-dyslexic='true'] body {
+  font-family: var(--font-dyslexic);
+  letter-spacing: -0.01em;
+  word-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+body {
+  background: var(--lumo-bg);
+  color: var(--lumo-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+}
+
+:focus-visible {
+  outline: 3px solid var(--lumo-accent);
+  outline-offset: 2px;
+}
+
+/* Mascot motion */
+@keyframes lumo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes lumo-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-12px) scale(1.05); }
+  60% { transform: translateY(0) scale(0.97); }
+}
+@keyframes lumo-pulse {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+@keyframes lumo-flap {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.45; }
+}
+.lumo-float { animation: lumo-float 3.2s ease-in-out infinite; }
+.lumo-bounce { animation: lumo-bounce 0.9s ease-in-out infinite; }
+.lumo-halo { animation: lumo-pulse 2.4s ease-in-out infinite; }
+.lumo-wing-l, .lumo-wing-r { animation: lumo-flap 0.5s ease-in-out infinite; }
+
+@keyframes pop-in {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pop-in { animation: pop-in 0.25s ease-out both; }
+
+html[data-reduce-motion='true'] *,
+html[data-reduce-motion='true'] *::before,
+html[data-reduce-motion='true'] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion='false']) * { animation: none !important; transition: none !important; }
+}
