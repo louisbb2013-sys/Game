@@ -62,7 +62,8 @@
     "weekly": "This week",
     "claim": "Claim",
     "adoptPet": "Adopt a study pet",
-    "adoptPetBody": "Pets cheer you on and give a small XP bonus."
+    "adoptPetBody": "Pets cheer you on and give a small XP bonus.",
+    "levelProgress": "Progress to the next level"
   },
   "stats": {
     "streak": "Day streak",
@@ -784,7 +785,8 @@
       "deck_too_small": "This deck needs a few more ideas for a game.",
       "invalid": "Something's not right. Try again.",
       "server_error": "Something went wrong. Try again.",
-      "network": "Can't reach Lumo. Check your connection."
+      "network": "Can't reach Lumo. Check your connection.",
+      "slow_down": "Slow down a little and try again in a few seconds."
     }
   },
   "friends": {

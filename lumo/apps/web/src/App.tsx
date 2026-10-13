@@ -1,30 +1,39 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { Layout } from './components/Layout';
 import { Lumo } from './components/Lumo';
+import { PageLoading } from './components/PageLoading';
 import { AuthProvider, useAuth } from './lib/auth';
-import { Chat, ChatHome } from './pages/Chat';
-import { Deck } from './pages/Deck';
-import { Sandbox } from './pages/Sandbox';
-import { SandboxPlay } from './pages/SandboxPlay';
 import { Home } from './pages/Home';
-import { League } from './pages/League';
-import { Pets } from './pages/Pets';
-import { Shop } from './pages/Shop';
 import { RewardsProvider } from './lib/rewards';
-import { Learn } from './pages/Learn';
-import { Quiz } from './pages/Quiz';
-import { Profile } from './pages/Profile';
-import { Settings } from './pages/Settings';
 import { SignIn } from './pages/SignIn';
-import { AddFriend, Friends } from './pages/Friends';
-import { Group, Groups, JoinGroup } from './pages/Groups';
-import { LiveHome, LiveRoom } from './pages/Live';
-import { ExamReport } from './pages/ExamReport';
-import { OfflineList, OfflineReview } from './pages/Offline';
-import { Audio } from './pages/Audio';
-import { Progress } from './pages/Progress';
+
+// Pages load on demand so the first screen appears fast (the service worker still caches them all for offline).
+const Chat = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Chat })));
+const ChatHome = lazy(() => import('./pages/Chat').then((m) => ({ default: m.ChatHome })));
+const Deck = lazy(() => import('./pages/Deck').then((m) => ({ default: m.Deck })));
+const Sandbox = lazy(() => import('./pages/Sandbox').then((m) => ({ default: m.Sandbox })));
+const SandboxPlay = lazy(() => import('./pages/SandboxPlay').then((m) => ({ default: m.SandboxPlay })));
+const League = lazy(() => import('./pages/League').then((m) => ({ default: m.League })));
+const Pets = lazy(() => import('./pages/Pets').then((m) => ({ default: m.Pets })));
+const Shop = lazy(() => import('./pages/Shop').then((m) => ({ default: m.Shop })));
+const Learn = lazy(() => import('./pages/Learn').then((m) => ({ default: m.Learn })));
+const Quiz = lazy(() => import('./pages/Quiz').then((m) => ({ default: m.Quiz })));
+const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
+const AddFriend = lazy(() => import('./pages/Friends').then((m) => ({ default: m.AddFriend })));
+const Friends = lazy(() => import('./pages/Friends').then((m) => ({ default: m.Friends })));
+const Group = lazy(() => import('./pages/Groups').then((m) => ({ default: m.Group })));
+const Groups = lazy(() => import('./pages/Groups').then((m) => ({ default: m.Groups })));
+const JoinGroup = lazy(() => import('./pages/Groups').then((m) => ({ default: m.JoinGroup })));
+const LiveHome = lazy(() => import('./pages/Live').then((m) => ({ default: m.LiveHome })));
+const LiveRoom = lazy(() => import('./pages/Live').then((m) => ({ default: m.LiveRoom })));
+const ExamReport = lazy(() => import('./pages/ExamReport').then((m) => ({ default: m.ExamReport })));
+const OfflineList = lazy(() => import('./pages/Offline').then((m) => ({ default: m.OfflineList })));
+const OfflineReview = lazy(() => import('./pages/Offline').then((m) => ({ default: m.OfflineReview })));
+const Audio = lazy(() => import('./pages/Audio').then((m) => ({ default: m.Audio })));
+const Progress = lazy(() => import('./pages/Progress').then((m) => ({ default: m.Progress })));
 
 export function App() {
   return (
@@ -55,51 +64,55 @@ function AppRoutes() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/signin" element={<SignIn />} />
-        <Route element={<Bare />}>
-          <Route path="/progress/:token" element={<Progress />} />
-        </Route>
-        <Route path="*" element={<RememberThenSignIn />} />
-      </Routes>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route path="/signin" element={<SignIn />} />
+          <Route element={<Bare />}>
+            <Route path="/progress/:token" element={<Progress />} />
+          </Route>
+          <Route path="*" element={<RememberThenSignIn />} />
+        </Routes>
+      </Suspense>
     );
   }
 
   return (
     <>
       <ResumeLink />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="learn" element={<Learn />} />
-          <Route path="decks/:id" element={<Deck />} />
-          <Route path="chat" element={<ChatHome />} />
-          <Route path="chat/:id" element={<Chat />} />
-          <Route path="sandbox" element={<Sandbox />} />
-          <Route path="sandbox/play/:id" element={<SandboxPlay />} />
-          <Route path="live" element={<LiveHome />} />
-          <Route path="friends" element={<Friends />} />
-          <Route path="add/:code" element={<AddFriend />} />
-          <Route path="groups" element={<Groups />} />
-          <Route path="groups/join/:code" element={<JoinGroup />} />
-          <Route path="groups/:id" element={<Group />} />
-          <Route path="exam/:sessionId" element={<ExamReport />} />
-          <Route path="offline" element={<OfflineList />} />
-          <Route path="audio/:deckId" element={<Audio />} />
-          <Route path="league" element={<League />} />
-          <Route path="shop" element={<Shop />} />
-          <Route path="pets" element={<Pets />} />
-          <Route path="me" element={<Profile />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-        <Route path="quiz/:sessionId" element={<Quiz />} />
-        <Route element={<Bare />}>
-          <Route path="live/:code" element={<LiveRoom />} />
-          <Route path="offline/:deckId" element={<OfflineReview />} />
-          <Route path="progress/:token" element={<Progress />} />
-        </Route>
-        <Route path="*" element={<Fallback />} />
-      </Routes>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="learn" element={<Learn />} />
+            <Route path="decks/:id" element={<Deck />} />
+            <Route path="chat" element={<ChatHome />} />
+            <Route path="chat/:id" element={<Chat />} />
+            <Route path="sandbox" element={<Sandbox />} />
+            <Route path="sandbox/play/:id" element={<SandboxPlay />} />
+            <Route path="live" element={<LiveHome />} />
+            <Route path="friends" element={<Friends />} />
+            <Route path="add/:code" element={<AddFriend />} />
+            <Route path="groups" element={<Groups />} />
+            <Route path="groups/join/:code" element={<JoinGroup />} />
+            <Route path="groups/:id" element={<Group />} />
+            <Route path="exam/:sessionId" element={<ExamReport />} />
+            <Route path="offline" element={<OfflineList />} />
+            <Route path="audio/:deckId" element={<Audio />} />
+            <Route path="league" element={<League />} />
+            <Route path="shop" element={<Shop />} />
+            <Route path="pets" element={<Pets />} />
+            <Route path="me" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+          <Route path="quiz/:sessionId" element={<Quiz />} />
+          <Route element={<Bare />}>
+            <Route path="live/:code" element={<LiveRoom />} />
+            <Route path="offline/:deckId" element={<OfflineReview />} />
+            <Route path="progress/:token" element={<Progress />} />
+          </Route>
+          <Route path="*" element={<Fallback />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }
@@ -147,11 +160,14 @@ function ResumeLink() {
   return null;
 }
 
+
 /** Full-screen pages without the tab bar (a live game). */
 function Bare() {
   return (
     <div className="mx-auto min-h-dvh max-w-xl px-4 pt-4 pb-6">
-      <Outlet />
+      <Suspense fallback={<PageLoading />}>
+        <Outlet />
+      </Suspense>
     </div>
   );
 }

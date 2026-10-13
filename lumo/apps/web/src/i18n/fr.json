@@ -62,7 +62,8 @@
     "weekly": "Cette semaine",
     "claim": "Réclamer",
     "adoptPet": "Adopte un compagnon d’étude",
-    "adoptPetBody": "Les compagnons t’encouragent et donnent un petit bonus d’XP."
+    "adoptPetBody": "Les compagnons t’encouragent et donnent un petit bonus d’XP.",
+    "levelProgress": "Progression vers le niveau suivant"
   },
   "stats": {
     "streak": "Jours de suite",
@@ -784,7 +785,8 @@
       "deck_too_small": "Ce paquet a besoin de quelques notions de plus pour une partie.",
       "invalid": "Quelque chose ne va pas. Réessaie.",
       "server_error": "Un problème est survenu. Réessaie.",
-      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion.",
+      "slow_down": "Doucement ! Réessaie dans quelques secondes."
     }
   },
   "friends": {

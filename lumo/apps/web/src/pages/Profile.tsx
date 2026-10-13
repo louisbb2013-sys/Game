@@ -131,8 +131,8 @@ function BadgesSection() {
       </h2>
       <ul className="grid grid-cols-4 gap-2">
         {data.badges.map((b) => (
-          <li key={b.id} className={`flex flex-col items-center gap-1 rounded-2xl p-2 text-center ${b.earnedAt ? 'bg-amber-glow/15' : 'bg-surface-2 opacity-50 grayscale'}`} title={t(`badges.${b.id}.desc`)}>
-            <span className="text-3xl">{b.emoji}</span>
+          <li key={b.id} className={`flex flex-col items-center gap-1 rounded-2xl p-2 text-center ${b.earnedAt ? 'bg-amber-glow/15' : 'bg-surface-2 text-muted'}`} title={t(`badges.${b.id}.desc`)}>
+            <span className={`text-3xl ${b.earnedAt ? '' : 'opacity-40 grayscale'}`}>{b.emoji}</span>
             <span className="text-[0.62rem] leading-tight font-bold">{t(`badges.${b.id}.name`)}</span>
             <span className="sr-only">{b.earnedAt ? t('profile.earned') : t('profile.locked')} — {t(`badges.${b.id}.desc`)}</span>
           </li>

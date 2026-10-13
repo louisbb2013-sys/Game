@@ -93,7 +93,7 @@ export const LIVE_FORMATS: Format[] = [
 ];
 
 export class LiveError extends Error {
-  constructor(public code: 'full' | 'started' | 'not_host' | 'not_enough_players' | 'not_in_game' | 'wrong_phase' | 'already_answered' | 'stale_question') {
+  constructor(public code: 'slow_down' | 'full' | 'started' | 'not_host' | 'not_enough_players' | 'not_in_game' | 'wrong_phase' | 'already_answered' | 'stale_question') {
     super(code);
   }
 }

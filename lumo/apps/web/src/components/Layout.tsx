@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import { PageLoading } from './PageLoading';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, Outlet } from 'react-router';
 import { useAuth } from '../lib/auth';
@@ -38,7 +40,9 @@ export function Layout() {
         </Link>
       )}
       <main className="flex-1 px-4 pt-4 pb-28">
-        <Outlet />
+        <Suspense fallback={<PageLoading />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <nav

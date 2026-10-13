@@ -32,6 +32,7 @@ export async function answerCurrent(page: Page, format: string) {
       const pool = page.getByRole('button', { name: 'Items to place' });
       const zones = page.locator('[data-drop]:not([data-drop="__pool"])');
       const before = await pool.getByRole('button').count();
+      await expect(pool.getByRole('button').first()).toBeVisible();
       const first = pool.getByRole('button').first();
       const fb = await first.boundingBox();
       const zb = await zones.first().boundingBox();

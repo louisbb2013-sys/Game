@@ -86,7 +86,7 @@ export function Home() {
           <span className="text-lg font-black">{t('home.level', { level: user.level.level })}</span>
           <span className="text-sm font-bold text-muted">{t('home.xpToNext', { current: user.level.current, needed: user.level.needed })}</span>
         </div>
-        <div className="mt-2 h-3.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(user.level.ratio * 100)}>
+        <div className="mt-2 h-3.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label={t('home.levelProgress')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(user.level.ratio * 100)}>
           <div className="h-full rounded-full bg-gradient-to-r from-amber-glow to-amber-300 transition-[width] duration-700" style={{ width: `${Math.max(3, user.level.ratio * 100)}%` }} />
         </div>
       </section>

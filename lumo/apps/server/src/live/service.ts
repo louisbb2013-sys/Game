@@ -78,6 +78,7 @@ const kickBody = z.object({ code: z.string().max(8), playerId: z.string().uuid()
  */
 export class LiveService {
   private games = new Map<string, Game>();
+  private lastCreate = new Map<string, number>();
   private io: Server | null = null;
   private sweeper: NodeJS.Timeout | null = null;
 
@@ -121,7 +122,18 @@ export class LiveService {
 
   private onConnection(s: Socket) {
     const me = s.data.user as { id: string; name: string; avatar: string };
+    // Per-connection flood guard: plenty for a real player, useless for a script.
+    let tokens = 20;
+    let refilled = Date.now();
     const safe = (fn: (body: unknown) => Promise<unknown> | unknown) => async (body: unknown, ack?: Ack) => {
+      const now = Date.now();
+      tokens = Math.min(20, tokens + ((now - refilled) / 1000) * 5);
+      refilled = now;
+      if (tokens < 1) {
+        if (typeof ack === 'function') ack({ ok: false, error: 'slow_down' });
+        return;
+      }
+      tokens -= 1;
       try {
         const r = await fn(body);
         if (typeof ack === 'function') ack({ ok: true, ...(r as object) });
@@ -134,6 +146,10 @@ export class LiveService {
 
     s.on('live:create', safe(async (b) => {
       const { deckId, count } = createBody.parse(b);
+      // Making a game generates many questions (AI calls): one new game per 15 seconds per host.
+      const last = this.lastCreate.get(me.id) ?? 0;
+      if (Date.now() - last < 15_000) throw new LiveError('slow_down');
+      this.lastCreate.set(me.id, Date.now());
       return { code: await this.create(me, deckId, count) };
     }));
     s.on('live:join', safe((b) => this.join(s, me, codeBody.parse(b).code.toUpperCase())));
@@ -374,6 +390,7 @@ export class LiveService {
 
   private sweep() {
     const now = Date.now();
+    for (const [id, at] of this.lastCreate) if (now - at > 60_000) this.lastCreate.delete(id);
     for (const g of [...this.games.values()]) {
       const idle = now - g.touchedAt;
       const nobody = g.state.players.every((p) => !p.connected);

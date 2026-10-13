@@ -102,7 +102,31 @@ npm run typecheck
 # browser tests (with `npm run dev` running):
 npx playwright install chromium   # once
 npx playwright test
+# against the production build (also runs the offline/PWA test):
+#   npm run build && WEB_DIST=apps/web/dist PORT=3002 APP_URL=http://localhost:3002 npm start
+#   E2E_URL=http://localhost:3002 npx playwright test
 ```
+
+## Production
+One Node process serves the API, Live games (WebSocket) and the built app.
+
+```bash
+npm ci
+npm run build                      # builds apps/web/dist (code-split, PWA with offline cache)
+NODE_ENV=production \
+APP_URL=https://lumo.example.com API_URL=https://lumo.example.com \
+SESSION_SECRET=$(openssl rand -hex 32) \
+DATABASE_URL=postgres://… \
+WEB_DIST=apps/web/dist \
+ANTHROPIC_API_KEY=… GOOGLE_CLIENT_ID=… GOOGLE_CLIENT_SECRET=… SMTP_URL=smtp://… \
+npm start                          # runs migrations, then listens on PORT (3001)
+```
+
+- Put it behind HTTPS (e.g. Caddy or nginx) and forward WebSocket upgrades for `/api/live/socket`.
+- Hashed assets are cached for a year; `index.html` and `sw.js` are always revalidated, so updates reach
+  everyone on their next visit.
+- Developer sign-in is disabled when `NODE_ENV=production`.
+- Without `ANTHROPIC_API_KEY` the app still works with the built-in offline generator (photos/PDFs need AI).
 
 ## Layout
 ```

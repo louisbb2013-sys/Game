@@ -32,13 +32,13 @@
   --lumo-surface: #ffffff;
   --lumo-surface-2: #fdf0d9;
   --lumo-ink: #1e1b4b;
-  --lumo-muted: #6b6893;
+  --lumo-muted: #57547d;
   --lumo-line: #eadfca;
   --lumo-brand: #4f46e5;
   --lumo-brand-ink: #ffffff;
   --lumo-accent: #f5a524;
   --lumo-good: #16a34a;
-  --lumo-bad: #e11d48;
+  --lumo-bad: #be123c;
   color-scheme: light;
 }
 

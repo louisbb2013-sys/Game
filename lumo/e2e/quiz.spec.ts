@@ -56,6 +56,7 @@ test('full session from the deck page through the summary', async ({ page }) => 
     const res = await page.request.get(page.url().replace(/.*\/quiz\//, '/api/sessions/'));
     const { question } = await res.json();
     if (!question) break;
+    await expect(page.locator(`section[data-format="${question.format}"]`)).toBeVisible();
     formatsSeen.add(question.format);
     await answerCurrent(page, question.format);
     await page.getByRole('button', { name: 'Check' }).click();

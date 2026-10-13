@@ -15,6 +15,8 @@ const schema = z.object({
   ANTHROPIC_API_KEY: z.string().default(''),
   AI_MODEL: z.string().default('claude-opus-5-5'),
   AI_GRADING_MODEL: z.string().default('claude-opus-5-5'),
+  /** Built web app to serve (production). Empty = don't serve it (development uses Vite). */
+  WEB_DIST: z.string().default(''),
 });
 
 export type Config = z.infer<typeof schema>;

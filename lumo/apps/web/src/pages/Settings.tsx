@@ -41,6 +41,7 @@ export function Settings() {
           <select
             value={s.theme ?? 'system'}
             onChange={(e) => set({ theme: e.target.value as S['theme'] })}
+            aria-label={t('settings.theme')}
             className="rounded-xl border-2 border-line bg-bg px-2 py-1 font-bold"
           >
             <option value="system">{t('settings.themeSystem')}</option>

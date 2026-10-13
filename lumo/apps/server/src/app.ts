@@ -1,6 +1,9 @@
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { Config } from './config.ts';
 import { EmailCodes } from './auth/email.ts';
@@ -106,6 +109,14 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
     },
   };
 
+  // Basic hardening for every response.
+  app.addHook('onSend', async (_req, reply) => {
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('referrer-policy', 'strict-origin-when-cross-origin');
+    reply.header('x-frame-options', 'DENY');
+    reply.header('permissions-policy', 'microphone=(self), camera=(self), geolocation=()');
+  });
+
   app.get('/api/health', async () => ({ ok: true }));
   await authRoutes(app, ctx);
   await meRoutes(app, ctx);
@@ -116,6 +127,27 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
   await gameRoutes(app, ctx);
   await socialRoutes(app, ctx);
   await studyRoutes(app, ctx);
+
+  // Production: serve the built web app (one process, one origin). Hashed assets are cached forever;
+  // index.html and the service worker are always revalidated so updates reach everyone.
+  // Relative paths are from the project root (where package.json and .env live).
+  const dist = config.WEB_DIST ? resolve(import.meta.dirname, '../../..', config.WEB_DIST) : '';
+  if (dist && existsSync(resolve(dist, 'index.html'))) {
+    await app.register(fastifyStatic, {
+      root: dist,
+      wildcard: false,
+      cacheControl: false, // set below per file
+      setHeaders: (res, path) => {
+        const immutable = /[\\/]assets[\\/]/.test(path);
+        res.setHeader('cache-control', immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
+      },
+    });
+    app.setNotFoundHandler((req, reply) => {
+      if ((req.method !== 'GET' && req.method !== 'HEAD') || req.url.startsWith('/api/')) return reply.code(404).send({ error: 'not_found' });
+      reply.code(200).header('cache-control', 'no-cache');
+      return reply.sendFile('index.html');
+    });
+  }
 
   return { app, ctx };
 }
