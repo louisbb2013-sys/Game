@@ -118,6 +118,14 @@ in Live (open answers are graded by the AI during the reveal phase, with a timeo
   prompt caching for deck context, rate limiting.
 - Moderation: chat input/output pass through a safety check; usernames filtered.
 
+## 7b. Study Sandbox (added on request)
+Any study format, generated from the deck's concepts: video, podcast, story, quiz show, escape room, crossword,
+word search, memory match, word scramble, speed round, two truths & a lie, flashcards, mind map, cheat sheet,
+memory tricks, timeline. Design rule from learning research (retrieval practice, spacing, elaboration, concrete
+examples, dual coding): **every format includes active recall**: videos and podcasts pause for questions, the
+mind map, cheat sheet, memory tricks and timeline all end in a self-test. Generators live in `core/sandbox`
+(offline, deterministic, tested); Claude rewrites the scripts for video/podcast/story/memory tricks when a key is set.
+
 ## 8. Milestones
 1. **Foundation** — monorepo, `core` (SRS, mastery, XP/levels, streaks, hearts, leagues) with tests; server with
    migrations, Google + email + dev auth, `/me`; web PWA shell with Lumo branding, EN/FR, dark mode,

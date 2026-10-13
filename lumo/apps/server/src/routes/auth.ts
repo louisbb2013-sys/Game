@@ -56,7 +56,8 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   const emailStart = z.object({ email: z.string().trim().toLowerCase().email().max(254), locale: localeSchema });
-  app.post('/api/auth/email/start', { config: { rateLimit: { max: 5, timeWindow: '10 minutes' } } }, async (req, reply) => {
+  const byEmail = (req: { body: unknown; ip: string }) => `e:${String((req.body as { email?: unknown } | null)?.email ?? '').trim().toLowerCase() || req.ip}`;
+  app.post('/api/auth/email/start', { config: { rateLimit: { max: 5, timeWindow: '10 minutes', keyGenerator: byEmail } } }, async (req, reply) => {
     const body = emailStart.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'invalid_email' });
     await emailCodes.start(body.data.email, body.data.locale);
@@ -69,7 +70,7 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
     locale: localeSchema,
     timezone: z.string().optional(),
   });
-  app.post('/api/auth/email/verify', { config: { rateLimit: { max: 10, timeWindow: '10 minutes' } } }, async (req, reply) => {
+  app.post('/api/auth/email/verify', { config: { rateLimit: { max: 10, timeWindow: '10 minutes', keyGenerator: byEmail } } }, async (req, reply) => {
     const body = emailVerify.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'invalid_code' });
     if (!(await emailCodes.verify(body.data.email, body.data.code))) return reply.code(401).send({ error: 'wrong_code' });

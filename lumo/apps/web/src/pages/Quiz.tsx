@@ -39,7 +39,14 @@ export function Quiz() {
 
   useEffect(() => {
     if (data || !sessionId) return;
-    api<Loaded>(`/api/sessions/${sessionId}`).then(setData, () => setError('load'));
+    api<Loaded & { followUp?: string }>(`/api/sessions/${sessionId}`).then((r) => {
+      setData(r);
+      if (r.followUp) {
+        // Reloaded in the middle of teach-back: continue with Lumo's question.
+        setFollowUp(r.followUp);
+        setPhase('followup');
+      }
+    }, () => setError('load'));
   }, [data, sessionId]);
 
   useEffect(() => {

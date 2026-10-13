@@ -18,3 +18,7 @@ export * from './quiz/planner';
 export * from './quiz/session';
 export * from './quiz/samples';
 export * from './quiz/answers';
+export * from './quiz/extract';
+export * from './sandbox/types';
+export * from './sandbox/generate';
+export * from './sandbox/intent';

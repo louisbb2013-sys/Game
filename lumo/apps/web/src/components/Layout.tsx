@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '../lib/auth';
-import { BoltIcon, BookIcon, CoinIcon, FlameIcon, HeartIcon, HomeIcon, TrophyIcon, UserIcon } from './icons';
+import { BoltIcon, BookIcon, CoinIcon, FlameIcon, HeartIcon, HomeIcon, SparkIcon, TrophyIcon, UserIcon } from './icons';
 
 export function Layout() {
   const { t } = useTranslation();
@@ -11,6 +11,7 @@ export function Layout() {
   const tabs = [
     { to: '/', label: t('nav.home'), icon: HomeIcon, end: true },
     { to: '/learn', label: t('nav.learn'), icon: BookIcon },
+    { to: '/sandbox', label: t('nav.sandbox'), icon: SparkIcon },
     { to: '/live', label: t('nav.live'), icon: BoltIcon },
     { to: '/league', label: t('nav.league'), icon: TrophyIcon },
     { to: '/me', label: t('nav.profile'), icon: UserIcon },
@@ -37,14 +38,14 @@ export function Layout() {
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl border-t border-line bg-surface/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1 backdrop-blur"
       >
-        <ul className="grid grid-cols-5">
+        <ul className="grid grid-cols-6">
           {tabs.map(({ to, label, icon: Icon, end }) => (
             <li key={to}>
               <NavLink
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  `flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-xs font-bold transition-colors ${
+                  `flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[0.7rem] font-bold transition-colors ${
                     isActive ? 'text-brand' : 'text-muted hover:text-ink'
                   }`
                 }

@@ -50,3 +50,57 @@ describe('ClaudeProvider (mocked HTTP)', () => {
     expect(api.calls[0].body.fallbacks).toBeUndefined(); // not supported on Haiku
   });
 });
+
+describe('ClaudeProvider: notes, tutor and sandbox (mocked HTTP)', () => {
+  const llmConcept = {
+    topic: 'Cells', kind: 'definition', term: 'ribosome', summary: 'Where proteins are made.', keyPoints: ['Makes proteins'], misconceptions: ['Makes energy'],
+    examples: [], synonyms: [], steps: [], causeEffects: [], comparison: null, categories: [], date: '', formula: null,
+  };
+
+  it('sends photos and PDFs to vision, validates concepts, drops bad ones', async () => {
+    const bad = { ...llmConcept, term: '', summary: '' };
+    const formula = { ...llmConcept, term: 'speed', kind: 'formula', formula: { expression: 'd / t', resultSymbol: 'v', resultName: 'speed', resultUnit: 'm/s', variables: [{ symbol: 'd', name: 'distance', unit: 'm', min: 10, max: 100, step: 10 }, { symbol: 't', name: 'time', unit: 's', min: 2, max: 10, step: 1 }] } };
+    const api = fakeApi(JSON.stringify({ title: 'Cells', subject: 'Biology', language: 'en', summary: 'About cells.', ignored: ['page numbers'], concepts: [llmConcept, bad, formula] }));
+    const p = new ClaudeProvider('sk-test', 'claude-opus-5-5', 'claude-opus-5-5', () => {}, api.f);
+    const d = await p.extractConcepts({
+      media: [
+        { kind: 'image', mime: 'image/jpeg', name: 'a.jpg', data: Buffer.from('fake') },
+        { kind: 'pdf', mime: 'application/pdf', name: 'b.pdf', data: Buffer.from('%PDF-1.4') },
+      ],
+      instruction: 'test on friday, skip chapter 2',
+      language: 'en',
+    });
+    expect(d.concepts.map((c) => c.term)).toEqual(['ribosome', 'speed']);
+    expect(d.concepts[1]!.formula?.result.unit).toBe('m/s');
+    const content = api.calls[0].body.messages[0].content;
+    expect(content[0].type).toBe('image');
+    expect(content[1].type).toBe('document');
+    expect(content.at(-1).text).toContain('skip chapter 2');
+    expect(api.calls[0].body.output_config.effort).toBe('medium');
+  });
+
+  it('writes a video script and repairs invalid checks', async () => {
+    const scenes = [
+      { type: 'title', heading: 'Cells!', text: '', bullets: [], emoji: '🔬', narration: 'Hi', check: null },
+      { type: 'idea', heading: 'Ribosome', text: 'Protein factory', bullets: [], emoji: '🏭', narration: 'Ribosomes build proteins', check: null },
+      { type: 'check', heading: 'Pause!', text: '', bullets: [], emoji: '⏸️', narration: 'Your turn', check: { prompt: 'Q?', options: ['a', 'a'], correctIndex: 5, explanation: 'x' } },
+      { type: 'recap', heading: 'Recap', text: '', bullets: ['one'], emoji: '✨', narration: 'Bye', check: null },
+    ];
+    const api = fakeApi(JSON.stringify({ scenes }));
+    const p = new ClaudeProvider('sk-test', 'claude-opus-5-5', 'claude-opus-5-5', () => {}, api.f);
+    const v = await p.sandboxScript('video', deck, 'Cells', 'en');
+    expect(v?.kind).toBe('video');
+    const check = v!.kind === 'video' ? v!.scenes[2]!.check! : null;
+    expect(check!.options[check!.correctIndex]).toBeTruthy(); // invalid check replaced
+    expect(await p.sandboxScript('crossword', deck, 'Cells', 'en')).toBeNull(); // built locally
+  });
+
+  it('tutor replies in plain text with the deck as context', async () => {
+    const api = fakeApi('Think of a ribosome like a tiny 3D printer!');
+    const p = new ClaudeProvider('sk-test', 'claude-opus-5-5', 'claude-opus-5-5', () => {}, api.f);
+    const r = await p.tutorReply({ history: [{ role: 'user', content: 'what is a ribosome' }], language: 'en', deck: { title: 'Cells', concepts: deck } });
+    expect(r).toContain('3D printer');
+    expect(api.calls[0].body.system).toContain('nucleus');
+    expect(api.calls[0].body.output_config.format).toBeUndefined();
+  });
+});

@@ -75,7 +75,7 @@ describe('quiz sessions', () => {
     expect(start.statusCode).toBe(200);
     const { session } = start.json();
     let question = start.json().question;
-    for (const key of ['correctId', 'accepted', 'keyPoints', 'correctOrder', 'mapping', 'answer"', 'explanation']) expect(JSON.stringify(question)).not.toContain(key);
+    for (const key of ['correctId', 'accepted', 'keyPoints', 'correctOrder', 'mapping', 'answer', 'explanation']) expect(JSON.stringify(question)).not.toContain(`"${key}":`);
 
     const seen: { conceptId: string; format: string }[] = [];
     let summary = null;
@@ -126,6 +126,18 @@ describe('quiz sessions', () => {
     expect(ledger.rows[0].s).toBe(totalXp);
   });
 
+  it('teach-back keeps Lumo’s follow-up across a reload', async () => {
+    const cookie = await login('teacher');
+    const deckId = await sampleDeck(cookie);
+    const s = (await t.app.inject({ method: 'POST', url: `/api/decks/${deckId}/sessions`, headers: { cookie }, payload: { length: 3, formats: ['teach_back'] } })).json();
+    const q = await current(s.session.id);
+    const first = (await t.app.inject({ method: 'POST', url: `/api/sessions/${s.session.id}/answer`, headers: { cookie }, payload: { questionId: q.id, answer: { kind: 'text', text: 'It is the control centre.' } } })).json();
+    expect(first.followUp).toBeTruthy();
+    const resumed = (await t.app.inject({ method: 'GET', url: `/api/sessions/${s.session.id}`, headers: { cookie } })).json();
+    expect(resumed.followUp).toBe(first.followUp);
+    expect(resumed.question.id).toBe(q.id);
+  });
+
   it('rejects stale and replayed answers', async () => {
     const cookie = await login('replayer');
     const deckId = await sampleDeck(cookie);
@@ -173,17 +185,15 @@ describe('quiz sessions', () => {
 
 describe('AI provider integration', () => {
   it('uses AI grading for open answers and falls back to the heuristic when AI fails', async () => {
-    const mock = new MockProvider();
     let calls = 0;
-    const flaky: AiProvider = {
-      name: 'mock',
-      generateQuestion: (i) => mock.generateQuestion(i),
-      gradeOpen: async () => {
+    class Flaky extends MockProvider {
+      override async gradeOpen() {
         calls++;
         if (calls === 1) return { score: 0.9, matchedPoints: ['x'], missingPoints: [], feedback: 'Great explanation!' };
         throw new Error('api down');
-      },
-    };
+      }
+    }
+    const flaky: AiProvider = new Flaky();
     const ai = await setupTestApp({ ai: flaky });
     try {
       const login2 = await ai.app.inject({ method: 'POST', url: '/api/auth/dev', payload: { name: 'aiuser' } });

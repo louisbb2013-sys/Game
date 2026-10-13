@@ -14,7 +14,23 @@ See [PLAN.md](PLAN.md) for architecture, data model and milestones.
   with an offline fallback), anti-repeat planner (never the same format twice in a row per concept, Bloom
   depth that rises with success, retries asked differently), spaced repetition, mastery map, practice /
   review / fix-mistakes / challenge (hearts) modes, XP + combo, coins, streaks, EN/FR sample decks.
-- ⏳ Milestones 3–6: AI chat deck builder, game systems, social & Live, extras.
+- ✅ **Milestone 3 — AI chat deck builder**: send photos, PDFs or text (with a clear consent notice), Lumo keeps
+  only what matters and shows *What I understood*; edit, untick or add concepts (or say “chapter 3 isn’t on the
+  exam”), then build the deck. Follow-ups in plain words: “make it harder”, “quiz me on what I got wrong”,
+  “explain osmosis again”, “make me a crossword”. Uploads are deleted as soon as the deck is built.
+  Without an API key, typed notes and Quizlet/Anki text exports still work offline; photos/PDFs need the key.
+- ✅ **Study Sandbox** — study any way you like; every format makes you *answer*, not just watch:
+  - 🎬 Watch & listen: narrated explainer **video** (pause-and-predict checkpoints), two-host **podcast** with
+    quick checks, interactive **mystery story**.
+  - 🎮 Play: **quiz show** (deeper questions = more points), **escape room** (each answer unlocks a digit),
+    **crossword**, **word search**, **memory match**, **word scramble**, 60-second **speed round**,
+    **two truths & a lie**.
+  - 🛠️ Review & remember: **flashcards** (think, flip, rate), **mind map** (explore, then test),
+    printable **cheat sheet** with self-test, **memory tricks** (acronyms + silly sentences, then rebuild the list),
+    **timeline** (follow, then rebuild from memory).
+  - Ask for anything in plain words (“make me a crossword about osmosis”), in English or French.
+  - XP once per activity, capped per day (games run on the device, so the server limits what they can earn).
+- ⏳ Milestones 4–6: full game systems (leagues, chests, pets, shop, quests), social & Live, extras.
 
 ## Requirements
 - Node 22+

@@ -159,3 +159,10 @@ html[data-reduce-motion='true'] *::after {
   to { transform: translateY(100vh) rotate(720deg); opacity: 0.8; }
 }
 .confetti { position: fixed; top: 0; width: 8px; height: 14px; border-radius: 2px; animation: confetti-fall linear forwards; pointer-events: none; z-index: 60; }
+
+/* Printing a cheat sheet prints only the sheet */
+@media print {
+  body * { visibility: hidden; }
+  .cheat-sheet, .cheat-sheet * { visibility: visible; }
+  .cheat-sheet { position: absolute; inset: 0 auto auto 0; width: 100%; box-shadow: none; }
+}

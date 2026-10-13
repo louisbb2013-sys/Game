@@ -12,6 +12,7 @@ export const settingsSchema = z
     largeText: z.boolean(),
     sound: z.boolean(),
     reduceMotion: z.boolean(),
+    uploadConsent: z.boolean(),
   })
   .partial()
   .strict();

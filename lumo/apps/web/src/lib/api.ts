@@ -27,6 +27,7 @@ export interface Settings {
   largeText?: boolean;
   sound?: boolean;
   reduceMotion?: boolean;
+  uploadConsent?: boolean;
 }
 
 export interface Profile {

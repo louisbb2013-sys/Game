@@ -52,13 +52,12 @@ export function Home() {
       </section>
 
       <section className="space-y-3">
-        <ActionCard
-          accent
-          icon={<CameraIcon size={28} />}
-          title={t('home.createTitle')}
-          body={t('home.createBody')}
-          soon={t('home.soon')}
-        />
+        <Link to="/chat" className="block">
+          <ActionCard accent icon={<CameraIcon size={28} />} title={t('home.createTitle')} body={t('home.createBody')} />
+        </Link>
+        <Link to="/sandbox" className="block">
+          <ActionCard icon={<span className="text-2xl">🎨</span>} title={t('home.sandboxTitle')} body={t('home.sandboxBody')} />
+        </Link>
         <Link to="/learn" className="block">
           <ActionCard icon={<span className="text-2xl">📚</span>} title={t('home.reviewTitle')} body={t('home.reviewBody')} />
         </Link>

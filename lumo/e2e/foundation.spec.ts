@@ -48,7 +48,8 @@ test('developer sign-in button', async ({ page }) => {
 test('email code sign-in', async ({ page, request }) => {
   await page.goto('/signin');
   await page.getByRole('button', { name: 'en', exact: true }).click();
-  await page.getByLabel('Email').fill('e2e@example.com');
+  // A fresh address per run: sign-in codes are rate-limited per email.
+  await page.getByLabel('Email').fill(`e2e${Date.now()}@example.com`);
   await page.getByRole('button', { name: 'Send me a code' }).click();
   await expect(page.getByText(/We sent a 6-digit code/)).toBeVisible();
   await page.getByLabel('Code').fill('000000');

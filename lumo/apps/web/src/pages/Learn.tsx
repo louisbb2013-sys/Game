@@ -30,7 +30,7 @@ export function Learn() {
     <div className="space-y-5">
       <h1 className="text-2xl font-black">{t('learn.title')}</h1>
 
-      <div className="flex items-center gap-4 rounded-3xl bg-amber-glow/15 p-4 ring-1 ring-amber-glow/40">
+      <Link to="/chat" className="flex items-center gap-4 rounded-3xl bg-amber-glow/15 p-4 ring-1 ring-amber-glow/40 transition hover:ring-amber-glow">
         <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-amber-glow text-night">
           <CameraIcon size={28} />
         </span>
@@ -38,8 +38,8 @@ export function Learn() {
           <h2 className="font-black">{t('home.createTitle')}</h2>
           <p className="text-sm text-muted">{t('home.createBody')}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[0.7rem] font-extrabold text-muted">{t('home.soon')}</span>
-      </div>
+        <span className="shrink-0 text-2xl text-muted">›</span>
+      </Link>
 
       {decks === null ? (
         <p className="text-center font-bold text-muted">{t('common.loading')}</p>
@@ -48,6 +48,9 @@ export function Learn() {
           <Lumo size={96} mood="thinking" />
           <p className="font-black">{t('learn.empty')}</p>
           <p className="text-sm text-muted">{t('learn.emptyBody')}</p>
+          <Link to="/chat" className="rounded-2xl bg-amber-glow px-5 py-3 font-black text-night">
+            📸 {t('chat.start')}
+          </Link>
           <button onClick={() => void addSample()} disabled={busy} className="rounded-2xl bg-brand px-5 py-3 font-black text-brand-ink disabled:opacity-50">
             {t('learn.trySample')}
           </button>

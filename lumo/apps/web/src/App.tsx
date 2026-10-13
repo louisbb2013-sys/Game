@@ -3,7 +3,10 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { Lumo } from './components/Lumo';
 import { AuthProvider, useAuth } from './lib/auth';
+import { Chat, ChatHome } from './pages/Chat';
 import { Deck } from './pages/Deck';
+import { Sandbox } from './pages/Sandbox';
+import { SandboxPlay } from './pages/SandboxPlay';
 import { Home } from './pages/Home';
 import { Learn } from './pages/Learn';
 import { Quiz } from './pages/Quiz';
@@ -51,6 +54,10 @@ function AppRoutes() {
         <Route index element={<Home />} />
         <Route path="learn" element={<Learn />} />
         <Route path="decks/:id" element={<Deck />} />
+        <Route path="chat" element={<ChatHome />} />
+        <Route path="chat/:id" element={<Chat />} />
+        <Route path="sandbox" element={<Sandbox />} />
+        <Route path="sandbox/play/:id" element={<SandboxPlay />} />
         <Route path="live" element={<Soon />} />
         <Route path="league" element={<Soon />} />
         <Route path="me" element={<Profile />} />

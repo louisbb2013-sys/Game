@@ -124,7 +124,13 @@ const OPEN_GRADE_TIMEOUT_MS = 20_000;
 
 export class QuizService {
   // Questions generated ahead of time so the next one is ready when the learner answers.
-  private prefetch = new Map<string, { conceptId: string; promise: Promise<Question | null> }>();
+  private prefetch = new Map<string, { conceptId: string; promise: Promise<Question | null>; at: number }>();
+
+  /** Drop warmed-up questions for sessions the learner abandoned. */
+  private prunePrefetch() {
+    const cutoff = Date.now() - 30 * 60_000;
+    for (const [id, p] of this.prefetch) if (p.at < cutoff) this.prefetch.delete(id);
+  }
 
   constructor(
     private db: Db,
@@ -198,9 +204,10 @@ export class QuizService {
     return { session: this.publicSession(sessionId, deckId, state, user), question: publicQuestion(q) };
   }
 
-  async resume(user: UserRow, sessionId: string): Promise<{ session: PublicSession; question: PublicQuestion | null }> {
+  async resume(user: UserRow, sessionId: string): Promise<{ session: PublicSession; question: PublicQuestion | null; followUp?: string }> {
     const s = await this.getSession(user.id, sessionId);
-    return { session: this.publicSession(s.id, s.deck_id, s.state, user), question: s.current ? publicQuestion(s.current) : null };
+    const followUp = s.current && s.state.teachBack?.questionId === s.current.id ? s.state.teachBack.followUp : undefined;
+    return { session: this.publicSession(s.id, s.deck_id, s.state, user), question: s.current ? publicQuestion(s.current) : null, followUp };
   }
 
   private async getSession(userId: string, sessionId: string, client: pg.PoolClient | Db = this.db, lock = false): Promise<SessionRow> {
@@ -231,7 +238,10 @@ export class QuizService {
     // Warm up the following question while the learner thinks.
     const following = state.queue[1];
     if (following && following !== conceptId) {
-      this.prefetch.set(sessionId, { conceptId: following, promise: this.makeQuestion(user, following, concepts, state) });
+      this.prunePrefetch();
+      const promise = this.makeQuestion(user, following, concepts, state);
+      promise.catch(() => {}); // never an unhandled rejection if it ends up unused
+      this.prefetch.set(sessionId, { conceptId: following, promise, at: Date.now() });
     }
     return q;
   }
@@ -390,6 +400,7 @@ export class QuizService {
 
   /** End of session: streak, coins, review hearts, and a mastery report. */
   private async finish(user: UserRow, sessionId: string, state: StoredState): Promise<SessionSummary> {
+    this.prefetch.delete(sessionId);
     const now = Date.now();
     const client = await this.db.connect();
     try {
