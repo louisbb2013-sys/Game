@@ -519,7 +519,27 @@ export class GameService {
         [week, userId],
       )
     ).rows;
-    return rows.map((r, i) => ({ rank: i + 1, username: r.username, avatar: r.avatar, tier: r.league_tier, weeklyXp: r.xp, me: r.me }));
+    const out = rows.map((r, i) => ({ rank: i + 1, username: r.username, avatar: r.avatar, tier: r.league_tier, weeklyXp: r.xp, me: r.me }));
+    if (!out.some((r) => r.me)) {
+      // Outside the top 50: still show where you stand.
+      const mine = (
+        await this.db.query<{ username: string; avatar: string; league_tier: string; xp: number }>(
+          `SELECT u.username, u.avatar, u.league_tier, coalesce(sum(e.amount), 0)::int AS xp
+           FROM users u LEFT JOIN xp_events e ON e.user_id = u.id AND e.week_id = $1 WHERE u.id = $2 GROUP BY u.id`,
+          [week, userId],
+        )
+      ).rows[0];
+      if (mine && mine.xp > 0) {
+        const above = (
+          await this.db.query<{ n: number }>(
+            `SELECT count(*)::int AS n FROM (SELECT user_id, sum(amount) AS xp FROM xp_events WHERE week_id = $1 GROUP BY user_id) t WHERE t.xp > $2`,
+            [week, mine.xp],
+          )
+        ).rows[0]!.n;
+        out.push({ rank: above + 1, username: mine.username, avatar: mine.avatar, tier: mine.league_tier, weeklyXp: mine.xp, me: true });
+      }
+    }
+    return out;
   }
 
   /** Everything the home screen needs in one call. */

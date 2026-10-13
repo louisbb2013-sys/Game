@@ -33,6 +33,18 @@ export async function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     return handle(reply, () => quiz.resume(req.user!, p.data.id));
   });
 
+  app.get('/api/sessions/:id/report', auth, async (req, reply) => {
+    const p = idParam.safeParse(req.params);
+    if (!p.success) return reply.code(404).send({ error: 'session_not_found' });
+    return handle(reply, () => quiz.report(req.user!.id, p.data.id));
+  });
+
+  app.post('/api/sessions/:id/hand-in', auth, async (req, reply) => {
+    const p = idParam.safeParse(req.params);
+    if (!p.success) return reply.code(404).send({ error: 'session_not_found' });
+    return handle(reply, async () => ({ summary: await quiz.handIn(req.user!, p.data.id) }));
+  });
+
   const answerBody = z.object({ questionId: z.string().max(60), answer: answerSchema, timeMs: z.number().int().min(0).max(3_600_000).optional() });
   // Answers are graded server-side; the rate limit stops scripted XP farming.
   app.post('/api/sessions/:id/answer', { ...auth, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (req, reply) => {

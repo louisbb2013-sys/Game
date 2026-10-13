@@ -1,11 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { setLocale } from '../i18n';
 import { api, ApiError, type Profile, type Settings } from './api';
+import { clearOffline, syncOffline } from './offline';
 import { applySettings, loadLocalSettings } from './prefs';
+
+const PROFILE_KEY = 'lumo_profile';
+function cachedProfile(): Profile | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? (JSON.parse(raw) as Profile) : null;
+  } catch {
+    return null;
+  }
+}
 
 interface AuthValue {
   user: Profile | null;
   loading: boolean;
+  /** Signed in earlier but the server can't be reached: offline review still works. */
+  offline: boolean;
   setUser: (u: Profile | null) => void;
   refresh: () => Promise<void>;
   update: (patch: Partial<Pick<Profile, 'username' | 'locale' | 'timezone' | 'avatar'>> & { settings?: Settings }) => Promise<Profile>;
@@ -17,9 +30,16 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
 
   const setUser = useCallback((u: Profile | null) => {
     setUserState(u);
+    try {
+      if (u) localStorage.setItem(PROFILE_KEY, JSON.stringify(u));
+      else localStorage.removeItem(PROFILE_KEY);
+    } catch {
+      /* storage blocked */
+    }
     if (u) {
       applySettings(u.settings);
       document.documentElement.dataset.skin = u.theme ?? 'default';
@@ -31,8 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { user } = await api<{ user: Profile }>('/api/me');
       setUser(user);
+      setOffline(false);
+      void syncOffline();
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setUser(null);
+      else if (e instanceof ApiError && e.status === 0) {
+        // No connection: keep the last known profile so saved decks can be reviewed.
+        const cached = cachedProfile();
+        if (cached) {
+          setUserState(cached);
+          applySettings(cached.settings);
+          setLocale(cached.locale);
+          setOffline(true);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -41,6 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     applySettings(loadLocalSettings());
     void refresh();
+    // Back online: reconnect and send reviews done offline.
+    const online = () => void refresh();
+    window.addEventListener('online', online);
+    return () => window.removeEventListener('online', online);
   }, [refresh]);
 
   // Only the newest PATCH response may update state, so quick successive changes can't be undone by a slower, older reply.
@@ -71,10 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await api('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    setUserState(null);
+    setUser(null);
+    clearOffline();
   }, []);
 
-  const value = useMemo(() => ({ user, loading, setUser, refresh, update, logout }), [user, loading, setUser, refresh, update, logout]);
+  const value = useMemo(() => ({ user, loading, offline, setUser, refresh, update, logout }), [user, loading, offline, setUser, refresh, update, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

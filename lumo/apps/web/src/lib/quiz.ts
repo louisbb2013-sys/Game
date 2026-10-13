@@ -14,6 +14,7 @@ export interface PublicSession {
   xp: number;
   hearts: number;
   done: boolean;
+  endsAt?: number;
 }
 
 export interface AnswerResult {

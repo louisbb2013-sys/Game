@@ -1,5 +1,6 @@
 import { canRepair, dayKey, type StreakState } from '@lumo/core';
 import { useCallback, useEffect, useState } from 'react';
+import { TodayPlans } from '../components/TodayPlans';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { CameraIcon, CoinIcon, FlameIcon, HeartIcon } from '../components/icons';
@@ -114,6 +115,8 @@ export function Home() {
       )}
       {user.boostUntil && <p className="rounded-2xl bg-amber-glow/20 px-3 py-2 text-sm font-bold">⚡ {t('home.boostOn')}</p>}
       {err && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">{t(`shop.errors.${err}`, { defaultValue: t('signin.errors.network') })}</p>}
+
+      <TodayPlans />
 
       {ov && ov.chests > 0 && (
         <Link to="/shop?tab=mine" className="flex items-center gap-3 rounded-3xl bg-gradient-to-r from-amber-glow/30 to-amber-glow/10 p-4 ring-1 ring-amber-glow">

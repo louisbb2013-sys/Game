@@ -28,6 +28,8 @@ export interface Settings {
   sound?: boolean;
   reduceMotion?: boolean;
   uploadConsent?: boolean;
+  reminder?: { enabled: boolean; time: string; days: number[] };
+  audioRate?: number;
 }
 
 export interface Profile {

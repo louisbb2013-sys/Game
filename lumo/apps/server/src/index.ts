@@ -14,9 +14,14 @@ const settle = () => ctx.game.settleLeagues().then((n) => n && app.log.info(`set
 void settle();
 const settleTimer = setInterval(settle, 10 * 60_000);
 
+// Study reminders (only for learners who turned them on): check every 5 minutes.
+const remind = () => ctx.study.sendReminders().then((n) => n && app.log.info(`sent ${n} reminder(s)`), (err) => app.log.error(err, 'reminders failed'));
+const remindTimer = setInterval(remind, 5 * 60_000);
+
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, async () => {
     clearInterval(settleTimer);
+    clearInterval(remindTimer);
     await app.close();
     await db.end();
     process.exit(0);

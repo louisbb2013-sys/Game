@@ -114,7 +114,7 @@ export function League() {
       ) : (
         <ol className="space-y-1.5">
           {(global ?? []).map((r) => (
-            <li key={r.rank} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 ${r.me ? 'bg-amber-glow/20 ring-amber-glow' : 'bg-surface ring-line'}`}>
+            <li key={r.username} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 ${r.me ? 'bg-amber-glow/20 ring-amber-glow' : 'bg-surface ring-line'}`}>
               <span className="w-7 text-center font-black text-muted">{r.rank}</span>
               <span className="text-lg">{TIER_STYLE[r.tier]?.emoji}</span>
               <span className="min-w-0 flex-1 truncate font-bold">{r.username}</span>

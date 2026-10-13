@@ -4,6 +4,10 @@ import {
   chooseFormat,
   currentHearts,
   dayKey,
+  EXAM_FORMATS,
+  examReport,
+  examTimeLimitMs,
+  type ExamReport,
   gainHearts,
   grade,
   hashString,
@@ -29,6 +33,7 @@ import {
   type Concept,
   type ConceptProgress,
   type ConceptStateView,
+  type ExamItem,
   type Format,
   type GradeResult,
   type Locale,
@@ -77,6 +82,12 @@ interface StoredState extends SessionState {
   formats?: Format[];
   teachBack?: { questionId: string; firstText: string; followUp: string };
   heartsLost: number;
+  /** Mock exam timing. */
+  startedAt?: number;
+  timeLimitMs?: number;
+  /** Concepts left unanswered when a mock exam was handed in early or ran out of time. */
+  skipped?: string[];
+  endedAt?: number;
   /** Set when this session is a study group's daily quiz. */
   groupDaily?: { groupId: string; day: string };
 }
@@ -93,6 +104,8 @@ export interface PublicSession {
   xp: number;
   hearts: number;
   done: boolean;
+  /** Mock exams: when time is up. */
+  endsAt?: number;
 }
 
 export interface AnswerResponse {
@@ -213,7 +226,15 @@ export class QuizService {
     const states = await this.loadStates(user.id, concepts.map((c) => c.id));
     const rng = seededRng(hashString(user.id + now));
     const ids = pickConcepts(concepts, states, length, mode, now, rng);
-    const state: StoredState = { ...newSession(mode, ids), heartsLost: 0, language: deck.language, formats: formats?.length ? formats : undefined, groupDaily };
+    const exam = mode === 'exam';
+    const state: StoredState = {
+      ...newSession(mode, ids),
+      heartsLost: 0,
+      language: deck.language,
+      formats: formats?.length ? formats : exam ? EXAM_FORMATS : undefined,
+      groupDaily,
+      ...(exam ? { startedAt: now, timeLimitMs: examTimeLimitMs(ids.length) } : {}),
+    };
 
     const { rows } = await this.db.query<{ id: string }>('INSERT INTO quiz_sessions (user_id, deck_id, mode, state) VALUES ($1, $2, $3, $4) RETURNING id', [
       user.id,
@@ -309,6 +330,11 @@ export class QuizService {
     const now = Date.now();
     const row = await this.getSession(user.id, sessionId);
     if (row.status !== 'active') throw new QuizError(409, 'session_done');
+    if (row.state.startedAt && row.state.timeLimitMs && now > row.state.startedAt + row.state.timeLimitMs + 15_000) {
+      // Mock exam: time is up, so the paper is handed in as it is.
+      await this.handIn(user, sessionId);
+      throw new QuizError(409, 'time_up');
+    }
     const q = row.current;
     if (!q || q.id !== questionId) throw new QuizError(409, 'stale_question');
     const state = row.state;
@@ -508,7 +534,40 @@ export class QuizService {
     }
   }
 
-  private publicSession(id: string, deckId: string, s: SessionState, user: Pick<UserRow, 'hearts' | 'hearts_updated_at'>, done = false): PublicSession {
+  /** Mock exam report, built from the answers stored for the session. */
+  async report(userId: string, sessionId: string): Promise<{ deckId: string; deckTitle: string; report: ExamReport }> {
+    const s = await this.getSession(userId, sessionId);
+    if (s.state.mode !== 'exam') throw new QuizError(404, 'not_an_exam');
+    if (s.status !== 'done') throw new QuizError(409, 'exam_not_finished');
+    const { rows } = await this.db.query<{ concept_id: string; term: string; topic: string; format: Format; bloom: ExamItem['bloom']; score: number; created_at: Date }>(
+      `SELECT a.concept_id, c.data->>'term' AS term, c.data->>'topic' AS topic, a.format, a.bloom, a.score, a.created_at
+       FROM attempts a JOIN concepts c ON c.id = a.concept_id WHERE a.session_id = $1 ORDER BY a.created_at`,
+      [sessionId],
+    );
+    const deck = (await this.db.query<{ title: string }>('SELECT title FROM decks WHERE id = $1', [s.deck_id])).rows[0];
+    const end = s.state.endedAt ?? rows.at(-1)?.created_at.getTime() ?? Date.now();
+    const timeMs = s.state.startedAt ? end - s.state.startedAt : 0;
+    const items = rows.map((r) => ({ conceptId: r.concept_id, term: r.term, topic: r.topic, format: r.format, bloom: r.bloom, score: r.score }));
+    const skipped = s.state.skipped ?? [];
+    const meta = skipped.length
+      ? (await this.db.query<{ id: string; term: string; topic: string }>("SELECT id, data->>'term' AS term, data->>'topic' AS topic FROM concepts WHERE id = ANY($1::uuid[])", [skipped])).rows
+      : [];
+    const unanswered = skipped.flatMap((id) => meta.filter((m) => m.id === id).map((m) => ({ conceptId: m.id, term: m.term, topic: m.topic })));
+    return { deckId: s.deck_id, deckTitle: deck?.title ?? '', report: examReport(items, timeMs, s.state.timeLimitMs ?? 0, unanswered) };
+  }
+
+  /** Hand in a mock exam now (or when time is up): what's left counts as unanswered. */
+  async handIn(user: UserRow, sessionId: string): Promise<SessionSummary> {
+    const s = await this.getSession(user.id, sessionId);
+    if (s.state.mode !== 'exam') throw new QuizError(400, 'not_an_exam');
+    if (s.status === 'done') throw new QuizError(409, 'session_done');
+    const state: StoredState = { ...s.state, skipped: [...new Set(s.state.queue)], queue: [], endedAt: Date.now() };
+    await this.db.query('UPDATE quiz_sessions SET state = $2, current = NULL WHERE id = $1', [sessionId, JSON.stringify(state)]);
+    this.prefetch.delete(sessionId);
+    return this.finish(user, sessionId, state);
+  }
+
+  private publicSession(id: string, deckId: string, s: StoredState, user: Pick<UserRow, 'hearts' | 'hearts_updated_at'>, done = false): PublicSession {
     return {
       id,
       deckId,
@@ -521,6 +580,7 @@ export class QuizService {
       xp: s.xp,
       hearts: currentHearts({ hearts: user.hearts, updatedAt: user.hearts_updated_at.getTime() }, Date.now()).hearts,
       done: done || sessionDone(s),
+      endsAt: s.startedAt && s.timeLimitMs ? s.startedAt + s.timeLimitMs : undefined,
     };
   }
 }

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 import { HeartIcon } from '../components/icons';
+import { StudyPlan } from '../components/StudyPlan';
+import { offlineDeck, saveDeckOffline } from '../lib/offline';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -37,11 +39,21 @@ export function Deck() {
     setStarting(mode);
     setError(null);
     try {
-      const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode, length: mode === 'review' ? 8 : 10 } });
+      const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode, length: mode === 'review' ? 8 : mode === 'exam' ? Math.min(20, Math.max(8, data?.concepts.length ?? 10)) : 10 } });
       navigate(`/quiz/${res.session.id}`, { state: res });
     } catch (e) {
       setError(e instanceof ApiError ? e.code : 'network');
       setStarting(null);
+    }
+  };
+
+  const [offlineState, setOfflineState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(() => (id && offlineDeck(id) ? 'saved' : 'idle'));
+  const saveOffline = async () => {
+    setOfflineState('saving');
+    try {
+      setOfflineState((await saveDeckOffline(id!)) ? 'saved' : 'failed');
+    } catch {
+      setOfflineState('failed');
     }
   };
 
@@ -68,6 +80,7 @@ export function Deck() {
   const due = data.concepts.filter((c) => c.due).length;
   const wrong = data.concepts.filter((c) => c.band === 'learning').length;
   const studied = data.concepts.some((c) => c.band !== 'new');
+  const examLength = Math.min(20, Math.max(8, data.concepts.length));
 
   return (
     <div className="space-y-5">
@@ -101,6 +114,17 @@ export function Deck() {
           disabled={(user?.hearts.current ?? 0) === 0}
           note={(user?.hearts.current ?? 0) === 0 ? t('deck.noHearts') : undefined}
         />
+        <ModeButton onClick={() => void start('exam')} busy={starting === 'exam'} title={t('deck.exam')} body={t('deck.examBody', { count: examLength })} icon="📝" />
+        <div className="grid grid-cols-2 gap-3">
+          <Link to={`/audio/${data.deck.id}`} className="rounded-2xl bg-surface p-3 ring-1 ring-line">
+            <span className="block font-black">🎧 {t('deck.audio')}</span>
+            <span className="block text-xs text-muted">{t('deck.audioBody')}</span>
+          </Link>
+          <button onClick={() => void saveOffline()} disabled={offlineState === 'saving'} className="rounded-2xl bg-surface p-3 text-left ring-1 ring-line disabled:opacity-60">
+            <span className="block font-black">{offlineState === 'saved' ? '✅' : '📥'} {offlineState === 'saved' ? t('deck.offlineSaved') : t('deck.offline')}</span>
+            <span className="block text-xs text-muted">{offlineState === 'failed' ? t('deck.offlineFailed') : t('deck.offlineBody')}</span>
+          </button>
+        </div>
         <Link to={`/live?deck=${data.deck.id}`} className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3.5 text-white">
           <span className="text-2xl">⚡</span>
           <span className="min-w-0 flex-1">
@@ -115,6 +139,8 @@ export function Deck() {
           </p>
         )}
       </section>
+
+      <StudyPlan deckId={data.deck.id} />
 
       <section aria-labelledby="map-title" className="rounded-3xl bg-surface p-4 ring-1 ring-line">
         <h2 id="map-title" className="font-black">

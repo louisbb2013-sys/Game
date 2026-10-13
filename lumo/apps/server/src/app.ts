@@ -23,6 +23,8 @@ import { getUser, type UserRow } from './users.ts';
 import { SocialService } from './social/service.ts';
 import { LiveService } from './live/service.ts';
 import { socialRoutes } from './routes/social.ts';
+import { StudyService } from './study/service.ts';
+import { studyRoutes } from './routes/study.ts';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -42,6 +44,7 @@ export interface AppContext {
   sandbox: SandboxService;
   social: SocialService;
   live: LiveService;
+  study: StudyService;
   requireUser: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
 }
 
@@ -79,6 +82,7 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
   const sandbox = new SandboxService(db, ai, quiz, game);
   const chat = new ChatService(db, ai, quiz, sandbox, game, (m, e) => app.log.warn({ err: e }, m));
   const social = new SocialService(db);
+  const study = new StudyService(db, quiz, game, emailCodes, config.APP_URL, (m, e) => app.log.warn({ err: e }, m));
   const live = new LiveService(db, ai, quiz, game, (m, e) => app.log.warn({ err: e }, m));
   // Live games run over Socket.io on the same HTTP server, authenticated by the session cookie.
   live.attach(app.server, sessions, config.APP_URL);
@@ -96,6 +100,7 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
     sandbox,
     social,
     live,
+    study,
     requireUser: async (req, reply) => {
       if (!req.user) return reply.code(401).send({ error: 'unauthorized' });
     },
@@ -110,6 +115,7 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
   await sandboxRoutes(app, ctx);
   await gameRoutes(app, ctx);
   await socialRoutes(app, ctx);
+  await studyRoutes(app, ctx);
 
   return { app, ctx };
 }

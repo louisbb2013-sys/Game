@@ -49,7 +49,20 @@ See [PLAN.md](PLAN.md) for architecture, data model and milestones.
   - **Live** quiz games for 2–50 players over Socket.io: lobby with code + QR, the same varied question types as
     solo, server-owned timer, speed + streak points, reveal with explanation, podium with XP and coins for
     everyone. Answers are graded on the server; open answers get a short AI check with a built-in fallback.
-- ⏳ Milestone 6: exam mode, study plan, audio, offline, share links, reminders, data export/delete.
+- ✅ **Milestone 6 — Exam ready**:
+  - **Mock exams**: the whole deck sampled evenly, timed (about a minute per question), no feedback until the
+    end, hand in early or auto hand-in when time is up (enforced on the server). The report shows the score,
+    readiness, weak spots, results by topic and by kind of thinking, and what to do next.
+  - **Study plans**: pick an exam date and daily time; Lumo plans each day (new ideas first, reviews after 1, 3
+    and 7 days, a mock exam two days before, a light last day) and shows today's plan on Home.
+  - **Audio mode**: Lumo reads questions and answers aloud; answer out loud (speech recognition where the
+    browser has it) or "just listen" like a podcast. Adjustable speed.
+  - **Offline review**: save a deck to the device; rounds are generated and graded on the device with no
+    connection and synced later (each batch counts once; small capped XP).
+  - **Parents & teachers**: private, revocable progress links (streak, activity, decks, mock exams; never
+    email, answers or chats).
+  - **Reminders**: optional, one email a day only if you haven't studied, never at night. Off by default.
+  - **My data**: download everything as JSON; delete the account and all data.
 
 ## Requirements
 - Node 22+

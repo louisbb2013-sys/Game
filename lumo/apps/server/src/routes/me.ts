@@ -13,6 +13,8 @@ export const settingsSchema = z
     sound: z.boolean(),
     reduceMotion: z.boolean(),
     uploadConsent: z.boolean(),
+    reminder: z.object({ enabled: z.boolean(), time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), days: z.array(z.number().int().min(0).max(6)).max(7) }).strict(),
+    audioRate: z.number().min(0.5).max(1.5),
   })
   .partial()
   .strict();

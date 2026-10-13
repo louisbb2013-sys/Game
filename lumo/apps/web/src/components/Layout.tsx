@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet } from 'react-router';
 import { useAuth } from '../lib/auth';
+import { useOnline } from '../lib/offline';
 import { BoltIcon, BookIcon, CoinIcon, FlameIcon, HeartIcon, HomeIcon, SparkIcon, TrophyIcon, UserIcon } from './icons';
 
 export function Layout() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, offline } = useAuth();
+  const online = useOnline();
   if (!user) return null;
 
   const tabs = [
@@ -30,6 +32,11 @@ export function Layout() {
         </div>
       </header>
 
+      {(offline || !online) && (
+        <Link to="/offline" className="block bg-amber-glow px-4 py-1.5 text-center text-sm font-black text-night">
+          📡 {t('offline.banner')}
+        </Link>
+      )}
       <main className="flex-1 px-4 pt-4 pb-28">
         <Outlet />
       </main>

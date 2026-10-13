@@ -12,7 +12,7 @@ export interface Person {
   id: string;
   username: string;
   avatar: string;
-  level: { level: number };
+  level: number;
   streak: number;
   studiedToday: boolean;
   leagueTier: string;
@@ -169,7 +169,7 @@ function PersonRow({ p, detail, children }: { p: Person; detail?: boolean; child
       <span className="min-w-0 flex-1">
         <span className="block truncate font-black">{p.username}</span>
         <span className="flex items-center gap-2 text-xs font-bold text-muted">
-          {t('home.level', { level: p.level.level })}
+          {t('home.level', { level: p.level })}
           {detail && (
             <>
               <span className={`flex items-center ${p.studiedToday ? 'text-amber-glow' : ''}`} title={t('stats.streak')}>

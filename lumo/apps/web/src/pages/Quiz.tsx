@@ -73,6 +73,18 @@ export function Quiz() {
           setPhase('followup');
           return;
         }
+        if (data.session.mode === 'exam') {
+          // Mock exam: no feedback until the end, like a real test.
+          showRewards((res as AnswerResponse & { rewards?: Rewards }).rewards);
+          if (res.summary || !res.next) {
+            navigate(`/exam/${data.session.id}`, { replace: true });
+            return;
+          }
+          setData({ session: res.session, question: res.next });
+          setAnswer(null);
+          setPhase('answering');
+          return;
+        }
         setResult(res.result);
         showRewards((res as AnswerResponse & { rewards?: Rewards }).rewards);
         setNext(res.next);
@@ -86,11 +98,15 @@ export function Quiz() {
         }
         setPhase('feedback');
       } catch (e) {
+        if (e instanceof ApiError && e.code === 'time_up') {
+          navigate(`/exam/${data.session.id}`, { replace: true });
+          return;
+        }
         setError(e instanceof ApiError ? e.code : 'network');
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, followUp, showRewards],
+    [answer, data, phase, followUp, showRewards, navigate],
   );
 
   const proceed = () => {
@@ -145,12 +161,13 @@ export function Quiz() {
         <div className="h-4 flex-1 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-gradient-to-r from-brand to-indigo-400 transition-[width] duration-500" style={{ width: `${Math.max(4, progress * 100)}%` }} />
         </div>
+        {s.mode === 'exam' && s.endsAt && <ExamClock endsAt={s.endsAt} sessionId={s.id} />}
         {s.mode === 'challenge' && (
           <span className="flex items-center gap-1 font-black text-heart" aria-label={`${t('stats.hearts')}: ${s.hearts}`}>
             <HeartIcon size={22} /> {s.hearts}
           </span>
         )}
-        <ComboBadge combo={s.combo} />
+        {s.mode !== 'exam' && <ComboBadge combo={s.combo} />}
       </div>
 
       {comboFlash && (
@@ -160,7 +177,7 @@ export function Quiz() {
       )}
 
       {q && (
-        <section className="mt-5 flex-1" key={q.id}>
+        <section className="mt-5 flex-1" key={q.id} data-format={q.format}>
           <div className="mb-3 flex items-center gap-2">
             <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-extrabold text-muted">{t(`formats.${q.format}`)}</span>
             <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-extrabold text-brand">{t(`bloom.${q.bloom}`)}</span>
@@ -209,12 +226,46 @@ export function Quiz() {
               disabled={phase === 'grading' || (phase === 'followup' ? !followText.trim() : !q || !isReady(q, answer))}
               className="w-full rounded-2xl bg-brand py-4 text-lg font-black text-brand-ink shadow-[0_4px_0_0_rgb(0_0_0/0.18)] transition active:translate-y-0.5 active:shadow-none disabled:opacity-40"
             >
-              {phase === 'grading' ? t('quiz.checking') : phase === 'followup' ? t('quiz.reply') : t('quiz.check')}
+              {phase === 'grading' ? t('quiz.checking') : phase === 'followup' ? t('quiz.reply') : s.mode === 'exam' ? t('exam.next') : t('quiz.check')}
             </button>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/** Mock exam countdown; at zero the paper is handed in. Also lets you hand in early. */
+function ExamClock({ endsAt, sessionId }: { endsAt: number; sessionId: string }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [now, setNow] = useState(Date.now());
+  const handedIn = useRef(false);
+  const left = Math.max(0, endsAt - now);
+  const handIn = useCallback(async () => {
+    if (handedIn.current) return;
+    handedIn.current = true;
+    await api(`/api/sessions/${sessionId}/hand-in`, { method: 'POST' }).catch(() => {});
+    navigate(`/exam/${sessionId}`, { replace: true });
+  }, [navigate, sessionId]);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (left === 0) void handIn();
+  }, [left, handIn]);
+  const m = Math.floor(left / 60_000);
+  const sec = Math.floor((left % 60_000) / 1000);
+  return (
+    <span className="flex items-center gap-2">
+      <span className={`rounded-full px-2.5 py-0.5 font-black tabular-nums ${left < 60_000 ? 'bg-bad text-white' : 'bg-surface-2'}`} role="timer" aria-label={t('exam.timeLeft')}>
+        ⏱ {m}:{String(sec).padStart(2, '0')}
+      </span>
+      <button onClick={() => confirm(t('exam.handInConfirm')) && void handIn()} className="rounded-full bg-surface px-2.5 py-0.5 text-sm font-black ring-1 ring-line">
+        {t('exam.handIn')}
+      </button>
+    </span>
   );
 }
 

@@ -40,6 +40,12 @@ export class EmailCodes {
     return code;
   }
 
+  /** Plain email (reminders). Without SMTP it is only logged, so development never sends anything. */
+  async send(to: string, subject: string, text: string) {
+    if (this.transport) await this.transport.sendMail({ from: this.from, to, subject, text });
+    else this.log(`[dev] email to ${to}: ${subject}`);
+  }
+
   async verify(email: string, code: string): Promise<boolean> {
     const { rows } = await this.db.query<{ code_hash: string; expires_at: Date; attempts: number }>(
       'UPDATE email_codes SET attempts = attempts + 1 WHERE email = $1 RETURNING code_hash, expires_at, attempts',

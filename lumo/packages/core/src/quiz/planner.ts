@@ -41,6 +41,8 @@ export function pickConcepts(
   if (mode === 'review') pool = scored.filter((x) => x.s?.srs);
   if (pool.length === 0) pool = scored; // nothing matches: fall back to everything
 
+  // A mock exam samples the whole deck evenly, like a real test; otherwise most-needed first.
+  if (mode === 'exam') pool = pool.map((x) => ({ ...x, priority: rng() }));
   pool.sort((a, b) => b.priority - a.priority);
 
   // Fill the session; short decks repeat concepts (each repeat gets a different format).

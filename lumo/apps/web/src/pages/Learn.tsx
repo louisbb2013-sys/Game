@@ -41,6 +41,11 @@ export function Learn() {
         <span className="shrink-0 text-2xl text-muted">›</span>
       </Link>
 
+      <Link to="/offline" className="flex items-center justify-between rounded-2xl bg-surface px-4 py-2.5 text-sm font-black ring-1 ring-line">
+        <span>📥 {t('offline.title')}</span>
+        <span className="text-muted">›</span>
+      </Link>
+
       {decks === null ? (
         <p className="text-center font-bold text-muted">{t('common.loading')}</p>
       ) : decks.length === 0 ? (
