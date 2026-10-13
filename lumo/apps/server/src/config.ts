@@ -17,12 +17,16 @@ const schema = z.object({
   AI_GRADING_MODEL: z.string().default('claude-opus-5-5'),
   /** Built web app to serve (production). Empty = don't serve it (development uses Vite). */
   WEB_DIST: z.string().default(''),
+  /** "Try without an account": each tap creates a fresh anonymous learner (no email, no name needed). */
+  GUEST_LOGIN: z.enum(['true', 'false']).default('false'),
 });
 
 export type Config = z.infer<typeof schema>;
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
-  const cfg = schema.parse(env);
+  // On Render the public address is provided automatically.
+  const appUrl = env.APP_URL || env.RENDER_EXTERNAL_URL;
+  const cfg = schema.parse({ ...env, APP_URL: appUrl, API_URL: env.API_URL || appUrl });
   if (cfg.NODE_ENV === 'production' && cfg.SESSION_SECRET === 'dev-only-secret-change-me') {
     throw new Error('SESSION_SECRET must be set in production');
   }
@@ -31,3 +35,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 
 export const googleEnabled = (c: Config) => Boolean(c.GOOGLE_CLIENT_ID && c.GOOGLE_CLIENT_SECRET);
 export const devLoginEnabled = (c: Config) => c.NODE_ENV !== 'production';
+export const guestLoginEnabled = (c: Config) => c.GUEST_LOGIN === 'true' || c.NODE_ENV !== 'production';
+/** Email codes need a mail server in production (without one, nobody would receive the code). */
+export const emailLoginEnabled = (c: Config) => Boolean(c.SMTP_URL) || c.NODE_ENV !== 'production';

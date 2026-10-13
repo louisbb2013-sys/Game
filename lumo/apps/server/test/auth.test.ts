@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { cookieFrom, setupTestApp } from './helpers.ts';
+import { loadConfig, devLoginEnabled, emailLoginEnabled, guestLoginEnabled } from '../src/config.ts';
+import { cookieFrom, setupTestApp, TEST_DB } from './helpers.ts';
 
 let t: Awaited<ReturnType<typeof setupTestApp>>;
 beforeAll(async () => { t = await setupTestApp(); });
@@ -13,7 +14,7 @@ describe('auth', () => {
 
   it('reports providers (google off without keys)', async () => {
     const res = await t.app.inject({ method: 'GET', url: '/api/auth/providers' });
-    expect(res.json()).toEqual({ google: false, email: true, dev: true });
+    expect(res.json()).toEqual({ google: false, email: true, guest: true, dev: true });
   });
 
   it('dev login creates a safe profile and a session', async () => {
@@ -72,5 +73,31 @@ describe('profile', () => {
     expect(del.statusCode).toBe(200);
     const gone = await t.app.inject({ method: 'GET', url: '/api/me', headers: { cookie } });
     expect(gone.statusCode).toBe(401);
+  });
+});
+
+describe('try without an account', () => {
+  it('creates a fresh anonymous learner each time', async () => {
+    {
+      const a = await t.app.inject({ method: 'POST', url: '/api/auth/guest', payload: { locale: 'fr', timezone: 'Europe/Paris' } });
+      const b = await t.app.inject({ method: 'POST', url: '/api/auth/guest', payload: {} });
+      expect(a.statusCode).toBe(200);
+      expect(a.json().user.id).not.toBe(b.json().user.id);
+      expect(a.json().user.email).toBeNull();
+      expect(a.json().user.locale).toBe('fr');
+      expect(cookieFrom(a)).toContain('lumo_session=');
+    }
+  });
+
+  it('production: guest only when turned on; email only with a mail server; Render URL picked up', async () => {
+    const base = { NODE_ENV: 'production', SESSION_SECRET: 'prod-secret-prod-secret', DATABASE_URL: TEST_DB, RENDER_EXTERNAL_URL: 'https://lumo-demo.onrender.com' };
+    const off = loadConfig(base);
+    expect(off.APP_URL).toBe('https://lumo-demo.onrender.com');
+    expect(guestLoginEnabled(off)).toBe(false);
+    expect(emailLoginEnabled(off)).toBe(false);
+    const on = loadConfig({ ...base, GUEST_LOGIN: 'true', SMTP_URL: 'smtp://x' });
+    expect(guestLoginEnabled(on)).toBe(true);
+    expect(emailLoginEnabled(on)).toBe(true);
+    expect(devLoginEnabled(on)).toBe(false);
   });
 });

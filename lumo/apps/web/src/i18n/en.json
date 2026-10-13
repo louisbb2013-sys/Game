@@ -32,7 +32,9 @@
       "google": "Google sign-in didn't work. Try again.",
       "state": "Sign-in expired. Try again.",
       "network": "Can't reach Lumo. Check your connection."
-    }
+    },
+    "guest": "Try Lumo now — no account needed",
+    "guestHint": "No email, no name. Come back on this device to keep your progress."
   },
   "home": {
     "greeting_morning": "Good morning, {{name}}!",

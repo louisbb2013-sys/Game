@@ -107,6 +107,11 @@ npx playwright test
 #   E2E_URL=http://localhost:3002 npx playwright test
 ```
 
+## Deploy on Render (easiest)
+The repo root has a `render.yaml` blueprint: on render.com choose **New → Blueprint**, pick this repository and
+click **Apply**. It creates the app and a Postgres database, runs migrations and turns on "Try without an
+account". Add `ANTHROPIC_API_KEY`, Google keys or `SMTP_URL` later under the service's **Environment** tab.
+
 ## Production
 One Node process serves the API, Live games (WebSocket) and the built app.
 

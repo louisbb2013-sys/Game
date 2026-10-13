@@ -32,7 +32,9 @@
       "google": "La connexion Google n'a pas marché. Réessaie.",
       "state": "La connexion a expiré. Réessaie.",
       "network": "Impossible de joindre Lumo. Vérifie ta connexion."
-    }
+    },
+    "guest": "Essayer Lumo — sans compte",
+    "guestHint": "Pas d’e-mail, pas de nom. Reviens sur cet appareil pour garder tes progrès."
   },
   "home": {
     "greeting_morning": "Bon matin, {{name}} !",

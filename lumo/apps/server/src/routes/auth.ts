@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { devLoginEnabled, googleEnabled } from '../config.ts';
+import { devLoginEnabled, emailLoginEnabled, googleEnabled, guestLoginEnabled } from '../config.ts';
 import { exchangeGoogleCode, googleAuthUrl } from '../auth/google.ts';
-import { findOrCreateByEmail, findOrCreateByGoogle, getUser, toProfile } from '../users.ts';
+import { createUser, findOrCreateByEmail, findOrCreateByGoogle, getUser, toProfile } from '../users.ts';
 import type { AppContext } from '../app.ts';
 
 const STATE_COOKIE = 'lumo_oauth_state';
@@ -17,7 +17,7 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
     redirectUri: `${config.API_URL}/api/auth/google/callback`,
   };
 
-  app.get('/api/auth/providers', async () => ({ google: googleEnabled(config), email: true, dev: devLoginEnabled(config) }));
+  app.get('/api/auth/providers', async () => ({ google: googleEnabled(config), email: emailLoginEnabled(config), guest: guestLoginEnabled(config), dev: devLoginEnabled(config) }));
 
   app.get('/api/auth/google', async (req, reply) => {
     if (!googleEnabled(config)) return reply.code(404).send({ error: 'google_disabled' });
@@ -58,6 +58,7 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
   const emailStart = z.object({ email: z.string().trim().toLowerCase().email().max(254), locale: localeSchema });
   const byEmail = (req: { body: unknown; ip: string }) => `e:${String((req.body as { email?: unknown } | null)?.email ?? '').trim().toLowerCase() || req.ip}`;
   app.post('/api/auth/email/start', { config: { rateLimit: { max: 5, timeWindow: '10 minutes', keyGenerator: byEmail } } }, async (req, reply) => {
+    if (!emailLoginEnabled(config)) return reply.code(404).send({ error: 'email_disabled' });
     const body = emailStart.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'invalid_email' });
     await emailCodes.start(body.data.email, body.data.locale);
@@ -75,6 +76,17 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!body.success) return reply.code(400).send({ error: 'invalid_code' });
     if (!(await emailCodes.verify(body.data.email, body.data.code))) return reply.code(401).send({ error: 'wrong_code' });
     const user = await findOrCreateByEmail(db, body.data.email, { locale: body.data.locale, timezone: safeTimeZone(body.data.timezone) });
+    await sessions.start(reply, user.id);
+    return { user: toProfile(user) };
+  });
+
+  // Try without an account: a brand-new anonymous learner every time (never someone else's account).
+  const guestBody = z.object({ locale: z.enum(['en', 'fr']).default('en'), timezone: z.string().max(64).optional() });
+  app.post('/api/auth/guest', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
+    if (!guestLoginEnabled(config)) return reply.code(404).send({ error: 'not_found' });
+    const b = guestBody.safeParse(req.body ?? {});
+    if (!b.success) return reply.code(400).send({ error: 'invalid' });
+    const user = await createUser(db, { locale: b.data.locale, timezone: safeTimeZone(b.data.timezone) });
     await sessions.start(reply, user.id);
     return { user: toProfile(user) };
   });

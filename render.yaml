@@ -1,0 +1,41 @@
+# One-click deploy of the Lumo study app on Render (render.com → New → Blueprint → pick this repo).
+# Creates the web service and a Postgres database. Optional keys are asked for during setup.
+services:
+  - type: web
+    name: lumo
+    runtime: node
+    plan: free
+    rootDir: lumo
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: WEB_DIST
+        value: apps/web/dist
+      - key: GUEST_LOGIN
+        value: "true"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lumo-db
+          property: connectionString
+      # Optional: leave empty to start. Add them later under Environment.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SMTP_URL
+        sync: false
+
+databases:
+  - name: lumo-db
+    plan: free
+    databaseName: lumo
+    user: lumo

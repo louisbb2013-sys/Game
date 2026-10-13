@@ -10,6 +10,7 @@ import { browserTimeZone, useAuth } from '../lib/auth';
 interface Providers {
   google: boolean;
   email: boolean;
+  guest: boolean;
   dev: boolean;
 }
 
@@ -61,6 +62,12 @@ export function SignIn() {
     });
   };
 
+  const guestLogin = () =>
+    run(async () => {
+      const { user } = await api<{ user: Profile }>('/api/auth/guest', { method: 'POST', body: { locale, timezone: browserTimeZone() } });
+      setUser(user);
+    });
+
   const devLogin = () =>
     run(async () => {
       const { user } = await api<{ user: Profile }>('/api/auth/dev', { method: 'POST', body: { name: 'student' } });
@@ -93,7 +100,16 @@ export function SignIn() {
           </a>
         )}
 
-        {providers?.google && (
+        {providers?.guest && (
+          <div className="space-y-1 text-center">
+            <button type="button" onClick={guestLogin} disabled={busy} className="w-full rounded-2xl bg-amber-glow px-4 py-3.5 text-lg font-black text-night shadow-[0_4px_0_0_rgb(0_0_0/0.18)] active:translate-y-0.5 disabled:opacity-50">
+              ✨ {t('signin.guest')}
+            </button>
+            <p className="text-xs text-muted">{t('signin.guestHint')}</p>
+          </div>
+        )}
+
+        {(providers?.google || providers?.guest) && providers?.email && (
           <div className="flex items-center gap-3 text-sm font-bold text-muted">
             <span className="h-px flex-1 bg-line" />
             {t('signin.or')}
@@ -101,7 +117,7 @@ export function SignIn() {
           </div>
         )}
 
-        {step === 'email' ? (
+        {!providers?.email ? null : step === 'email' ? (
           <form onSubmit={sendCode} className="space-y-3">
             <label className="block">
               <span className="mb-1 block text-sm font-bold">{t('signin.emailLabel')}</span>
