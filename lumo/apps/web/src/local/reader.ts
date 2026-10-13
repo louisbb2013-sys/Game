@@ -1,0 +1,93 @@
+import { CONCEPT_KINDS, type ConceptInput, type ConceptKind, type Locale } from '@lumo/core';
+
+/**
+ * Browser-only build: read photos of notes with Claude through the page's `sample` capability
+ * (the viewer's own Claude account, after they allow it). Absent outside a Claude viewer.
+ */
+
+type Sample = ((input: string, options?: object) => Promise<{ text: string }>) & {
+  json: <T>(input: string, options?: object) => Promise<T>;
+  limits: () => Promise<{ images?: { maxCount: number; maxInputBytes: number; mediaTypes: string[] } }>;
+};
+
+let samplePromise: Promise<Sample | null> | null = null;
+function getSample(): Promise<Sample | null> {
+  const use = (window as unknown as { claude?: { use?: (n: string) => Promise<unknown> } }).claude?.use;
+  if (!use) return Promise.resolve(null);
+  samplePromise ??= use('sample').then((s) => (s as Sample | null) ?? null, () => null);
+  return samplePromise;
+}
+
+/** What this view can send: null = no photo reading here. */
+export async function photoLimits() {
+  const s = await getSample();
+  if (!s) return null;
+  const l = await s.limits().catch(() => null);
+  return l?.images ?? null;
+}
+
+export class ReaderError extends Error {
+  constructor(public code: string) {
+    super(code);
+  }
+}
+
+const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+const list = (v: unknown, n: number, max = 300) => (Array.isArray(v) ? v.map((x) => str(x, max)).filter(Boolean).slice(0, n) : []);
+
+/** Keep only well-formed concepts, trimmed to the same limits the server uses. */
+function clean(raw: unknown): ConceptInput[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 80).flatMap((c: Record<string, unknown>) => {
+    const term = str(c?.term, 160);
+    const summary = str(c?.summary, 600);
+    if (!term || !summary) return [];
+    const kind = (CONCEPT_KINDS as readonly string[]).includes(String(c.kind)) && c.kind !== 'formula' ? (c.kind as ConceptKind) : 'definition';
+    const steps = list(c.steps, 10);
+    const causeEffects = Array.isArray(c.causeEffects)
+      ? (c.causeEffects as Record<string, unknown>[]).map((x) => ({ cause: str(x?.cause, 300), effect: str(x?.effect, 300) })).filter((x) => x.cause && x.effect).slice(0, 6)
+      : [];
+    return [
+      {
+        topic: str(c.topic, 120) || 'General',
+        kind: kind === 'process' && steps.length < 2 ? 'definition' : kind,
+        term,
+        summary,
+        keyPoints: list(c.keyPoints, 8),
+        misconceptions: list(c.misconceptions, 8),
+        examples: list(c.examples, 6),
+        synonyms: list(c.synonyms, 8, 160),
+        ...(steps.length >= 2 ? { steps } : {}),
+        ...(causeEffects.length ? { causeEffects } : {}),
+      },
+    ];
+  });
+}
+
+const PROMPT = (language: Locale, extra: string) => `You are Lumo, a study helper for school students. The images are photos of a student's notes or textbook pages.
+Read them and pull out the important ideas a student must understand for a test. Skip page numbers, headers, admin info and decoration.
+Write everything in ${language === 'fr' ? 'French' : 'English'}.
+${extra ? `The student says: """${extra.slice(0, 2000)}"""\n` : ''}
+Reply with only one JSON object, no other text:
+{"title": string, "subject": string, "summary": string (one sentence),
+ "concepts": [{"topic": string, "kind": one of ${CONCEPT_KINDS.filter((k) => k !== 'formula').join(' | ')},
+   "term": string (the key word or idea, short), "summary": string (one clear sentence that explains it, without repeating the term),
+   "keyPoints": string[] (2-4 short facts a good answer mentions), "examples": string[] (0-2 real-life examples),
+   "misconceptions": string[] (0-2 common mistakes), "synonyms": string[],
+   "steps"?: string[] (only for processes, in order), "causeEffects"?: [{"cause": string, "effect": string}]}]}
+Aim for 6-25 concepts. If the images hold no readable study notes, reply {"title": "", "concepts": []}.`;
+
+/** Photos (and optional instructions) → a deck draft. Throws ReaderError with a code for the UI. */
+export async function readPhotos(files: File[], language: Locale, extra: string, signal?: AbortSignal) {
+  const s = await getSample();
+  if (!s) throw new ReaderError('unavailable');
+  let raw: { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
+  try {
+    raw = await s.json(PROMPT(language, extra), { images: files, signal, modelTier: 'default' });
+  } catch (e) {
+    throw new ReaderError(String((e as { code?: string })?.code ?? 'upstream_error'));
+  }
+  const concepts = clean(raw?.concepts);
+  if (concepts.length === 0) throw new ReaderError('nothing_found');
+  return { title: str(raw.title, 120), subject: str(raw.subject, 80), summary: str(raw.summary, 1000), language, concepts };
+}

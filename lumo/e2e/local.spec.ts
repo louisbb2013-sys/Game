@@ -55,8 +55,9 @@ test('browser-only Lumo: deck, quiz, exam, sandbox, notes, progress kept after r
   await page.screenshot({ path: 'e2e/screens/local-sandbox.png', fullPage: true });
 
   // Progress survives a reload.
-  const xp = await page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.xp);
-  expect(xp).toBeGreaterThan(0);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!));
+  expect(saved.decks).toHaveLength(2);
+  expect(Object.keys(saved.states).length).toBeGreaterThan(0);
   await page.reload();
   await page.getByRole('link', { name: 'Learn' }).click();
   await expect(page.getByText('Cells — the basics')).toBeVisible();

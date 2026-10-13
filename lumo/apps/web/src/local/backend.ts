@@ -595,6 +595,16 @@ const routes: [string, RegExp, Handler][] = [
       return createDeck({ title: String(b.title || r.title || 'My notes').slice(0, 120), language, summary: r.summary, concepts: r.concepts });
     },
   ],
+  [
+    'POST',
+    /^\/api\/local\/decks$/,
+    (_m, b) => {
+      // A draft already cleaned by the photo reader.
+      const concepts = Array.isArray(b.concepts) ? (b.concepts as Omit<Concept, 'id'>[]) : [];
+      if (concepts.length === 0) throw new LocalError(422, 'nothing_found');
+      return createDeck({ title: String(b.title || 'My notes').slice(0, 120), subject: String(b.subject ?? ''), language: b.language === 'fr' ? 'fr' : 'en', summary: String(b.summary ?? ''), concepts });
+    },
+  ],
   ['GET', /^\/api\/decks\/([\w-]+)$/, (m) => masteryMap(m[1]!)],
   [
     'DELETE',

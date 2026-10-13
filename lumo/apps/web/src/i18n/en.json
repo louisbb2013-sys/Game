@@ -1009,6 +1009,30 @@
     "nothingFound": "Lumo couldn't find ideas in these notes. Try one definition per line, like “Osmosis is …”.",
     "exampleEn": "# The Water Cycle\n\nEvaporation is when water turns into vapour because of the sun's heat.\nCondensation is the process where water vapour cools and turns into droplets, forming clouds.\nPrecipitation: water falling from clouds as rain, snow or hail.\nFor example, morning dew on grass is condensation.\nIf the temperature drops, more water vapour condenses.\n\nStages of the water cycle:\n1. Water evaporates from oceans\n2. Vapour rises and cools\n3. Clouds form by condensation\n4. Rain falls back to the ground\n\nTranspiration - water released by plants through their leaves\nRunoff - water that flows over the ground into rivers",
     "exampleFr": "# Le cycle de l’eau\n\nL’évaporation est le passage de l’eau à l’état de vapeur grâce à la chaleur du soleil.\nLa condensation désigne le refroidissement de la vapeur d’eau qui forme des gouttelettes et des nuages.\nPrécipitations : eau qui tombe des nuages sous forme de pluie, neige ou grêle.\nPar exemple, la rosée du matin sur l’herbe est de la condensation.\n\nÉtapes du cycle de l’eau :\n1. L’eau des océans s’évapore\n2. La vapeur monte et se refroidit\n3. Les nuages se forment par condensation\n4. La pluie retombe au sol\n\nTranspiration - eau rejetée par les feuilles des plantes\nRuissellement - eau qui coule sur le sol jusqu’aux rivières",
-    "createBody": "Paste your notes and Lumo turns them into a deck and quizzes."
+    "createBody": "Send photos of your notes or paste them, and Lumo turns them into a deck and quizzes.",
+    "photosTitle": "From photos of your notes",
+    "photosBody": "Take or choose photos of your notes or textbook. Claude reads them and Lumo builds the deck.",
+    "choosePhotos": "Choose photos",
+    "photosChosen_one": "{{count}} photo chosen — tap to change",
+    "photosChosen_other": "{{count}} photos chosen — tap to change",
+    "photoAlt": "Photo {{n}}",
+    "readPhotos": "Read my photos",
+    "reading": "Claude is reading your notes… this can take up to a minute.",
+    "stop": "Stop",
+    "photosPrivacy": "Your photos are sent to Claude only when you tap “Read my photos”. It uses your own Claude account, and Claude asks you first.",
+    "orNotes": "Or paste your notes",
+    "photoErrors": {
+      "nothing_found": "Claude couldn't find study notes in these photos. Try clearer, closer photos.",
+      "not_granted": "Photo reading needs your OK to use Claude. You can allow it from the page's permissions.",
+      "sampling_disabled": "Claude isn't available on this account, so photos can't be read here.",
+      "rate_limited": "Too many requests right now. Wait a minute and try again.",
+      "image_rejected": "One of the photos couldn't be used. Try JPG or PNG photos.",
+      "images_unavailable": "Photo reading isn't available here.",
+      "unavailable": "Photo reading isn't available here.",
+      "invalid_json": "Claude's answer came back incomplete. Try again with fewer photos.",
+      "refused": "Claude couldn't read these photos. Try different ones.",
+      "session_expired": "Please sign in to Claude again.",
+      "upstream_error": "Something went wrong while reading. Try again."
+    }
   }
 }

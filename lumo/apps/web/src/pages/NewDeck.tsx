@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError } from '../lib/api';
+import { photoLimits, readPhotos, ReaderError } from '../local/reader';
 
 /** Browser-only build: paste notes (or open a .txt file) and Lumo builds a deck on this device. */
 export function NewDeck() {
@@ -13,6 +14,36 @@ export function NewDeck() {
   const [language, setLanguage] = useState<'en' | 'fr'>(i18n.language === 'fr' ? 'fr' : 'en');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [photoCaps, setPhotoCaps] = useState<Awaited<ReturnType<typeof photoLimits>>>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [reading, setReading] = useState(false);
+  const ctl = useRef<AbortController | null>(null);
+
+  // Photos can be read only where this page may ask Claude (inside a Claude viewer, once allowed).
+  useEffect(() => {
+    void photoLimits().then(setPhotoCaps);
+  }, []);
+  const [previews, setPreviews] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = photos.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [photos]);
+
+  const readThem = async () => {
+    setReading(true);
+    setError(null);
+    ctl.current = new AbortController();
+    try {
+      const draft = await readPhotos(photos, language, title, ctl.current.signal);
+      const { id } = await api<{ id: string }>('/api/local/decks', { method: 'POST', body: { ...draft, title: title || draft.title } });
+      navigate(`/decks/${id}`);
+    } catch (err) {
+      const code = err instanceof ReaderError ? err.code : 'upstream_error';
+      if (code !== 'cancelled') setError(t(`local.photoErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
+      setReading(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -65,8 +96,47 @@ export function NewDeck() {
           <input id="deck-file" type="file" accept=".txt,.md,text/plain,text/markdown" className="sr-only" onChange={(e) => readFile(e.target.files?.[0])} />
         </label>
       </div>
+      {photoCaps && (
+        <section className="space-y-3 rounded-3xl bg-amber-glow/15 p-4 ring-1 ring-amber-glow/40">
+          <h2 className="font-black">📸 {t('local.photosTitle')}</h2>
+          <p className="text-sm text-muted">{t('local.photosBody')}</p>
+          <label className="block cursor-pointer rounded-2xl bg-surface px-4 py-3 text-center font-black ring-1 ring-line">
+            {photos.length ? t('local.photosChosen', { count: photos.length }) : t('local.choosePhotos')}
+            <input
+              id="deck-photos"
+              type="file"
+              multiple
+              accept={photoCaps.mediaTypes.join(',')}
+              className="sr-only"
+              onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, photoCaps.maxCount))}
+            />
+          </label>
+          {photos.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto">
+              {previews.map((u, i) => (
+                <img key={u} src={u} alt={t('local.photoAlt', { n: i + 1 })} className="size-20 shrink-0 rounded-xl object-cover ring-1 ring-line" />
+              ))}
+            </div>
+          )}
+          {reading ? (
+            <div className="flex items-center gap-3">
+              <Lumo size={40} mood="thinking" />
+              <span className="flex-1 text-sm font-bold">{t('local.reading')}</span>
+              <button type="button" onClick={() => ctl.current?.abort()} className="rounded-xl px-3 py-1.5 text-sm font-black ring-1 ring-line">
+                {t('local.stop')}
+              </button>
+            </div>
+          ) : (
+            <button type="button" disabled={photos.length === 0} onClick={() => void readThem()} className="w-full rounded-2xl bg-brand py-3 font-black text-brand-ink disabled:opacity-40">
+              ✨ {t('local.readPhotos')}
+            </button>
+          )}
+          <p className="text-xs text-muted">{t('local.photosPrivacy')}</p>
+        </section>
+      )}
+
       <label className="block">
-        <span className="mb-1 block text-sm font-bold">{t('local.notes')}</span>
+        <span className="mb-1 block text-sm font-bold">{photoCaps ? t('local.orNotes') : t('local.notes')}</span>
         <textarea id="deck-notes" required rows={10} value={text} onChange={(e) => setText(e.target.value)} placeholder={example} className="w-full rounded-2xl border-2 border-line bg-surface px-4 py-3 outline-none focus:border-brand" />
       </label>
       <button type="button" onClick={() => setText(example)} className="text-sm font-black text-brand">
