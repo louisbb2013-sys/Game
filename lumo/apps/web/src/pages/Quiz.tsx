@@ -9,6 +9,7 @@ import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { AnswerResponse, AnswerResult, PublicSession, SessionSummary } from '../lib/quiz';
 import { play, setSoundEnabled } from '../lib/sound';
+import { useRewards, type Rewards } from '../lib/rewards';
 
 type Phase = 'answering' | 'grading' | 'followup' | 'feedback' | 'summary';
 
@@ -34,6 +35,7 @@ export function Quiz() {
   const [error, setError] = useState<string | null>(null);
   const [comboFlash, setComboFlash] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
+  const showRewards = useRewards();
 
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
 
@@ -71,6 +73,7 @@ export function Quiz() {
           return;
         }
         setResult(res.result);
+        showRewards((res as AnswerResponse & { rewards?: Rewards }).rewards);
         setNext(res.next);
         setSummary(res.summary);
         setData((d) => (d ? { ...d, session: res.session } : d));
@@ -86,7 +89,7 @@ export function Quiz() {
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, followUp],
+    [answer, data, phase, followUp, showRewards],
   );
 
   const proceed = () => {

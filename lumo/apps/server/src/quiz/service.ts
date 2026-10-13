@@ -24,7 +24,6 @@ import {
   review,
   seededRng,
   sessionDone,
-  weekId,
   xpForAnswer,
   type Answer,
   type Concept,
@@ -45,6 +44,7 @@ import type pg from 'pg';
 import type { AiProvider } from '../ai/provider.ts';
 import type { Db } from '../db/pool.ts';
 import type { UserRow } from '../users.ts';
+import { emptyRewards, type GameService, type Rewards } from '../game/service.ts';
 
 export class QuizError extends Error {
   constructor(public status: number, public code: string) {
@@ -94,6 +94,7 @@ export interface PublicSession {
 }
 
 export interface AnswerResponse {
+  rewards: Rewards;
   result: Omit<GradeResult, 'gradedBy'> & {
     xp: number;
     combo: number;
@@ -117,6 +118,7 @@ export interface SessionSummary {
   streak: { days: number; extended: boolean };
   heartsGained: number;
   endedReason: 'done' | 'out_of_hearts';
+  rewards: Rewards;
   concepts: { id: string; term: string; score: number; band: string }[];
 }
 
@@ -135,6 +137,7 @@ export class QuizService {
   constructor(
     private db: Db,
     private ai: AiProvider,
+    private game: GameService,
     private log: (msg: string, err?: unknown) => void = () => {},
   ) {}
 
@@ -314,6 +317,7 @@ export class QuizService {
       state.teachBack = { questionId: q.id, firstText: answer.text, followUp };
       await this.db.query('UPDATE quiz_sessions SET state = $2, updated_at = now() WHERE id = $1', [sessionId, JSON.stringify(state)]);
       return {
+        rewards: emptyRewards(),
         result: { score: 0, correct: false, correctAnswer: '', explanation: '', xp: 0, combo: state.combo, multiplier: 1, retryScheduled: false, mastered: false },
         followUp,
         session: this.publicSession(sessionId, row.deck_id, state, user),
@@ -333,6 +337,9 @@ export class QuizService {
     let xp = 0;
     let masteredNow = false;
     let hearts = currentHearts({ hearts: user.hearts, updatedAt: user.hearts_updated_at.getTime() }, now).state;
+    let rewards: Rewards = emptyRewards();
+    // Active XP boost + equipped pet perk (capped in core).
+    const boost = await this.game.boostFor(user.id, now);
     try {
       await client.query('BEGIN');
       const locked = await this.getSession(user.id, sessionId, client, true);
@@ -353,7 +360,7 @@ export class QuizService {
 
       const firstTry = !isRetry(state, q.conceptId);
       const comboAfter = g.correct ? state.combo + 1 : 0;
-      xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter });
+      xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost });
       outcome = applyAnswer(state, { conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, variantKey: q.variantKey }, xp);
       const next: StoredState = { ...state, ...outcome.state, teachBack: undefined };
 
@@ -368,10 +375,12 @@ export class QuizService {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [user.id, q.conceptId, sessionId, q.format, q.bloom, q.variantKey, g.score, timeMs ?? null, JSON.stringify(q), JSON.stringify(answer)],
       );
-      if (xp > 0) {
-        await client.query('INSERT INTO xp_events (user_id, amount, reason, week_id) VALUES ($1, $2, $3, $4)', [user.id, xp, 'answer', weekId(now)]);
-      }
-      await client.query('UPDATE users SET xp = xp + $2, hearts = $3, hearts_updated_at = $4 WHERE id = $1', [user.id, xp, hearts.hearts, new Date(hearts.updatedAt)]);
+      await client.query('UPDATE users SET hearts = $2, hearts_updated_at = $3 WHERE id = $1', [user.id, hearts.hearts, new Date(hearts.updatedAt)]);
+      rewards = await this.game.award(client, user.id, {
+        xp,
+        reason: 'answer',
+        events: [{ type: 'answer', correct: g.correct, combo: comboAfter }, ...(masteredNow ? [{ type: 'mastered' as const }] : [])],
+      });
       await client.query('UPDATE quiz_sessions SET state = $2, current = NULL, updated_at = now() WHERE id = $1', [sessionId, JSON.stringify(next)]);
       await client.query('COMMIT');
       outcome = { ...outcome, state: next };
@@ -390,7 +399,9 @@ export class QuizService {
     if (!nextQ) summary = await this.finish(fresh, sessionId, stateAfter);
 
     const { gradedBy: _g, ...result } = g;
+    if (summary) rewards = mergeRewards(rewards, summary.rewards);
     return {
+      rewards,
       result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow },
       session: this.publicSession(sessionId, row.deck_id, stateAfter, { ...fresh, hearts: summary ? fresh.hearts + summary.heartsGained : fresh.hearts }, !!summary),
       next: nextQ ? publicQuestion(nextQ) : null,
@@ -429,6 +440,14 @@ export class QuizService {
         new Date(hearts.updatedAt),
       ]);
       await client.query("UPDATE quiz_sessions SET status = 'done', current = NULL, state = $2, updated_at = now() WHERE id = $1", [sessionId, JSON.stringify({ ...state, endedReason: state.endedReason ?? 'done' })]);
+      const rewards = alreadyDone
+        ? emptyRewards()
+        : await this.game.award(client, user.id, {
+            events: [
+              { type: 'session_done', perfect: accuracy === 1 && state.answered >= 5, answered: state.answered },
+              ...(streakUpdate.extended ? [{ type: 'streak' as const, days: streakUpdate.state.days }] : []),
+            ],
+          });
       await client.query('COMMIT');
 
       const conceptIds = [...new Set(state.history.map((h) => h.conceptId))];
@@ -445,6 +464,7 @@ export class QuizService {
         streak: { days: streakUpdate.state.days, extended: streakUpdate.extended },
         heartsGained,
         endedReason: state.endedReason ?? 'done',
+        rewards,
         concepts: conceptIds.map((id) => {
           const p = states.get(id)?.progress ?? newProgress();
           return { id, term: termOf.get(id) ?? '', score: masteryScore(p), band: masteryBand(p) };
@@ -483,4 +503,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
       (e) => (clearTimeout(t), reject(e)),
     );
   });
+}
+
+export function mergeRewards(a: Rewards, b: Rewards): Rewards {
+  return { xp: a.xp + b.xp, levelUp: b.levelUp ?? a.levelUp, badges: [...a.badges, ...b.badges], questsCompleted: [...a.questsCompleted, ...b.questsCompleted] };
 }

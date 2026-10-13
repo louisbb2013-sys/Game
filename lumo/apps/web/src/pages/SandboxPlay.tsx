@@ -12,6 +12,7 @@ import { PodcastPlayer, StoryPlayer, VideoPlayer } from '../components/sandbox/w
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { play, setSoundEnabled } from '../lib/sound';
+import { useRewards, type Rewards } from '../lib/rewards';
 
 interface Activity {
   id: string;
@@ -31,6 +32,7 @@ export function SandboxPlay() {
   const [error, setError] = useState(false);
   const [reward, setReward] = useState<{ score: number; xp: number; streak: { days: number; extended: boolean } } | null>(null);
   const [again, setAgain] = useState(false);
+  const showRewards = useRewards();
 
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
   useEffect(() => {
@@ -40,7 +42,8 @@ export function SandboxPlay() {
   }, [id]);
 
   const complete = async (score: number) => {
-    const r = await api<{ xp: number; streak: { days: number; extended: boolean } }>(`/api/sandbox/${id}/complete`, { method: 'POST', body: { score } }).catch(() => ({ xp: 0, streak: { days: 0, extended: false } }));
+    const r = await api<{ xp: number; streak: { days: number; extended: boolean }; rewards?: Rewards }>(`/api/sandbox/${id}/complete`, { method: 'POST', body: { score } }).catch(() => ({ xp: 0, streak: { days: 0, extended: false }, rewards: undefined }));
+    showRewards(r.rewards);
     setReward({ score, ...r });
     play('finish');
     void refresh();

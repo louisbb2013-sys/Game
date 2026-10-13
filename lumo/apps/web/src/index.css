@@ -166,3 +166,13 @@ html[data-reduce-motion='true'] *::after {
   .cheat-sheet, .cheat-sheet * { visibility: visible; }
   .cheat-sheet { position: absolute; inset: 0 auto auto 0; width: 100%; box-shadow: none; }
 }
+
+/* Cosmetic themes bought in the shop (brand + accent colors) */
+:root[data-skin='theme_sunset'] { --lumo-brand: #ea580c; --lumo-accent: #f472b6; }
+:root[data-skin='theme_ocean'] { --lumo-brand: #0369a1; --lumo-accent: #22d3ee; }
+:root[data-skin='theme_forest'] { --lumo-brand: #15803d; --lumo-accent: #facc15; }
+:root[data-skin='theme_galaxy'] { --lumo-brand: #7e22ce; --lumo-accent: #f0abfc; }
+:root[data-theme='dark'][data-skin='theme_sunset'] { --lumo-brand: #fb923c; }
+:root[data-theme='dark'][data-skin='theme_ocean'] { --lumo-brand: #38bdf8; }
+:root[data-theme='dark'][data-skin='theme_forest'] { --lumo-brand: #4ade80; }
+:root[data-theme='dark'][data-skin='theme_galaxy'] { --lumo-brand: #c084fc; }

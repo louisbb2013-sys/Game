@@ -7,6 +7,7 @@ import { conceptInputSchema } from '../quiz/schemas.ts';
 import { QuizError, type QuizService } from '../quiz/service.ts';
 import type { SandboxService } from '../sandbox/service.ts';
 import type { UserRow } from '../users.ts';
+import type { GameService } from '../game/service.ts';
 
 export type ChatCard =
   | { type: 'draft' }
@@ -51,6 +52,7 @@ export class ChatService {
     private ai: AiProvider,
     private quiz: QuizService,
     private sandbox: SandboxService,
+    private game: GameService,
     private log: (msg: string, err?: unknown) => void = () => {},
   ) {}
 
@@ -254,6 +256,7 @@ export class ChatService {
     const deckId = await createDeck(this.db, user.id, { title: d.title, subject: d.subject, language: d.language, summary: d.summary, concepts: d.concepts });
     await this.db.query('UPDATE chats SET deck_id = $2, draft = $3, title = $4 WHERE id = $1', [chatId, deckId, JSON.stringify(d), d.title]);
     await this.db.query('DELETE FROM uploads WHERE chat_id = $1', [chatId]);
+    await this.game.awardNow(user.id, { events: [{ type: 'deck_created' }] });
     const fr = user.locale === 'fr';
     const messages: ChatMessage[] = [];
     if (addUserMessage) messages.push(await this.addMessage(chatId, 'user', fr ? 'Crée le paquet !' : 'Build the deck!'));

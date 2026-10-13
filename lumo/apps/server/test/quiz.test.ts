@@ -1,4 +1,4 @@
-import { perfectAnswer, type Answer, type Question } from '@lumo/core';
+import { levelFromXp, levelUpRewards, perfectAnswer, type Answer, type Question } from '@lumo/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AiProvider } from '../src/ai/provider.ts';
 import { MockProvider } from '../src/ai/provider.ts';
@@ -118,7 +118,11 @@ describe('quiz sessions', () => {
 
     const me = (await t.app.inject({ method: 'GET', url: '/api/me', headers: { cookie } })).json().user;
     expect(me.xp).toBe(totalXp);
-    expect(me.coins).toBe(summary.coins);
+    // Session coins + level-up coins (every level reached gives coins).
+    let levelCoins = 0;
+    for (let l = 2; l <= levelFromXp(totalXp); l++) levelCoins += levelUpRewards(l).coins;
+    expect(me.coins).toBe(summary.coins + levelCoins);
+    expect(summary.rewards.badges).toContain('first_steps');
     expect(me.streak.days).toBe(1);
     const map = (await t.app.inject({ method: 'GET', url: `/api/decks/${deckId}`, headers: { cookie } })).json();
     expect(map.concepts.some((c: { band: string }) => c.band !== 'new')).toBe(true);

@@ -30,7 +30,18 @@ See [PLAN.md](PLAN.md) for architecture, data model and milestones.
     **timeline** (follow, then rebuild from memory).
   - Ask for anything in plain words (“make me a crossword about osmosis”), in English or French.
   - XP once per activity, capped per day (games run on the device, so the server limits what they can earn).
-- ⏳ Milestones 4–6: full game systems (leagues, chests, pets, shop, quests), social & Live, extras.
+- ✅ **Milestone 4 — Game systems** (all rewards granted server-side through one audited service):
+  - **Leagues**: Bronze → Diamond, weekly groups of up to 30 at your level, live table with promotion/demotion
+    zones, automatic end-of-week settlement (top move up, bottom move down, rewards), weekly global board.
+  - **Levels** with coins and chests on level-up; **XP boost** item; **pet perk** (small, capped).
+  - **Chests** (common/rare/epic) with an opening animation; loot rolled on the server.
+  - **Pets**: adopt a starter, name it, feed it, level it up; 8 species from common to legendary; mood follows your
+    streak and hunger; eggs hatch new pets.
+  - **Shop**: streak freezes, heart refills, XP boosts, pet snacks, eggs, chests, color themes.
+  - **Quests**: 3 daily + 2 weekly, different per learner, claim for coins/chests.
+  - **Badges**: 17 achievements and lifetime stats on your profile; **streak repair** within 2 days.
+  - Celebration pop-ups for level-ups, badges and finished quests.
+- ⏳ Milestones 5–6: friends, groups & Live multiplayer; exam mode, study plan, audio, offline, extras.
 
 ## Requirements
 - Node 22+

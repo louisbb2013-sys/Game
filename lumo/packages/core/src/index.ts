@@ -22,3 +22,5 @@ export * from './quiz/extract';
 export * from './sandbox/types';
 export * from './sandbox/generate';
 export * from './sandbox/intent';
+export * from './game/items';
+export * from './game/progress';

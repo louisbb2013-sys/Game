@@ -8,7 +8,6 @@ import {
   SANDBOX_XP,
   sandboxSupports,
   seededRng,
-  weekId,
   type Concept,
   type SandboxData,
   type SandboxKind,
@@ -18,6 +17,7 @@ import type { AiProvider } from '../ai/provider.ts';
 import type { Db } from '../db/pool.ts';
 import { QuizError, type QuizService } from '../quiz/service.ts';
 import type { UserRow } from '../users.ts';
+import { type GameService, type Rewards } from '../game/service.ts';
 
 /** Formats whose text benefits most from AI writing (the rest are built locally). */
 const AI_SCRIPTED: SandboxKind[] = ['video', 'podcast', 'story', 'mnemonics'];
@@ -40,6 +40,7 @@ export class SandboxService {
     private db: Db,
     private ai: AiProvider,
     private quiz: QuizService,
+    private game: GameService,
   ) {}
 
   /** Which formats are available for a deck (some need lists, dates or enough words). */
@@ -89,7 +90,7 @@ export class SandboxService {
   }
 
   /** XP once per activity, scaled by score, with a daily cap (games run on the device, so the server limits what they can earn). */
-  async complete(user: UserRow, id: string, score: number): Promise<{ xp: number; streak: { days: number; extended: boolean } }> {
+  async complete(user: UserRow, id: string, score: number): Promise<{ xp: number; streak: { days: number; extended: boolean }; rewards: Rewards }> {
     const now = Date.now();
     const s = Math.min(1, Math.max(0, score));
     const client = await this.db.connect();
@@ -106,14 +107,16 @@ export class SandboxService {
         );
         xp = Math.max(0, Math.min(Math.round(SANDBOX_XP[a.kind] * s), SANDBOX_DAILY_XP_CAP - today.rows[0]!.sum));
         await client.query('UPDATE sandbox_activities SET score = $2, xp = $3, completed_at = now() WHERE id = $1', [id, s, xp]);
-        if (xp > 0) {
-          await client.query("INSERT INTO xp_events (user_id, amount, reason, week_id) VALUES ($1, $2, 'sandbox', $3)", [user.id, xp, weekId(now)]);
-        }
       }
       const streak = s >= 0.3 ? recordStudyDay(u.streak, dayKey(now, u.timezone)) : { state: u.streak, extended: false };
-      await client.query('UPDATE users SET xp = xp + $2, streak = $3 WHERE id = $1', [user.id, xp, JSON.stringify(streak.state)]);
+      await client.query('UPDATE users SET streak = $2 WHERE id = $1', [user.id, JSON.stringify(streak.state)]);
+      const rewards: Rewards = await this.game.award(client, user.id, {
+        xp,
+        reason: 'sandbox',
+        events: [...(a.completed_at ? [] : [{ type: 'sandbox_done' as const, kind: a.kind, score: s }]), ...(streak.extended ? [{ type: 'streak' as const, days: streak.state.days }] : [])],
+      });
       await client.query('COMMIT');
-      return { xp, streak: { days: streak.state.days, extended: streak.extended } };
+      return { xp, streak: { days: streak.state.days, extended: streak.extended }, rewards };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;

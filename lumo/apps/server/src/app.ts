@@ -13,6 +13,8 @@ import { quizRoutes } from './routes/quiz.ts';
 import { ClaudeProvider } from './ai/claude.ts';
 import { MockProvider, type AiProvider } from './ai/provider.ts';
 import { QuizService } from './quiz/service.ts';
+import { GameService } from './game/service.ts';
+import { gameRoutes } from './routes/game.ts';
 import { ChatService } from './chat/service.ts';
 import { SandboxService } from './sandbox/service.ts';
 import { chatRoutes } from './routes/chat.ts';
@@ -32,6 +34,7 @@ export interface AppContext {
   emailCodes: EmailCodes;
   ai: AiProvider;
   quiz: QuizService;
+  game: GameService;
   chat: ChatService;
   sandbox: SandboxService;
   requireUser: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
@@ -66,9 +69,10 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
       ? new ClaudeProvider(config.ANTHROPIC_API_KEY, config.AI_MODEL, config.AI_GRADING_MODEL, (m, e) => app.log.warn({ err: e }, m))
       : new MockProvider());
   app.log.info(`AI provider: ${ai.name}`);
-  const quiz = new QuizService(db, ai, (m, e) => app.log.warn({ err: e }, m));
-  const sandbox = new SandboxService(db, ai, quiz);
-  const chat = new ChatService(db, ai, quiz, sandbox, (m, e) => app.log.warn({ err: e }, m));
+  const game = new GameService(db);
+  const quiz = new QuizService(db, ai, game, (m, e) => app.log.warn({ err: e }, m));
+  const sandbox = new SandboxService(db, ai, quiz, game);
+  const chat = new ChatService(db, ai, quiz, sandbox, game, (m, e) => app.log.warn({ err: e }, m));
 
   const ctx: AppContext = {
     config,
@@ -77,6 +81,7 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
     emailCodes,
     ai,
     quiz,
+    game,
     chat,
     sandbox,
     requireUser: async (req, reply) => {
@@ -91,6 +96,7 @@ export async function buildApp(config: Config, db: Db, opts: { logger?: boolean;
   await quizRoutes(app, ctx);
   await chatRoutes(app, ctx);
   await sandboxRoutes(app, ctx);
+  await gameRoutes(app, ctx);
 
   return { app, ctx };
 }

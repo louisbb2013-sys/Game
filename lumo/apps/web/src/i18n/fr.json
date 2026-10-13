@@ -50,7 +50,19 @@
     "level": "Niveau {{level}}",
     "xpToNext": "{{current}} / {{needed}} XP",
     "sandboxTitle": "Bac à sable",
-    "sandboxBody": "Vidéos, balados, casse-têtes, escape games… le format que tu veux."
+    "sandboxBody": "Vidéos, balados, casse-têtes, escape games… le format que tu veux.",
+    "freezes_one": "{{count}} gel de série prêt",
+    "freezes_other": "{{count}} gels de série prêts",
+    "repairStreak": "Réparer ma série de {{days}} jours (150 pièces)",
+    "boostOn": "Boost d’XP actif ! (+50 %)",
+    "chestsWaiting_one": "Tu as un coffre à ouvrir !",
+    "chestsWaiting_other": "Tu as {{count}} coffres à ouvrir !",
+    "quests": "Quêtes",
+    "daily": "Aujourd’hui",
+    "weekly": "Cette semaine",
+    "claim": "Réclamer",
+    "adoptPet": "Adopte un compagnon d’étude",
+    "adoptPetBody": "Les compagnons t’encouragent et donnent un petit bonus d’XP."
   },
   "stats": {
     "streak": "Jours de suite",
@@ -86,7 +98,14 @@
       "username_blocked": "Choisis un nom plus gentil, s'il te plaît.",
       "username_personal_info": "Garde tes infos personnelles (comme ton année de naissance) hors de ton nom.",
       "username_taken": "Quelqu'un a déjà ce nom."
-    }
+    },
+    "badges": "Badges ({{n}}/{{total}})",
+    "statCorrect": "Bonnes réponses",
+    "statMastered": "Maîtrisées",
+    "statBestStreak": "Meilleure série",
+    "statFormats": "Formats essayés",
+    "earned": "Obtenu",
+    "locked": "Verrouillé"
   },
   "settings": {
     "title": "Réglages",
@@ -411,6 +430,261 @@
       "format_not_possible": "Ce format ne marche pas avec ces notes — essaie-en un autre !",
       "no_deck": "Crée d’abord un paquet.",
       "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+    }
+  },
+  "quests": {
+    "correct_answers_one": "Réussis {{count}} réponse",
+    "correct_answers_other": "Réussis {{count}} réponses",
+    "xp_one": "Gagne {{count}} XP",
+    "xp_other": "Gagne {{count}} XP",
+    "sessions_one": "Termine {{count}} séance",
+    "sessions_other": "Termine {{count}} séances",
+    "sandbox_one": "Termine {{count}} activité du Bac à sable",
+    "sandbox_other": "Termine {{count}} activités du Bac à sable",
+    "combo_one": "Fais un combo de {{count}} réponses",
+    "combo_other": "Fais un combo de {{count}} réponses",
+    "mastered_one": "Maîtrise {{count}} notion",
+    "mastered_other": "Maîtrise {{count}} notions",
+    "perfect_session_one": "Réussis {{count}} séance à 100 %",
+    "perfect_session_other": "Réussis {{count}} séances à 100 %"
+  },
+  "rewards": {
+    "levelUp": "Niveau {{level}} !",
+    "levelUpCoins": "+{{coins}} pièces",
+    "levelUpChest": "+{{coins}} pièces et un {{chest}} !",
+    "badge": "Badge débloqué !",
+    "quest_one": "Quête terminée !",
+    "quest_other": "{{count}} quêtes terminées !",
+    "questClaim": "Réclame ta récompense sur l’Accueil."
+  },
+  "chests": {
+    "common": "coffre",
+    "rare": "coffre rare",
+    "epic": "coffre épique"
+  },
+  "league": {
+    "title": "Ligue {{tier}}",
+    "endsIn": "Fin dans {{d}} j {{h}} h",
+    "tab_league": "Ma ligue",
+    "tab_global": "Mondial",
+    "notJoined": "Tu n’as pas encore rejoint la ligue de cette semaine",
+    "notJoinedBody": "Gagne de l’XP pour rejoindre un groupe de 30 élèves de ton niveau.",
+    "startStudying": "Commencer à étudier",
+    "promotionZone": "Zone de promotion",
+    "demotionZone": "Zone de relégation",
+    "you": "toi",
+    "globalEmpty": "Personne n’a encore gagné d’XP cette semaine. Sois le premier !",
+    "rules": "Chaque semaine, les meilleurs montent d’une ligue, les derniers descendent. Seule l’XP gagnée en étudiant compte.",
+    "result_promoted": "Promu en {{tier}} !",
+    "result_stayed": "Tu restes en {{tier}}",
+    "result_demoted": "Retour en {{tier}} — tu vas y arriver !",
+    "resultRank": "Tu as fini n°{{rank}} la semaine dernière."
+  },
+  "items": {
+    "streak_freeze": {
+      "name": "Gel de série",
+      "desc": "Protège ta série pour un jour manqué."
+    },
+    "heart_refill": {
+      "name": "Recharge de cœurs",
+      "desc": "Remplit tous tes cœurs tout de suite."
+    },
+    "xp_boost": {
+      "name": "Boost d’XP",
+      "desc": "+50 % d’XP pendant 15 minutes."
+    },
+    "pet_food": {
+      "name": "Collation",
+      "desc": "Nourrit ton compagnon et l’aide à grandir."
+    },
+    "egg_common": {
+      "name": "Œuf mystère",
+      "desc": "Fait éclore un compagnon au hasard."
+    },
+    "egg_rare": {
+      "name": "Œuf rare",
+      "desc": "Fait éclore un compagnon rare, épique ou légendaire."
+    },
+    "chest_common": {
+      "name": "Coffre",
+      "desc": "Des pièces et un objet surprise."
+    },
+    "theme_sunset": {
+      "name": "Thème coucher de soleil",
+      "desc": "Couleurs chaudes orange et rose."
+    },
+    "theme_ocean": {
+      "name": "Thème océan",
+      "desc": "Couleurs fraîches bleu et turquoise."
+    },
+    "theme_forest": {
+      "name": "Thème forêt",
+      "desc": "Couleurs calmes vert et or."
+    },
+    "theme_galaxy": {
+      "name": "Thème galaxie",
+      "desc": "Thème violet rare — seulement dans les coffres !"
+    }
+  },
+  "shop": {
+    "title": "Boutique",
+    "tab_shop": "Boutique",
+    "tab_mine": "Mes trucs",
+    "owned": "Tu en as {{n}}",
+    "bought": "Acheté : {{item}}",
+    "buyFor": "Acheter {{item}} pour {{price}} pièces",
+    "chests": "Coffres",
+    "noChests": "Pas encore de coffres — gagne-les avec les niveaux, quêtes et ligues.",
+    "openChest": "Ouvrir le {{kind}}",
+    "tapToOpen": "Touche pour ouvrir",
+    "items": "Objets",
+    "noItems": "Rien pour l’instant. Gagne des pièces en étudiant !",
+    "boostActive": "Boost d’XP actif jusqu’à {{time}}",
+    "feedPet": "Nourrir",
+    "wear": "Porter",
+    "wearing": "Actif",
+    "themeOn": "Nouveau look appliqué !",
+    "use": "Utiliser",
+    "hatch": "Faire éclore",
+    "used": "C’est fait !",
+    "used_streak_freeze": "Gel de série prêt !",
+    "used_heart_refill": "Cœurs rechargés !",
+    "used_xp_boost": "Boost d’XP actif pendant 15 minutes !",
+    "used_egg": "Ton œuf a éclos ! Va voir ton nouveau compagnon.",
+    "opening": "Ouverture…",
+    "youGot": "Tu as reçu",
+    "awesome": "Génial !",
+    "errors": {
+      "not_enough_coins": "Pas encore assez de pièces — étudie encore un peu !",
+      "already_owned": "Tu l’as déjà.",
+      "not_enough_items": "Tu n’as pas cet objet.",
+      "max_freezes": "Tu peux garder au plus 3 gels de série.",
+      "cannot_repair": "Cette série ne peut plus être réparée.",
+      "not_done": "Termine d’abord la quête !",
+      "already_claimed": "Déjà réclamé.",
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+    }
+  },
+  "pets": {
+    "title": "Mes compagnons",
+    "adoptTitle": "Choisis ton compagnon d’étude",
+    "adoptBody": "Ton compagnon t’encourage. Garde ta série et nourris-le pour qu’il soit heureux — un compagnon heureux te donne un petit bonus d’XP.",
+    "nameLabel": "Donne-lui un nom",
+    "adopt": "Adopter !",
+    "rename": "Renommer",
+    "level": "Niveau {{level}}",
+    "fullness": "Satiété",
+    "perk": "Te donne +{{pct}} % d’XP",
+    "getFood": "Achète des collations à la boutique",
+    "tip": "Les compagnons sont tristes si ta série se brise. Étudie chaque jour pour qu’ils restent heureux !",
+    "eggs": "Œufs",
+    "collection": "Collection ({{n}} sur {{total}} espèces)",
+    "equip": "Emmener",
+    "species": {
+      "moss_turtle": "Tortue mousse",
+      "cloud_sheep": "Mouton nuage",
+      "pixel_owl": "Hibou pixel",
+      "comet_fox": "Renard comète",
+      "crystal_cat": "Chat cristal",
+      "star_jelly": "Méduse étoile",
+      "bubble_octo": "Poulpe bulle",
+      "ember_dragon": "Dragon braise"
+    },
+    "rarity": {
+      "common": "Commun",
+      "rare": "Rare",
+      "epic": "Épique",
+      "legendary": "Légendaire"
+    },
+    "mood": {
+      "happy": "Heureux",
+      "content": "Content",
+      "hungry": "Affamé",
+      "sad": "Triste"
+    },
+    "moodLine": {
+      "happy": "Est super fier de ta série !",
+      "content": "Est prêt à étudier avec toi.",
+      "hungry": "Commence à avoir faim — une collation ?",
+      "sad": "S’ennuie de toi. Étudie aujourd’hui pour lui remonter le moral !"
+    },
+    "errors": {
+      "bad_pet_name": "Choisis un nom gentil (1 à 16 lettres).",
+      "already_has_pet": "Tu as déjà adopté un compagnon.",
+      "not_enough_items": "Plus de collations — achète-en à la boutique.",
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+    },
+    "feed_one": "Nourrir ({{count}} collation)",
+    "feed_other": "Nourrir ({{count}} collations)"
+  },
+  "badges": {
+    "first_steps": {
+      "name": "Premiers pas",
+      "desc": "Termine ta première séance"
+    },
+    "deck_maker": {
+      "name": "Créateur",
+      "desc": "Crée ton premier paquet"
+    },
+    "sharp_mind": {
+      "name": "Esprit vif",
+      "desc": "100 bonnes réponses"
+    },
+    "brainiac": {
+      "name": "Cerveau",
+      "desc": "1 000 bonnes réponses"
+    },
+    "master_10": {
+      "name": "Étoile montante",
+      "desc": "Maîtrise 10 notions"
+    },
+    "master_50": {
+      "name": "Superstar",
+      "desc": "Maîtrise 50 notions"
+    },
+    "streak_7": {
+      "name": "En feu",
+      "desc": "Série de 7 jours"
+    },
+    "streak_30": {
+      "name": "Inarrêtable",
+      "desc": "Série de 30 jours"
+    },
+    "combo_10": {
+      "name": "Roi du combo",
+      "desc": "10 bonnes réponses de suite"
+    },
+    "perfectionist": {
+      "name": "Perfectionniste",
+      "desc": "5 séances à 100 %"
+    },
+    "explorer": {
+      "name": "Explorateur",
+      "desc": "Essaie 5 formats du Bac à sable"
+    },
+    "all_formats": {
+      "name": "Maître des formats",
+      "desc": "Essaie les 16 formats du Bac à sable"
+    },
+    "chest_hunter": {
+      "name": "Chasseur de trésor",
+      "desc": "Ouvre 10 coffres"
+    },
+    "pet_pal": {
+      "name": "Ami des bêtes",
+      "desc": "Nourris ton compagnon 20 fois"
+    },
+    "gold_league": {
+      "name": "En or",
+      "desc": "Atteins la ligue Or"
+    },
+    "diamond_league": {
+      "name": "Esprit diamant",
+      "desc": "Atteins la ligue Diamant"
+    },
+    "level_10": {
+      "name": "Décollage",
+      "desc": "Atteins le niveau 10"
     }
   }
 }

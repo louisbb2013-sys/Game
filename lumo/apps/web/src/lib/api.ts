@@ -44,5 +44,7 @@ export interface Profile {
   hearts: { current: number; nextRefillAt: number | null };
   streak: { days: number; lastDay: string | null; freezes: number; status: 'none' | 'safe' | 'at_risk' | 'broken' };
   leagueTier: string;
+  theme: string;
+  boostUntil: string | null;
   createdAt: string;
 }

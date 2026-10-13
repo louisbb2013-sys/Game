@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { GearIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
-import { ApiError } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 export function Profile() {
@@ -73,9 +73,65 @@ export function Profile() {
         )}
       </form>
 
+      <BadgesSection />
+
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/pets" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+          🐾 {t('pets.title')}
+        </Link>
+        <Link to="/shop" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+          🛍️ {t('shop.title')}
+        </Link>
+      </div>
+
       <button onClick={() => void logout()} className="w-full rounded-2xl py-3 font-extrabold text-bad ring-1 ring-line">
         {t('profile.logout')}
       </button>
     </div>
+  );
+}
+
+interface BadgeData {
+  stats: { correct: number; mastered: number; bestStreak: number; sessions: number; sandboxKinds: string[] };
+  badges: { id: string; emoji: string; earnedAt: string | null }[];
+}
+
+function BadgesSection() {
+  const { t } = useTranslation();
+  const [data, setData] = useState<BadgeData | null>(null);
+  useEffect(() => {
+    api<BadgeData>('/api/game/badges').then(setData, () => {});
+  }, []);
+  if (!data) return null;
+  const earned = data.badges.filter((b) => b.earnedAt).length;
+  const stats = [
+    { label: t('profile.statCorrect'), value: data.stats.correct },
+    { label: t('profile.statMastered'), value: data.stats.mastered },
+    { label: t('profile.statBestStreak'), value: data.stats.bestStreak },
+    { label: t('profile.statFormats'), value: data.stats.sandboxKinds.length },
+  ];
+  return (
+    <section className="space-y-3 rounded-3xl bg-surface p-4 ring-1 ring-line" aria-labelledby="badges-title">
+      <div className="grid grid-cols-4 gap-2 text-center">
+        {stats.map((x) => (
+          <div key={x.label}>
+            <p className="text-xl font-black">{x.value}</p>
+            <p className="text-[0.65rem] leading-tight font-bold text-muted">{x.label}</p>
+          </div>
+        ))}
+      </div>
+      <h2 id="badges-title" className="font-black">
+        🏅 {t('profile.badges', { n: earned, total: data.badges.length })}
+      </h2>
+      <ul className="grid grid-cols-4 gap-2">
+        {data.badges.map((b) => (
+          <li key={b.id} className={`flex flex-col items-center gap-1 rounded-2xl p-2 text-center ${b.earnedAt ? 'bg-amber-glow/15' : 'bg-surface-2 opacity-50 grayscale'}`} title={t(`badges.${b.id}.desc`)}>
+            <span className="text-3xl">{b.emoji}</span>
+            <span className="text-[0.62rem] leading-tight font-bold">{t(`badges.${b.id}.name`)}</span>
+            <span className="sr-only">{b.earnedAt ? t('profile.earned') : t('profile.locked')} — {t(`badges.${b.id}.desc`)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

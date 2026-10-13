@@ -8,6 +8,10 @@ import { Deck } from './pages/Deck';
 import { Sandbox } from './pages/Sandbox';
 import { SandboxPlay } from './pages/SandboxPlay';
 import { Home } from './pages/Home';
+import { League } from './pages/League';
+import { Pets } from './pages/Pets';
+import { Shop } from './pages/Shop';
+import { RewardsProvider } from './lib/rewards';
 import { Learn } from './pages/Learn';
 import { Quiz } from './pages/Quiz';
 import { Profile } from './pages/Profile';
@@ -18,7 +22,9 @@ export function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <RewardsProvider>
+          <AppRoutes />
+        </RewardsProvider>
       </BrowserRouter>
     </AuthProvider>
   );
@@ -59,7 +65,9 @@ function AppRoutes() {
         <Route path="sandbox" element={<Sandbox />} />
         <Route path="sandbox/play/:id" element={<SandboxPlay />} />
         <Route path="live" element={<Soon />} />
-        <Route path="league" element={<Soon />} />
+        <Route path="league" element={<League />} />
+        <Route path="shop" element={<Shop />} />
+        <Route path="pets" element={<Pets />} />
         <Route path="me" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
       </Route>

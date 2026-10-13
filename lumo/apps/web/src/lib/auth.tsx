@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserState(u);
     if (u) {
       applySettings(u.settings);
+      document.documentElement.dataset.skin = u.theme ?? 'default';
       setLocale(u.locale);
     }
   }, []);

@@ -50,7 +50,19 @@
     "level": "Level {{level}}",
     "xpToNext": "{{current}} / {{needed}} XP",
     "sandboxTitle": "Study Sandbox",
-    "sandboxBody": "Videos, podcasts, puzzles, escape rooms… any format you like."
+    "sandboxBody": "Videos, podcasts, puzzles, escape rooms… any format you like.",
+    "freezes_one": "{{count}} streak freeze ready",
+    "freezes_other": "{{count}} streak freezes ready",
+    "repairStreak": "Repair my {{days}}-day streak (150 coins)",
+    "boostOn": "Double-speed XP boost is on! (+50%)",
+    "chestsWaiting_one": "You have a chest to open!",
+    "chestsWaiting_other": "You have {{count}} chests to open!",
+    "quests": "Quests",
+    "daily": "Today",
+    "weekly": "This week",
+    "claim": "Claim",
+    "adoptPet": "Adopt a study pet",
+    "adoptPetBody": "Pets cheer you on and give a small XP bonus."
   },
   "stats": {
     "streak": "Day streak",
@@ -86,7 +98,14 @@
       "username_blocked": "Please choose a kinder username.",
       "username_personal_info": "Keep personal info (like birth years) out of your username.",
       "username_taken": "Someone already has that username."
-    }
+    },
+    "badges": "Badges ({{n}}/{{total}})",
+    "statCorrect": "Right answers",
+    "statMastered": "Mastered",
+    "statBestStreak": "Best streak",
+    "statFormats": "Formats tried",
+    "earned": "Earned",
+    "locked": "Locked"
   },
   "settings": {
     "title": "Settings",
@@ -411,6 +430,261 @@
       "format_not_possible": "That format doesn’t work with these notes — try another one!",
       "no_deck": "Make a deck first.",
       "network": "Can’t reach Lumo. Check your connection."
+    }
+  },
+  "quests": {
+    "correct_answers_one": "Get {{count}} answer right",
+    "correct_answers_other": "Get {{count}} answers right",
+    "xp_one": "Earn {{count}} XP",
+    "xp_other": "Earn {{count}} XP",
+    "sessions_one": "Finish {{count}} study session",
+    "sessions_other": "Finish {{count}} study sessions",
+    "sandbox_one": "Complete {{count}} Sandbox activity",
+    "sandbox_other": "Complete {{count}} Sandbox activities",
+    "combo_one": "Reach a {{count}}-answer combo",
+    "combo_other": "Reach a {{count}}-answer combo",
+    "mastered_one": "Master {{count}} concept",
+    "mastered_other": "Master {{count}} concepts",
+    "perfect_session_one": "Ace {{count}} session (100%)",
+    "perfect_session_other": "Ace {{count}} sessions (100%)"
+  },
+  "rewards": {
+    "levelUp": "Level {{level}}!",
+    "levelUpCoins": "+{{coins}} coins",
+    "levelUpChest": "+{{coins}} coins and a {{chest}}!",
+    "badge": "Badge unlocked!",
+    "quest_one": "Quest complete!",
+    "quest_other": "{{count}} quests complete!",
+    "questClaim": "Claim your reward on Home."
+  },
+  "chests": {
+    "common": "chest",
+    "rare": "rare chest",
+    "epic": "epic chest"
+  },
+  "league": {
+    "title": "{{tier}} League",
+    "endsIn": "Ends in {{d}}d {{h}}h",
+    "tab_league": "My league",
+    "tab_global": "Global",
+    "notJoined": "You haven’t joined this week’s league yet",
+    "notJoinedBody": "Earn XP to join a group of up to 30 learners at your level.",
+    "startStudying": "Start studying",
+    "promotionZone": "Promotion zone",
+    "demotionZone": "Demotion zone",
+    "you": "you",
+    "globalEmpty": "Nobody has earned XP this week yet. Be the first!",
+    "rules": "Each week, the top learners move up a league, the bottom ones move down. Only XP from real studying counts.",
+    "result_promoted": "Promoted to {{tier}}!",
+    "result_stayed": "You stay in {{tier}}",
+    "result_demoted": "Back to {{tier}} — you’ve got this!",
+    "resultRank": "You finished #{{rank}} last week."
+  },
+  "items": {
+    "streak_freeze": {
+      "name": "Streak freeze",
+      "desc": "Protects your streak for one missed day."
+    },
+    "heart_refill": {
+      "name": "Heart refill",
+      "desc": "Fills all your hearts right away."
+    },
+    "xp_boost": {
+      "name": "XP boost",
+      "desc": "+50% XP for 15 minutes."
+    },
+    "pet_food": {
+      "name": "Pet snack",
+      "desc": "Feeds your pet and helps it grow."
+    },
+    "egg_common": {
+      "name": "Mystery egg",
+      "desc": "Hatches a random pet (any rarity)."
+    },
+    "egg_rare": {
+      "name": "Rare egg",
+      "desc": "Hatches a rare, epic or legendary pet."
+    },
+    "chest_common": {
+      "name": "Chest",
+      "desc": "Coins and a surprise item."
+    },
+    "theme_sunset": {
+      "name": "Sunset theme",
+      "desc": "Warm orange and pink colors."
+    },
+    "theme_ocean": {
+      "name": "Ocean theme",
+      "desc": "Cool blue and teal colors."
+    },
+    "theme_forest": {
+      "name": "Forest theme",
+      "desc": "Calm green and gold colors."
+    },
+    "theme_galaxy": {
+      "name": "Galaxy theme",
+      "desc": "Rare purple theme — chests only!"
+    }
+  },
+  "shop": {
+    "title": "Shop",
+    "tab_shop": "Shop",
+    "tab_mine": "My stuff",
+    "owned": "You have {{n}}",
+    "bought": "You bought: {{item}}",
+    "buyFor": "Buy {{item}} for {{price}} coins",
+    "chests": "Chests",
+    "noChests": "No chests yet — earn them from levels, quests and leagues.",
+    "openChest": "Open {{kind}}",
+    "tapToOpen": "Tap to open",
+    "items": "Items",
+    "noItems": "Nothing here yet. Earn coins by studying!",
+    "boostActive": "XP boost active until {{time}}",
+    "feedPet": "Feed pet",
+    "wear": "Wear",
+    "wearing": "On",
+    "themeOn": "New look applied!",
+    "use": "Use",
+    "hatch": "Hatch",
+    "used": "Done!",
+    "used_streak_freeze": "Streak freeze ready!",
+    "used_heart_refill": "Hearts refilled!",
+    "used_xp_boost": "XP boost on for 15 minutes!",
+    "used_egg": "Your egg hatched! Meet your new pet on the Pets page.",
+    "opening": "Opening…",
+    "youGot": "You got",
+    "awesome": "Awesome!",
+    "errors": {
+      "not_enough_coins": "Not enough coins yet — study a bit more!",
+      "already_owned": "You already own this.",
+      "not_enough_items": "You don’t have that item.",
+      "max_freezes": "You can hold at most 3 streak freezes.",
+      "cannot_repair": "This streak can’t be repaired anymore.",
+      "not_done": "Finish the quest first!",
+      "already_claimed": "Already claimed.",
+      "network": "Can’t reach Lumo. Check your connection."
+    }
+  },
+  "pets": {
+    "title": "My pets",
+    "adoptTitle": "Choose your study buddy",
+    "adoptBody": "Your pet cheers you on. Keep your streak going and feed it to keep it happy — a happy pet gives you a small XP bonus.",
+    "nameLabel": "Give it a name",
+    "adopt": "Adopt!",
+    "rename": "Rename",
+    "level": "Level {{level}}",
+    "fullness": "Fullness",
+    "perk": "Gives you +{{pct}}% XP",
+    "getFood": "Get snacks in the shop",
+    "tip": "Pets get sad if your streak breaks. Study every day to keep them happy!",
+    "eggs": "Eggs",
+    "collection": "Collection ({{n}} of {{total}} species)",
+    "equip": "Take along",
+    "species": {
+      "moss_turtle": "Moss Turtle",
+      "cloud_sheep": "Cloud Sheep",
+      "pixel_owl": "Pixel Owl",
+      "comet_fox": "Comet Fox",
+      "crystal_cat": "Crystal Cat",
+      "star_jelly": "Star Jelly",
+      "bubble_octo": "Bubble Octo",
+      "ember_dragon": "Ember Dragon"
+    },
+    "rarity": {
+      "common": "Common",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
+    },
+    "mood": {
+      "happy": "Happy",
+      "content": "Content",
+      "hungry": "Hungry",
+      "sad": "Sad"
+    },
+    "moodLine": {
+      "happy": "Is so proud of your streak!",
+      "content": "Is ready to study with you.",
+      "hungry": "Is getting hungry — time for a snack?",
+      "sad": "Misses you. Study today to cheer it up!"
+    },
+    "errors": {
+      "bad_pet_name": "Please choose a kind name (1–16 letters).",
+      "already_has_pet": "You already adopted a pet.",
+      "not_enough_items": "No snacks left — get some in the shop.",
+      "network": "Can’t reach Lumo. Check your connection."
+    },
+    "feed_one": "Feed ({{count}} snack)",
+    "feed_other": "Feed ({{count}} snacks)"
+  },
+  "badges": {
+    "first_steps": {
+      "name": "First steps",
+      "desc": "Finish your first study session"
+    },
+    "deck_maker": {
+      "name": "Deck maker",
+      "desc": "Create your first deck"
+    },
+    "sharp_mind": {
+      "name": "Sharp mind",
+      "desc": "100 correct answers"
+    },
+    "brainiac": {
+      "name": "Brainiac",
+      "desc": "1,000 correct answers"
+    },
+    "master_10": {
+      "name": "Rising star",
+      "desc": "Master 10 concepts"
+    },
+    "master_50": {
+      "name": "Superstar",
+      "desc": "Master 50 concepts"
+    },
+    "streak_7": {
+      "name": "On fire",
+      "desc": "7-day streak"
+    },
+    "streak_30": {
+      "name": "Unstoppable",
+      "desc": "30-day streak"
+    },
+    "combo_10": {
+      "name": "Combo king",
+      "desc": "10 right answers in a row"
+    },
+    "perfectionist": {
+      "name": "Perfectionist",
+      "desc": "5 sessions at 100%"
+    },
+    "explorer": {
+      "name": "Explorer",
+      "desc": "Try 5 Sandbox formats"
+    },
+    "all_formats": {
+      "name": "Format master",
+      "desc": "Try all 16 Sandbox formats"
+    },
+    "chest_hunter": {
+      "name": "Treasure hunter",
+      "desc": "Open 10 chests"
+    },
+    "pet_pal": {
+      "name": "Pet pal",
+      "desc": "Feed your pet 20 times"
+    },
+    "gold_league": {
+      "name": "Golden",
+      "desc": "Reach the Gold league"
+    },
+    "diamond_league": {
+      "name": "Diamond mind",
+      "desc": "Reach the Diamond league"
+    },
+    "level_10": {
+      "name": "Lift-off",
+      "desc": "Reach level 10"
     }
   }
 }

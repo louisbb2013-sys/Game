@@ -58,6 +58,7 @@ export async function deckRoutes(app: FastifyInstance, ctx: AppContext) {
     const body = deckInputSchema.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'invalid_deck', issues: body.error.issues.slice(0, 5) });
     const id = await createDeck(db, req.user!.id, body.data);
+    await ctx.game.awardNow(req.user!.id, { events: [{ type: 'deck_created' }] });
     return { id };
   });
 
@@ -65,6 +66,7 @@ export async function deckRoutes(app: FastifyInstance, ctx: AppContext) {
     const { language } = z.object({ language: z.enum(['en', 'fr']).optional() }).parse(req.body ?? {});
     const sample = SAMPLE_DECKS[language ?? req.user!.locale];
     const id = await createDeck(db, req.user!.id, deckInputSchema.parse(sample));
+    await ctx.game.awardNow(req.user!.id, { events: [{ type: 'deck_created' }] });
     return { id };
   });
 

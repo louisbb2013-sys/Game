@@ -26,6 +26,8 @@ export interface UserRow {
   streak: StreakState;
   league_tier: LeagueTier;
   created_at: Date;
+  theme: string;
+  boost_until: Date | null;
 }
 
 export async function getUser(db: Db, id: string): Promise<UserRow | null> {
@@ -90,6 +92,8 @@ export function toProfile(u: UserRow, now = Date.now()) {
     hearts: { current: hearts.hearts, nextRefillAt: hearts.nextRefillAt },
     streak: { ...u.streak, status: streakStatus(u.streak, today) },
     leagueTier: u.league_tier,
+    theme: u.theme,
+    boostUntil: u.boost_until && u.boost_until.getTime() > now ? u.boost_until.toISOString() : null,
     createdAt: u.created_at.toISOString(),
   };
 }
