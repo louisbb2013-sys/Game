@@ -1,0 +1,22 @@
+# Lumo standalone site on Netlify (see lumo/NETLIFY.md for the one-time setup).
+[build]
+  base = "lumo"
+  command = "npm run build:netlify -w @lumo/web"
+  publish = "apps/web/dist-netlify"
+  edge_functions = "netlify/edge-functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# The app handles its own pages.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"

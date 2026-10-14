@@ -116,6 +116,14 @@ export async function publishProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>)
   }
 }
 
+/** Everyone's public profiles, read now (not live). */
+export async function findProfiles(): Promise<PublicProfile[]> {
+  const t = await together();
+  if (!t) return [];
+  const snap = await t.db.collection('profiles').limit(500).get().catch(() => null);
+  return (snap?.docs ?? []).map((d: Any) => ({ id: d.id, ...plain(d.data()) }) as PublicProfile);
+}
+
 /** Live list of everyone's public profiles. */
 export function useProfiles() {
   const [list, setList] = useState<PublicProfile[] | null>(null);

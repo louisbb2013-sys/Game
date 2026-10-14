@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { FlameIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { useAuth } from '../lib/auth';
-import { setFriends, useFriends, useNames, useOnlineNow, useProfiles, useTogether, type PublicProfile } from '../local/together';
+import { findProfiles, setFriends, useFriends, useNames, useOnlineNow, useProfiles, useTogether, type PublicProfile } from '../local/together';
 
 /**
  * Browser-only build: add friends by typing their username (Enter), or tap Add next to someone who is
@@ -65,11 +65,16 @@ export function LocalFriends() {
     setBusy(false);
   };
 
-  const addTyped = (e: FormEvent) => {
+  const addTyped = async (e: FormEvent) => {
     e.preventDefault();
     const name = typed.trim().replace(/^@/, '').toLowerCase();
     if (!name) return;
-    const found = (profiles ?? []).find((p) => p.username?.toLowerCase() === name);
+    let found = (profiles ?? []).find((p) => p.username?.toLowerCase() === name);
+    // Someone who just joined may not be in the list yet: look once more, straight from the source.
+    for (let i = 0; !found && i < 3; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 1200));
+      found = (await findProfiles()).find((p) => p.username?.toLowerCase() === name);
+    }
     if (!found) return setMsg({ ok: false, text: t('together.notFound', { name: typed.trim() }) });
     if (found.id === me) return setMsg({ ok: false, text: t('friends.errors.cannot_add_self') });
     if (myFriends.has(found.id)) return setMsg({ ok: true, text: t('together.alreadyFriends', { name: found.username }) });
@@ -133,7 +138,7 @@ export function LocalFriends() {
             </Link>
           </div>
         </div>
-        <form onSubmit={addTyped} className="flex gap-2">
+        <form onSubmit={(e) => void addTyped(e)} className="flex gap-2">
           <input
             id="friend-username"
             value={typed}

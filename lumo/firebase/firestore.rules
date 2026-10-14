@@ -1,0 +1,33 @@
+rules_version = '2';
+// Lumo (standalone site): everyone signed in can read shared things; each learner writes only their own.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function mine(uid) { return signedIn() && request.auth.uid == uid; }
+    function small() { return request.resource.data._j is string && request.resource.data._j.size() < 900000; }
+
+    // Public study stats and username (for friends and the weekly board).
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create, update: if mine(uid) && small();
+      allow delete: if mine(uid);
+    }
+    // Decks a learner made public.
+    match /decks/{uid} {
+      allow read: if signedIn();
+      allow create, update: if mine(uid) && small();
+      allow delete: if mine(uid);
+    }
+    // The Live game a learner is hosting.
+    match /games/{uid} {
+      allow read: if signedIn();
+      allow create, update: if mine(uid) && small();
+      allow delete: if mine(uid);
+    }
+    // Private: progress, decks, friends list. Only the learner themself.
+    match /data/users/{uid}/{doc} {
+      allow read, delete: if mine(uid);
+      allow create, update: if mine(uid) && small();
+    }
+  }
+}

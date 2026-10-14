@@ -6,6 +6,8 @@ export class ApiError extends Error {
 
 /** Browser-only build: no server, the app's data lives in this browser. */
 export const LOCAL = import.meta.env.VITE_LOCAL === '1';
+/** The standalone site (Netlify): the browser-only app, with Google sign-in and its own address. */
+export const NETLIFY = import.meta.env.VITE_NETLIFY === '1';
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   if (LOCAL) {

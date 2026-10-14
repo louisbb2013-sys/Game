@@ -651,7 +651,7 @@
       "happy": "Est super fier de ta série !",
       "content": "Est prêt à étudier avec toi.",
       "hungry": "Commence à avoir faim — une collation ?",
-      "sad": "S’ennuie de toi. Étudie aujourd’hui pour lui remonter le moral !"
+      "sad": "Se repose. Une petite série va le réveiller !"
     },
     "errors": {
       "bad_pet_name": "Choisis un nom gentil (1 à 16 lettres).",
@@ -1113,5 +1113,18 @@
     "duplicateBody": "Ton {{name}} est devenu plus fort et a monté de niveau.",
     "seePets": "Mes compagnons",
     "keepGoing": "Continuer"
+  },
+  "gate": {
+    "tagline": "Transforme n’importe quel sujet ou tes notes en quiz — et comprends vraiment.",
+    "point1": "Photos, notes ou juste un sujet : Lumo crée le quiz",
+    "point2": "Fais éclore des œufs, collectionne des compagnons, ouvre des coffres",
+    "point3": "Joue en Live avec tes amis",
+    "google": "Continuer avec Google",
+    "guest": "Essayer sans compte (sauvegardé sur cet appareil seulement)",
+    "privacy": "Ta progression est sauvegardée dans ton compte Google. Les autres joueurs ne voient que ton nom d’utilisateur Lumo.",
+    "error": "Connexion impossible. Réessaie.",
+    "domainError": "Ce site n’est pas encore autorisé. Ajoute-le dans Firebase → Authentication → Settings → Authorized domains.",
+    "signOut": "Se déconnecter",
+    "signedInAs": "Connecté avec Google"
   }
 }

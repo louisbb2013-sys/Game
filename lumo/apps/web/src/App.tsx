@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, MemoryRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
-import { LOCAL } from './lib/api';
+import { LOCAL, NETLIFY } from './lib/api';
 import { Layout } from './components/Layout';
 import { Lumo } from './components/Lumo';
 import { PageLoading } from './components/PageLoading';
@@ -37,7 +37,7 @@ const Audio = lazy(() => import('./pages/Audio').then((m) => ({ default: m.Audio
 const Progress = lazy(() => import('./pages/Progress').then((m) => ({ default: m.Progress })));
 
 // The browser-only build lives inside another page, so it keeps its own in-memory address bar.
-const Router = LOCAL ? MemoryRouter : BrowserRouter;
+const Router = LOCAL && !NETLIFY ? MemoryRouter : BrowserRouter;
 const NewDeck = lazy(() => import('./pages/NewDeck').then((m) => ({ default: m.NewDeck })));
 const LocalFriends = lazy(() => import('./pages/LocalFriends').then((m) => ({ default: m.LocalFriends })));
 

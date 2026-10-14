@@ -196,7 +196,8 @@ interface GameData {
   hatched: number;
 }
 
-const KEY = 'lumo_local_v1';
+// The standalone site keeps one copy per signed-in Google account (or guest).
+const KEY = (globalThis as { __LUMO_KEY__?: string }).__LUMO_KEY__ ?? 'lumo_local_v1';
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
 
 function freshDb(): DB {
@@ -652,7 +653,11 @@ const gameRoutes: [string, RegExp, Handler][] = [
     q.st.claimed = true;
     load().user.coins += def.reward.coins;
     if (def.reward.chest) giveChest(def.reward.chest, `quest_${def.id}`);
-    return def.reward;
+    // All of today's quests done: a bonus rare chest.
+    const daily = currentQuests().filter((x) => x.period === 'daily');
+    const allDone = q.period === 'daily' && daily.every((x) => x.st.claimed);
+    if (allDone) giveChest('rare', 'daily_all');
+    return { ...def.reward, bonusChest: allDone };
   }],
   ['POST', /^\/api\/game\/streak\/repair$/, () => {
     const PRICE = 150;
@@ -1004,8 +1009,10 @@ function completeActivity(id: string, score: number) {
 /** Friends see my stats: publish them a moment after a change (only when the page can share data). */
 let shareTimer: ReturnType<typeof setTimeout> | null = null;
 function shareStats() {
-  if (shareTimer) clearTimeout(shareTimer);
+  // At most one publish every 1.5 s, starting from the first change (busy tapping never postpones it).
+  if (shareTimer) return;
   shareTimer = setTimeout(() => {
+    shareTimer = null;
     const u = load().user;
     const wk = weekId(now());
     void publishProfile({ username: u.username, level: levelFromXp(u.xp), xp: u.xp, weekId: wk, weeklyXp: u.week?.id === wk ? u.week.xp : 0, streak: u.streak.days, lastDay: u.streak.lastDay, decks: load().decks.length });

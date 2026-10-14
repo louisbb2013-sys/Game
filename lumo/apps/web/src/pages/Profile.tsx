@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { GearIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
-import { api, ApiError, LOCAL } from '../lib/api';
+import { api, ApiError, LOCAL, NETLIFY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 export function Profile() {
@@ -93,12 +93,22 @@ export function Profile() {
       )}
 
       {LOCAL && (
-        <Link to="/friends" className="block rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
-          👋 {t('friends.title')}
-        </Link>
+        <div className="grid grid-cols-3 gap-3">
+          <Link to="/friends" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+            👋 {t('friends.title')}
+          </Link>
+          <Link to="/pets" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+            🐾 {t('pets.title')}
+          </Link>
+          <Link to="/shop" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+            🛍️ {t('shop.title')}
+          </Link>
+        </div>
       )}
 
-      {LOCAL ? (
+      {NETLIFY ? (
+        <NetlifyAccount />
+      ) : LOCAL ? (
         <p className="text-center text-xs text-muted">{t('local.savedHere')}</p>
       ) : (
         <button onClick={() => void logout()} className="w-full rounded-2xl py-3 font-extrabold text-bad ring-1 ring-line">
@@ -151,5 +161,29 @@ function BadgesSection() {
         ))}
       </ul>
     </section>
+  );
+}
+
+/** Standalone site: which Google account this is, and signing out. */
+function NetlifyAccount() {
+  const { t } = useTranslation();
+  const signedIn = typeof (window as { claude?: unknown }).claude !== 'undefined';
+  const out = async () => {
+    const { signOutEverywhere } = await import('../netlify/firebase');
+    await signOutEverywhere();
+    try {
+      localStorage.removeItem('lumo_guest');
+    } catch {
+      /* ignore */
+    }
+    location.reload();
+  };
+  return (
+    <div className="space-y-2 text-center">
+      <p className="text-xs text-muted">{signedIn ? t('gate.signedInAs') : t('local.savedHere')}</p>
+      <button onClick={() => void out()} className="w-full rounded-2xl py-3 font-extrabold text-bad ring-1 ring-line">
+        {signedIn ? t('gate.signOut') : t('gate.google')}
+      </button>
+    </div>
   );
 }

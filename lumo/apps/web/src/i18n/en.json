@@ -651,7 +651,7 @@
       "happy": "Is so proud of your streak!",
       "content": "Is ready to study with you.",
       "hungry": "Is getting hungry — time for a snack?",
-      "sad": "Misses you. Study today to cheer it up!"
+      "sad": "Is resting. A quick round wakes it up!"
     },
     "errors": {
       "bad_pet_name": "Please choose a kind name (1–16 letters).",
@@ -1113,5 +1113,18 @@
     "duplicateBody": "Your {{name}} got stronger and levelled up.",
     "seePets": "See my pets",
     "keepGoing": "Keep going"
+  },
+  "gate": {
+    "tagline": "Turn any topic or your notes into quizzes — and actually understand.",
+    "point1": "Photos, notes or just a topic: Lumo makes the quiz",
+    "point2": "Hatch eggs, collect pets, open chests",
+    "point3": "Play Live with your friends",
+    "google": "Continue with Google",
+    "guest": "Try without an account (saved on this device only)",
+    "privacy": "Your progress is saved to your Google account. Other players only see your Lumo username.",
+    "error": "Couldn't sign in. Try again.",
+    "domainError": "This site isn't allowed to sign in yet. Add it in Firebase → Authentication → Settings → Authorized domains.",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in with Google"
   }
 }

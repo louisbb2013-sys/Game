@@ -75,7 +75,17 @@ class HostGame {
   ) {
     this.state = state;
     this.unsubPeers = named.onPeers((change: Any) => void this.onPeers(change.peers));
+    // While waiting for players, check in every 30 s: games whose host left drop off the list.
+    this.heartbeat = setInterval(() => {
+      if (this.state.phase === 'lobby') void this.publish();
+    }, 30_000);
+    window.addEventListener('pagehide', this.onLeave);
   }
+
+  private heartbeat: ReturnType<typeof setInterval>;
+  private onLeave = () => {
+    if (this.state.phase === 'lobby') void this.t.db.doc(`games/${this.t.me}`).delete().catch(() => {});
+  };
 
   view(): LivePublic {
     return { ...publicView(this.state), serverNow: Date.now() };
@@ -208,6 +218,8 @@ class HostGame {
 
   async close() {
     if (this.timer) clearTimeout(this.timer);
+    clearInterval(this.heartbeat);
+    window.removeEventListener('pagehide', this.onLeave);
     this.unsubPeers?.();
     this.listeners.clear();
     await this.named.leave().catch(() => {});
@@ -264,33 +276,35 @@ export async function hostLocalGame(deckId: string, count: number): Promise<stri
 // ------------------------------------------------------------------ open games (lobby list)
 
 export function useOpenGames() {
-  const [games, setGames] = useState<{ code: string; title: string; hostId: string; players: number }[] | null>(null);
+  const [docs, setDocs] = useState<GameDoc[] | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     let unsub: (() => void) | null = null;
     let alive = true;
     void together().then((t) => {
-      if (!t || !t.room || !alive) return setGames(null);
+      if (!t || !t.room || !alive) return setDocs(null);
       unsub = t.db
         .collection('games')
         .where('phase', '==', 'lobby')
         .limit(50)
         .onSnapshot(
-          (snap: Any) =>
-            setGames(
-              snap.docs
-                .map((d: Any) => plain(d.data()) as GameDoc)
-                .filter((g: GameDoc) => Date.now() - g.updatedAt < 30 * 60_000)
-                .map((g: GameDoc) => ({ code: g.code, title: g.title, hostId: g.hostId, players: g.view?.players?.length ?? 0 })),
-            ),
-          () => setGames([]),
+          (snap: Any) => setDocs(snap.docs.map((d: Any) => plain(d.data()) as GameDoc)),
+          () => setDocs([]),
         );
     });
+    // Re-check every 20 s so games whose host has gone quiet disappear.
+    const tick = setInterval(() => setNow(Date.now()), 20_000);
     return () => {
       alive = false;
       unsub?.();
+      clearInterval(tick);
     };
   }, []);
-  return games;
+  if (!docs) return docs;
+  return docs
+    .filter((g) => now - g.updatedAt < 90_000)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((g) => ({ code: g.code, title: g.title, hostId: g.hostId, players: g.view?.players?.length ?? 0 }));
 }
 
 // ------------------------------------------------------------------ the room hook (host or player)

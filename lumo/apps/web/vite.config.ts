@@ -4,11 +4,15 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // VITE_LOCAL=1 builds the browser-only Lumo: one self-contained page, no server, no service worker.
-const local = process.env.VITE_LOCAL === '1';
+// VITE_NETLIFY=1 (with VITE_LOCAL=1) builds the same app as a standalone, installable site.
+const netlify = process.env.VITE_NETLIFY === '1';
+const local = process.env.VITE_LOCAL === '1' && !netlify;
 
 export default defineConfig({
   base: local ? './' : '/',
-  build: local
+  build: netlify
+    ? { outDir: 'dist-netlify' }
+    : local
     ? {
         outDir: 'dist-local',
         assetsInlineLimit: 100_000_000, // fonts and images become data: URIs
