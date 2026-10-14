@@ -90,11 +90,11 @@ describe('quiz sessions', () => {
       expect(res.statusCode, res.body).toBe(200);
       if (res.json().followUp) {
         // Teach-back: answer Lumo's follow-up question.
-        res = await t.app.inject({ method: 'POST', url: `/api/sessions/${session.id}/answer`, headers: { cookie }, payload: { questionId: q.id, answer: { kind: 'text', text: q.format === 'teach_back' ? q.modelAnswer : '' } } });
+        res = await t.app.inject({ method: 'POST', url: `/api/sessions/${session.id}/answer`, headers: { cookie }, payload: { questionId: q.id, answer: { kind: 'text', text: q.format === 'teach_back' && i >= 2 ? q.modelAnswer : '' } } });
       }
       const body = res.json();
       if (i < 2) {
-        expect(body.result.correct).toBe(false);
+        expect(body.result.correct, `${q.format} ${JSON.stringify(answer)}`).toBe(false);
         expect(body.result.retryScheduled).toBe(true);
         expect(body.result.explanation.length).toBeGreaterThan(0);
       } else {
@@ -114,7 +114,7 @@ describe('quiz sessions', () => {
     const byConcept = new Map<string, string[]>();
     for (const s of seen) byConcept.set(s.conceptId, [...(byConcept.get(s.conceptId) ?? []), s.format]);
     for (const formats of byConcept.values()) for (let i = 1; i < formats.length; i++) expect(formats[i]).not.toBe(formats[i - 1]);
-    expect(new Set(seen.map((s) => s.format)).size).toBeGreaterThanOrEqual(6);
+    expect(new Set(seen.map((s) => s.format)).size).toBeGreaterThanOrEqual(5); // formats are random: 5+ of 16 in 14 answers
 
     const me = (await t.app.inject({ method: 'GET', url: '/api/me', headers: { cookie } })).json().user;
     expect(me.xp).toBe(totalXp);

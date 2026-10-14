@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { CameraIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
+import { SharedDecks } from '../components/SharedDecks';
 import { api, LOCAL } from '../lib/api';
 import type { DeckListItem } from '../lib/quiz';
 
@@ -93,6 +94,8 @@ export function Learn() {
           </li>
         </ul>
       )}
+
+      {LOCAL && <SharedDecks />}
     </div>
   );
 }

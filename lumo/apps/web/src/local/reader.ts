@@ -11,7 +11,7 @@ type Sample = ((input: string, options?: object) => Promise<{ text: string }>) &
 };
 
 let samplePromise: Promise<Sample | null> | null = null;
-function getSample(): Promise<Sample | null> {
+export function getSample(): Promise<Sample | null> {
   const use = (window as unknown as { claude?: { use?: (n: string) => Promise<unknown> } }).claude?.use;
   if (!use) return Promise.resolve(null);
   samplePromise ??= use('sample').then((s) => (s as Sample | null) ?? null, () => null);
@@ -90,4 +90,26 @@ export async function readPhotos(files: File[], language: Locale, extra: string,
   const concepts = clean(raw?.concepts);
   if (concepts.length === 0) throw new ReaderError('nothing_found');
   return { title: str(raw.title, 120), subject: str(raw.subject, 80), summary: str(raw.summary, 1000), language, concepts };
+}
+
+/** Short answers in other words: Claude decides if each means the same as an expected answer. */
+export async function judgeShort(question: string, checks: { key: string; given: string; expected: string[] }[], language: Locale): Promise<Record<string, boolean>> {
+  const s = await getSample();
+  if (!s || checks.length === 0) return {};
+  const prompt = [
+    `A student answered a quiz question (${language === 'fr' ? 'French' : 'English'}). Question: ${question.slice(0, 1500)}`,
+    "For each item, decide like a fair teacher if the student's short answer means the same thing as one of the expected answers: accept synonyms, everyday wording, another word form or a short phrase with the same meaning; reject vague, partly right, opposite or unrelated answers.",
+    ...checks.map((c) => `Item ${c.key}: student wrote «${c.given.slice(0, 200)}»; expected one of: ${c.expected.slice(0, 6).map((e) => `«${e}»`).join(', ')}`),
+    'Reply with only a JSON object mapping each item key to true or false, for example {"0": true}.',
+  ].join('\n');
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 15_000);
+  try {
+    const r = await s.json<Record<string, unknown>>(prompt, { modelTier: 'quick', signal: ctl.signal });
+    return Object.fromEntries(checks.map((c) => [c.key, r?.[c.key] === true]));
+  } catch {
+    return {}; // no consent, offline or slow: the word list decides
+  } finally {
+    clearTimeout(timer);
+  }
 }

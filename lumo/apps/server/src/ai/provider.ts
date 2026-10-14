@@ -14,6 +14,7 @@ import {
   type OpenGrade,
   type OpenGradeNeed,
   type Question,
+  type ShortCheck,
 } from '@lumo/core';
 
 export interface GenerateInput {
@@ -78,6 +79,8 @@ export interface AiProvider {
   tutorReply(input: TutorInput): Promise<string>;
   /** Richer, AI-written content for a Sandbox activity; null = use the built-in generator. */
   sandboxScript(kind: SandboxKind, concepts: Concept[], title: string, language: Locale): Promise<SandboxData | null>;
+  /** Short answers that didn't match word for word: does each mean the same as an accepted answer? */
+  judgeShort(question: string, checks: ShortCheck[], language: Locale): Promise<Record<string, boolean>>;
 }
 
 export class NeedsAiError extends Error {
@@ -156,5 +159,9 @@ export class MockProvider implements AiProvider {
 
   async sandboxScript(): Promise<SandboxData | null> {
     return null;
+  }
+
+  async judgeShort(_question: string, _checks: ShortCheck[], _language: Locale): Promise<Record<string, boolean>> {
+    return {}; // offline: the built-in synonym list in core already ran
   }
 }

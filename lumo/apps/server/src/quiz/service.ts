@@ -28,6 +28,7 @@ import {
   review,
   seededRng,
   sessionDone,
+  shortAnswersToCheck,
   xpForAnswer,
   type Answer,
   type Concept,
@@ -375,7 +376,13 @@ export class QuizService {
       answer = { kind: 'text', text: `${state.teachBack.firstText}\n\n${answer.text}` };
       delete state.teachBack;
     }
-    const g = grade(q, answer, open);
+    // Short typed answers: a fair judge accepts the same meaning in other words ("round" for "circular").
+    let meaning: Record<string, boolean> = {};
+    const checks = shortAnswersToCheck(q, answer);
+    if (checks.length && this.ai.name === 'claude') {
+      meaning = await withTimeout(this.ai.judgeShort(q.prompt, checks, deckLang), 8_000).catch((err) => (this.log('meaning check failed', err), {}));
+    }
+    const g = grade(q, answer, open, meaning);
 
     // ---- persist: learner progress, XP, hearts, session (one transaction) ----
     const client = await this.db.connect();

@@ -8,7 +8,9 @@ import { Avatar } from '../components/Avatar';
 import { Lumo } from '../components/Lumo';
 import { QrCode, shareOrCopy } from '../components/QrCode';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
-import { api } from '../lib/api';
+import { api, LOCAL } from '../lib/api';
+import { hostLocalGame, useLocalLiveRoom, useOpenGames } from '../local/liveLocal';
+import { useNames, useTogether } from '../local/together';
 import { useAuth } from '../lib/auth';
 import { useConfetti } from '../lib/confetti';
 import { liveCall, useLiveRoom, type LivePublic } from '../lib/live';
@@ -29,6 +31,7 @@ export function LiveHome() {
   const [count, setCount] = useState(10);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const together = useTogether();
 
   useEffect(() => {
     api<{ decks: DeckListItem[] }>('/api/decks').then(
@@ -49,11 +52,22 @@ export function LiveHome() {
   const host = async () => {
     setBusy(true);
     setError(null);
+    if (LOCAL) {
+      try {
+        navigate(`/live/${await hostLocalGame(deckId, count)}`);
+      } catch (e) {
+        setError((e as { code?: string }).code ?? 'network');
+      }
+      setBusy(false);
+      return;
+    }
     const r = await liveCall<{ code: string }>('live:create', { deckId, count });
     setBusy(false);
     if (r.ok) navigate(`/live/${r.code}`);
     else setError(r.error);
   };
+
+  if (LOCAL && together === null) return <PlayTogetherHelp />;
 
   return (
     <div className="space-y-5">
@@ -77,6 +91,8 @@ export function LiveHome() {
           </button>
         </div>
       </form>
+
+      {LOCAL && <OpenGames />}
 
       <section className="space-y-3 rounded-3xl bg-surface p-5 ring-1 ring-line">
         <h2 className="text-lg font-black">{t('live.hostTitle')}</h2>
@@ -123,12 +139,62 @@ export function LiveHome() {
           <span className="block text-3xl">👋</span>
           <span className="font-black">{t('friends.title')}</span>
         </Link>
-        <Link to="/groups" className="rounded-3xl bg-surface p-4 text-center ring-1 ring-line">
-          <span className="block text-3xl">👥</span>
-          <span className="font-black">{t('groups.title')}</span>
-        </Link>
+        {LOCAL ? (
+          <Link to="/learn" className="rounded-3xl bg-surface p-4 text-center ring-1 ring-line">
+            <span className="block text-3xl">📚</span>
+            <span className="font-black">{t('together.sharedDecks')}</span>
+          </Link>
+        ) : (
+          <Link to="/groups" className="rounded-3xl bg-surface p-4 text-center ring-1 ring-line">
+            <span className="block text-3xl">👥</span>
+            <span className="font-black">{t('groups.title')}</span>
+          </Link>
+        )}
       </div>
     </div>
+  );
+}
+
+// The browser-only build runs games in the host's page (see local/liveLocal); the shape is the same.
+const useRoom = LOCAL ? useLocalLiveRoom : useLiveRoom;
+
+/** Shown in the browser-only build when the page can't share data (not opened in Claude, or not shared). */
+function PlayTogetherHelp() {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-black">{t('live.title')}</h1>
+      <div className="flex items-start gap-3 rounded-3xl bg-surface p-4 ring-1 ring-line">
+        <Lumo size={56} mood="thinking" />
+        <div className="space-y-2 text-sm">
+          <p className="font-black">{t('together.helpTitle')}</p>
+          <p>{t('together.helpBody')}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Games friends are hosting right now (browser-only build). */
+function OpenGames() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const games = useOpenGames();
+  const names = useNames((games ?? []).map((g) => g.hostId));
+  if (!games || games.length === 0) return null;
+  return (
+    <section className="space-y-2">
+      <h2 className="font-black">🎮 {t('together.openGames')}</h2>
+      {games.map((g) => (
+        <button key={g.code} onClick={() => navigate(`/live/${g.code}`)} className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left ring-1 ring-line">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-black">{g.title}</span>
+            <span className="text-xs font-bold text-muted">{t('together.hostedBy', { name: names[g.hostId]?.name || t('together.someone'), count: g.players })}</span>
+          </span>
+          <span className="rounded-xl bg-brand px-3 py-1.5 text-sm font-black text-brand-ink">{t('live.join')}</span>
+        </button>
+      ))}
+    </section>
   );
 }
 
@@ -137,7 +203,7 @@ export function LiveRoom() {
   const { code = '' } = useParams();
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
-  const room = useLiveRoom(code.toUpperCase());
+  const room = useRoom(code.toUpperCase());
   const showRewards = useRewards();
   const shown = useRef(false);
 
@@ -197,13 +263,19 @@ function Lobby({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send
         <p className="font-mono text-5xl font-black tracking-[0.2em]" data-testid="live-code">
           {s.code}
         </p>
-        <QrCode value={link} label={t('live.qrLabel', { code: s.code })} size={150} />
-        <button
-          onClick={() => void shareOrCopy(link, s.title).then((r) => setMsg(r === 'failed' ? null : t(`live.${r}`)))}
-          className="rounded-full bg-white/20 px-4 py-1.5 text-sm font-black"
-        >
-          🔗 {t('live.shareLink')}
-        </button>
+        {LOCAL ? (
+          <p className="text-sm font-bold opacity-90">{t('together.joinHint')}</p>
+        ) : (
+          <>
+            <QrCode value={link} label={t('live.qrLabel', { code: s.code })} size={150} />
+            <button
+              onClick={() => void shareOrCopy(link, s.title).then((r) => setMsg(r === 'failed' ? null : t(`live.${r}`)))}
+              className="rounded-full bg-white/20 px-4 py-1.5 text-sm font-black"
+            >
+              🔗 {t('live.shareLink')}
+            </button>
+          </>
+        )}
       </section>
       <section>
         <h2 className="mb-2 font-black">{t('live.players', { n: online.length })}</h2>

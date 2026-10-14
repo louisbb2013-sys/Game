@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { generateLocal, seededRng, type OpenGrade, type Question } from '@lumo/core';
+import { generateLocal, seededRng, type OpenGrade, type Question, type ShortCheck } from '@lumo/core';
 import { z } from 'zod';
 import { buildQuestion, DRAFT_KIND, DRAFT_SCHEMAS } from './build.ts';
 import type { AiProvider, DeckDraft, ExtractInput, GenerateInput, GradeOpenInput, TutorInput } from './provider.ts';
@@ -49,6 +49,7 @@ Return score from 0 to 1 (1 = every required key point is clearly there and noth
 List which key points were matched and which are missing (copy the key point text).
 feedback: 1-2 warm, encouraging sentences addressed to the student ("you"), in the requested language, saying what was good and what to add or fix. Never mock.`;
 
+const judgeSchema = z.object({ items: z.array(z.object({ key: z.string(), sameMeaning: z.boolean() })) });
 const gradeSchema = z.object({
   score: z.number(),
   matchedPoints: z.array(z.string()),
@@ -161,6 +162,17 @@ export class ClaudeProvider implements AiProvider {
       feedback: r.feedback || undefined,
       followUp: i.wantFollowUp && r.followUp ? r.followUp : undefined,
     };
+  }
+
+  async judgeShort(question: string, checks: ShortCheck[], language: Locale): Promise<Record<string, boolean>> {
+    const user = [
+      `Question shown to the student (${language === 'fr' ? 'French' : 'English'}): ${question.slice(0, 1500)}`,
+      "For each item, decide if the student's short answer means the same thing as one of the expected answers, the way a fair teacher would: accept synonyms, everyday wording, a different word form or a short phrase with the same meaning; reject answers that are vague, only partly right, opposite or about something else.",
+      ...checks.map((c) => `Item ${c.key}: student wrote «${c.given.slice(0, 200)}»; expected one of: ${c.expected.slice(0, 6).map((e) => `«${e}»`).join(', ')}`),
+    ].join('\n');
+    const r = await this.structured(this.gradingModel, SYSTEM_GRADE, user, judgeSchema, 600);
+    if (!r) return {};
+    return Object.fromEntries(r.items.filter((x) => checks.some((c) => c.key === x.key)).map((x) => [x.key, x.sameMeaning]));
   }
 
   // ---------- notes → deck ----------

@@ -46,7 +46,78 @@ export function similarity(a: string, b: string): number {
   return max === 0 ? 1 : 1 - levenshtein(a, b) / max;
 }
 
-/** Does a short typed answer match one of the accepted answers (typos, accents, articles, plurals ok)? */
+/**
+ * Everyday words that mean the same thing in school answers (EN + FR). Offline only: when Claude
+ * is available it judges meaning far more broadly (see shortAnswersToCheck).
+ */
+const SYNONYM_GROUPS: string[][] = [
+  ['round', 'circular', 'circle', 'circle shaped', 'spherical', 'sphere', 'ball shaped', 'rond', 'ronde', 'circulaire', 'spherique', 'sphere'],
+  ['big', 'large', 'huge', 'giant', 'enormous', 'grand', 'grande', 'gros', 'grosse', 'enorme', 'geant'],
+  ['small', 'little', 'tiny', 'petit', 'petite', 'minuscule'],
+  ['fast', 'quick', 'rapid', 'speedy', 'rapide', 'vite'],
+  ['slow', 'lent', 'lente'],
+  ['hot', 'warm', 'heated', 'chaud', 'chaude'],
+  ['cold', 'cool', 'chilly', 'froid', 'froide'],
+  ['increase', 'rise', 'go up', 'grow', 'augmente', 'augmenter', 'monte', 'monter', 'hausse'],
+  ['decrease', 'drop', 'fall', 'go down', 'shrink', 'diminue', 'diminuer', 'baisse', 'baisser'],
+  ['many', 'lots', 'lot', 'numerous', 'plenty', 'beaucoup', 'nombreux', 'nombreuses'],
+  ['start', 'begin', 'beginning', 'commence', 'commencer', 'debut'],
+  ['end', 'finish', 'stop', 'fin', 'finir', 'terminer'],
+  ['make', 'produce', 'create', 'form', 'fabrique', 'fabriquer', 'produire', 'produit', 'creer', 'former'],
+  ['use', 'consume', 'utilise', 'utiliser', 'consomme', 'consommer'],
+  ['strong', 'powerful', 'fort', 'forte', 'puissant'],
+  ['weak', 'faible'],
+  ['light', 'lightweight', 'leger', 'legere'],
+  ['heavy', 'lourd', 'lourde'],
+  ['flat', 'level', 'plat', 'plate'],
+  ['hard', 'solid', 'rigid', 'dur', 'dure', 'rigide'],
+  ['soft', 'mou', 'molle', 'doux', 'douce'],
+  ['wet', 'damp', 'moist', 'humide', 'mouille'],
+  ['dry', 'sec', 'seche'],
+  ['high', 'tall', 'haut', 'haute', 'eleve'],
+  ['low', 'short', 'bas', 'basse'],
+  ['same', 'identical', 'equal', 'meme', 'identique', 'egal', 'egale'],
+  ['different', 'distinct', 'differente'],
+  ['important', 'essential', 'key', 'vital', 'essentiel', 'essentielle'],
+  ['help', 'assist', 'aide', 'aider'],
+  ['protect', 'shield', 'defend', 'proteger', 'protege', 'defendre'],
+  ['move', 'travel', 'deplacer', 'bouger', 'deplace'],
+  ['water', 'h2o', 'eau'],
+  ['sun', 'sunlight', 'soleil', 'lumiere du soleil'],
+  ['earth', 'world', 'planet earth', 'terre', 'planete terre'],
+  ['plant', 'plants', 'vegetal', 'vegetaux', 'plante', 'plantes'],
+  ['animal', 'animals', 'animaux'],
+  ['food', 'nutrients', 'nourriture', 'aliments', 'nutriments'],
+  ['energy', 'power', 'energie'],
+  ['oxygen', 'o2', 'oxygene'],
+  ['carbon dioxide', 'co2', 'dioxyde de carbone', 'gaz carbonique'],
+  ['king', 'monarch', 'ruler', 'roi', 'monarque'],
+  ['war', 'conflict', 'guerre', 'conflit'],
+];
+const SYNONYM_OF = new Map<string, number>();
+SYNONYM_GROUPS.forEach((g, i) => g.forEach((w) => SYNONYM_OF.set(normalize(w), i)));
+const singular = (w: string) => w.replace(/(es|s|x)$/, '');
+const synonymGroup = (phrase: string) => SYNONYM_OF.get(phrase) ?? SYNONYM_OF.get(singular(phrase));
+
+/** Do two normalized phrases mean the same thing (same words, or known synonyms word by word)? */
+function sameMeaning(a: string, b: string): boolean {
+  const ga = synonymGroup(a);
+  if (ga !== undefined && ga === synonymGroup(b)) return true;
+  const wa = a.split(' ');
+  const wb = b.split(' ');
+  if (wa.length !== wb.length || wa.length > 4) return false;
+  return wa.every((w, i) => {
+    const v = wb[i]!;
+    if (w === v || singular(w) === singular(v)) return true;
+    const g = synonymGroup(w);
+    return g !== undefined && g === synonymGroup(v);
+  });
+}
+
+/** The content words of a phrase (no "it", "is", "the"…), to accept "it is round" for "round". */
+const contentWords = (s: string) => s.split(' ').filter((w) => !STOPWORDS.has(w));
+
+/** Does a short typed answer match one of the accepted answers (typos, accents, articles, plurals, synonyms ok)? */
 export function matchesAccepted(answer: string, accepted: readonly string[]): boolean {
   const a = normalize(answer);
   if (!a) return false;
@@ -54,7 +125,12 @@ export function matchesAccepted(answer: string, accepted: readonly string[]): bo
     const b = normalize(acc);
     if (!b) return false;
     if (a === b) return true;
-    const singular = (w: string) => w.replace(/(es|s|x)$/, '');
+    if (sameMeaning(a, b)) return true;
+    // A short sentence around the right word ("it is round", "they are circular") still counts.
+    const ca = contentWords(a).join(' ');
+    const cb = contentWords(b).join(' ');
+    const negated = /\b(not|no|never|pas|jamais|aucun|aucune)\b/.test(a) && !/\b(not|no|never|pas|jamais|aucun|aucune)\b/.test(b);
+    if (!negated && ca && cb && ca !== a && (ca === cb || sameMeaning(ca, cb) || (cb.length > 4 && similarity(ca, cb) >= 0.82))) return true;
     if (singular(a) === singular(b)) return true;
     // Short words must be (nearly) exact; longer ones tolerate ~1 typo per 6 letters.
     if (b.length <= 4) return levenshtein(a, b) === 0;

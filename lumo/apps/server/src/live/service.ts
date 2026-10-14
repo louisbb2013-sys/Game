@@ -18,6 +18,7 @@ import {
   revealLive,
   seededRng,
   setConnected,
+  shortAnswersToCheck,
   shuffle,
   startLive,
   submitLive,
@@ -318,9 +319,9 @@ export class LiveService {
     g.revealing = true;
     const index = g.state.index;
     try {
-      const judged = await this.judge(g);
+      const [judged, meanings] = await Promise.all([this.judge(g), this.meanings(g)]);
       if (g.state.phase !== 'question' || g.state.index !== index || !this.games.has(g.state.code)) return;
-      g.state = revealLive(g.state, judged);
+      g.state = revealLive(g.state, judged, meanings);
     } finally {
       g.revealing = false;
     }
@@ -342,6 +343,21 @@ export class LiveService {
         } catch {
           // Too slow or failed: the built-in key-point grader decides.
         }
+      }),
+    );
+    return out;
+  }
+
+  /** Short answers in other words ("round" for "circular"): Claude decides, briefly; else the word list stands. */
+  private async meanings(g: Game): Promise<Record<string, Record<string, boolean>>> {
+    if (this.ai.name !== 'claude') return {};
+    const q = g.state.questions[g.state.index]!;
+    const out: Record<string, Record<string, boolean>> = {};
+    await Promise.all(
+      Object.entries(g.state.answers).map(async ([playerId, a]) => {
+        const checks = shortAnswersToCheck(q, a.answer);
+        if (!checks.length) return;
+        out[playerId] = await timeout(this.ai.judgeShort(q.prompt, checks, q.language), JUDGE_TIMEOUT_MS).catch(() => ({}));
       }),
     );
     return out;

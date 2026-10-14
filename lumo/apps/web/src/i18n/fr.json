@@ -788,7 +788,8 @@
       "invalid": "Quelque chose ne va pas. Réessaie.",
       "server_error": "Un problème est survenu. Réessaie.",
       "network": "Impossible de joindre Lumo. Vérifie ta connexion.",
-      "slow_down": "Doucement ! Réessaie dans quelques secondes."
+      "slow_down": "Doucement ! Réessaie dans quelques secondes.",
+      "read_only": "Il te faut l’accès Contributeur à cette page pour organiser une partie."
     }
   },
   "friends": {
@@ -1034,5 +1035,33 @@
       "session_expired": "Reconnecte-toi à Claude.",
       "upstream_error": "Un problème est survenu pendant la lecture. Réessaie."
     }
+  },
+  "together": {
+    "helpTitle": "Jouer ensemble dans Claude",
+    "helpBody": "Les amis, les paquets partagés et les parties Live marchent quand cette page est ouverte dans Claude et partagée avec tes amis. Utilise le menu Partager de la page et donne-leur l’accès « Contributeur ».",
+    "joinHint": "Tes amis rejoignent depuis leur onglet Live : touche la partie dans « Parties en cours » ou tape ce code.",
+    "openGames": "Parties en cours",
+    "hostedBy_one": "Organisée par {{name}} · {{count}} joueur",
+    "hostedBy_other": "Organisée par {{name}} · {{count}} joueurs",
+    "someone": "Quelqu’un",
+    "sharedDecks": "Paquets partagés",
+    "noSharedDecks": "Aucun paquet partagé pour l’instant. Ouvre un de tes paquets et active « Partager avec mes amis ».",
+    "sharedBy_one": "par {{name}} · {{count}} notion",
+    "sharedBy_other": "par {{name}} · {{count}} notions",
+    "playLiveWith": "Jouer {{deck}} en Live",
+    "addToMine": "Ajouter",
+    "shareDeck": "Partager avec mes amis",
+    "shareDeckBody": "Tous ceux avec qui tu as partagé cette page Lumo peuvent le copier et y jouer en Live.",
+    "nowPublic": "Tes amis voient ce paquet maintenant.",
+    "nowPrivate": "Ce paquet est de nouveau privé.",
+    "cantShare": "Impossible de partager. Il te faut l’accès Contributeur à cette page.",
+    "friendsIntro": "Tes amis sont les personnes avec qui tu as partagé cette page Lumo. Ajoute-les pour comparer séries et XP, et défie-les en Live.",
+    "thisWeek": "Cette semaine",
+    "noFriendsYet": "Ajoute des amis ci-dessous pour voir qui révise le plus cette semaine.",
+    "challenge": "Défier mes amis en Live",
+    "peopleHere": "Personnes sur ce Lumo",
+    "searchName": "Chercher un nom",
+    "nobodyElse": "Personne d’autre pour l’instant. Partage cette page avec tes amis (menu Partager, accès Contributeur).",
+    "howToInvite": "Pour inviter quelqu’un : ouvre le menu Partager de la page et ajoute-le avec l’accès Contributeur. Il apparaît ici après avoir ouvert Lumo une fois."
   }
 }

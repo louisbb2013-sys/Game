@@ -21,8 +21,8 @@ export function Layout() {
     { to: '/league', label: t('nav.league'), icon: TrophyIcon },
     { to: '/me', label: t('nav.profile'), icon: UserIcon },
   ];
-  // The browser-only build has no Live games or leagues (they need a server).
-  const tabs = LOCAL ? allTabs.filter((x) => x.to !== '/live' && x.to !== '/league') : allTabs;
+  // The browser-only build has no leagues (they need a server); Live runs between friends' pages.
+  const tabs = LOCAL ? allTabs.filter((x) => x.to !== '/league') : allTabs;
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
@@ -52,7 +52,7 @@ export function Layout() {
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl border-t border-line bg-surface/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1 backdrop-blur"
       >
-        <ul className={`grid ${tabs.length === 4 ? 'grid-cols-4' : 'grid-cols-6'}`}>
+        <ul className={`grid ${tabs.length === 5 ? 'grid-cols-5' : 'grid-cols-6'}`}>
           {tabs.map(({ to, label, icon: Icon, end }) => (
             <li key={to}>
               <NavLink

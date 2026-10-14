@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 import { HeartIcon } from '../components/icons';
 import { StudyPlan } from '../components/StudyPlan';
+import { ShareDeckToggle } from '../components/SharedDecks';
 import { offlineDeck, saveDeckOffline } from '../lib/offline';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError, LOCAL } from '../lib/api';
@@ -127,7 +128,7 @@ export function Deck() {
           </button>
           )}
         </div>
-        {!LOCAL && (
+        {(
         <Link to={`/live?deck=${data.deck.id}`} className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3.5 text-white">
           <span className="text-2xl">⚡</span>
           <span className="min-w-0 flex-1">
@@ -143,6 +144,8 @@ export function Deck() {
           </p>
         )}
       </section>
+
+      {LOCAL && <ShareDeckToggle deckId={data.deck.id} />}
 
       <StudyPlan deckId={data.deck.id} />
 

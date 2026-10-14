@@ -13,9 +13,9 @@ test('browser-only Lumo: deck, quiz, exam, sandbox, notes, progress kept after r
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
-  // No sign-in screen: straight to Home, 4 tabs.
+  // No sign-in screen: straight to Home, 5 tabs (no League).
   await expect(page.getByRole('link', { name: 'Learn' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Live' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'League' })).toHaveCount(0);
   await page.screenshot({ path: 'e2e/screens/local-home.png', fullPage: true });
 
   await page.getByRole('link', { name: 'Learn' }).click();

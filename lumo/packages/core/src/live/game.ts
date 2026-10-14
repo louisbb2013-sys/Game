@@ -171,15 +171,15 @@ export function openAnswersToJudge(s: LiveState): { playerId: string; text: stri
   });
 }
 
-/** Close the question: grade everyone, award points, rank. `judged` holds AI grades for open answers. */
-export function revealLive(s: LiveState, judged: Record<string, OpenGrade> = {}): LiveState {
+/** Close the question: grade everyone, award points, rank. `judged` holds AI grades for open answers; `meanings`, accepted short answers. */
+export function revealLive(s: LiveState, judged: Record<string, OpenGrade> = {}, meanings: Record<string, Record<string, boolean>> = {}): LiveState {
   if (s.phase !== 'question') throw new LiveError('wrong_phase');
   const q = s.questions[s.index]!;
   const previousRanks = Object.fromEntries(ranking(s).map((p, i) => [p.id, i + 1]));
   const lastResults: Record<string, LiveResult> = {};
   const players = s.players.map((p) => {
     const a = s.answers[p.id];
-    const g: GradeResult | null = a ? grade(q, a.answer, judged[p.id]) : null;
+    const g: GradeResult | null = a ? grade(q, a.answer, judged[p.id], meanings[p.id]) : null;
     const score = g?.score ?? 0;
     const correct = score >= PASS;
     const streak = correct ? p.streak + 1 : 0;

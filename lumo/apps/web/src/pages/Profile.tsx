@@ -92,6 +92,12 @@ export function Profile() {
       </div>
       )}
 
+      {LOCAL && (
+        <Link to="/friends" className="block rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+          👋 {t('friends.title')}
+        </Link>
+      )}
+
       {LOCAL ? (
         <p className="text-center text-xs text-muted">{t('local.savedHere')}</p>
       ) : (

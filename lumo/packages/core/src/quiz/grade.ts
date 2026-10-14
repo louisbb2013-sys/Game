@@ -49,7 +49,30 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
  * Grade an answer. Closed parts are graded deterministically here; for open parts
  * pass `open` (from the AI judge). Without it, a keyword heuristic is used.
  */
-export function grade(q: Question, a: Answer, open?: OpenGrade): GradeResult {
+/** A short typed answer that didn't match word for word: a judge (Claude) may decide it means the same. */
+export interface ShortCheck {
+  key: string;
+  given: string;
+  expected: string[];
+}
+
+/**
+ * Short answers worth a meaning check: typed, not empty, and not already accepted.
+ * Keys: "0" for type_answer, the blank index for fill_blank, "fix" for a spot-the-mistake correction.
+ */
+export function shortAnswersToCheck(q: Question, a: Answer): ShortCheck[] {
+  const out: ShortCheck[] = [];
+  const add = (key: string, given: string, expected: string[]) => {
+    if (given.trim() && given.length <= 200 && !matchesAccepted(given, expected)) out.push({ key, given: given.trim(), expected });
+  };
+  if (q.format === 'type_answer' && a.kind === 'text') add('0', a.text, q.accepted);
+  if (q.format === 'fill_blank' && a.kind === 'blanks') q.blanks.forEach((b, i) => add(String(i), a.values[i] ?? '', b.accepted));
+  if (q.format === 'spot_mistake' && a.kind === 'mistake' && a.segmentId === q.wrongId) add('fix', a.correction, q.correction);
+  return out;
+}
+
+/** `meaning`: keys a judge accepted as meaning the same (from shortAnswersToCheck). */
+export function grade(q: Question, a: Answer, open?: OpenGrade, meaning: Record<string, boolean> = {}): GradeResult {
   if (a.kind !== ANSWER_KIND[q.format]) {
     return finish(q, 0, 'local');
   }
@@ -73,12 +96,12 @@ export function grade(q: Question, a: Answer, open?: OpenGrade): GradeResult {
     }
     case 'type_answer': {
       if (a.kind !== 'text') break;
-      return finish(q, matchesAccepted(a.text, q.accepted) ? 1 : 0, by);
+      return finish(q, matchesAccepted(a.text, q.accepted) || meaning['0'] ? 1 : 0, by);
     }
     case 'fill_blank': {
       if (a.kind !== 'blanks') break;
       const items: Record<string, boolean> = {};
-      q.blanks.forEach((b, i) => (items[String(i)] = matchesAccepted(a.values[i] ?? '', b.accepted)));
+      q.blanks.forEach((b, i) => (items[String(i)] = matchesAccepted(a.values[i] ?? '', b.accepted) || !!meaning[String(i)]));
       const n = Object.values(items).filter(Boolean).length;
       return { ...finish(q, n / q.blanks.length, by), itemResults: items };
     }
@@ -105,7 +128,7 @@ export function grade(q: Question, a: Answer, open?: OpenGrade): GradeResult {
     case 'spot_mistake': {
       if (a.kind !== 'mistake') break;
       const found = a.segmentId === q.wrongId;
-      const fixed = found && matchesAccepted(a.correction, q.correction);
+      const fixed = found && (matchesAccepted(a.correction, q.correction) || !!meaning.fix);
       return finish(q, (found ? 0.7 : 0) + (fixed ? 0.3 : 0), by);
     }
     case 'calculation': {

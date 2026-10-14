@@ -788,7 +788,8 @@
       "invalid": "Something's not right. Try again.",
       "server_error": "Something went wrong. Try again.",
       "network": "Can't reach Lumo. Check your connection.",
-      "slow_down": "Slow down a little and try again in a few seconds."
+      "slow_down": "Slow down a little and try again in a few seconds.",
+      "read_only": "You need Contributor access to this page to host a game."
     }
   },
   "friends": {
@@ -1034,5 +1035,33 @@
       "session_expired": "Please sign in to Claude again.",
       "upstream_error": "Something went wrong while reading. Try again."
     }
+  },
+  "together": {
+    "helpTitle": "Play together inside Claude",
+    "helpBody": "Friends, shared decks and Live games work when this page is opened in Claude and shared with your friends. Use the page's Share menu and give them “Contributor” access.",
+    "joinHint": "Friends join from their Live tab: tap the game in “Games now” or type this code.",
+    "openGames": "Games now",
+    "hostedBy_one": "Hosted by {{name}} · {{count}} player",
+    "hostedBy_other": "Hosted by {{name}} · {{count}} players",
+    "someone": "Someone",
+    "sharedDecks": "Shared decks",
+    "noSharedDecks": "No shared decks yet. Open one of your decks and turn on “Share with friends”.",
+    "sharedBy_one": "by {{name}} · {{count}} idea",
+    "sharedBy_other": "by {{name}} · {{count}} ideas",
+    "playLiveWith": "Play {{deck}} Live",
+    "addToMine": "Add",
+    "shareDeck": "Share with friends",
+    "shareDeckBody": "Everyone you shared this Lumo page with can copy it and play it Live.",
+    "nowPublic": "Your friends can see this deck now.",
+    "nowPrivate": "This deck is private again.",
+    "cantShare": "Couldn't share. You need Contributor access to this page.",
+    "friendsIntro": "Friends are the people you shared this Lumo page with. Add them to compare streaks and XP, and challenge them to a Live game.",
+    "thisWeek": "This week",
+    "noFriendsYet": "Add friends below to see who studies the most this week.",
+    "challenge": "Challenge friends to a Live game",
+    "peopleHere": "People on this Lumo",
+    "searchName": "Search by name",
+    "nobodyElse": "Nobody else yet. Share this page with friends (Share menu, Contributor access).",
+    "howToInvite": "To invite someone new: open the page's Share menu and add them with Contributor access. They appear here after they open Lumo once."
   }
 }

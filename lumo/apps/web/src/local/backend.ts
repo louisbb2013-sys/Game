@@ -23,6 +23,8 @@ import {
   levelFromXp,
   levelProgress,
   levelUpRewards,
+  liveRewards,
+  weekId,
   loseHeart,
   MAX_HEARTS,
   masteryBand,
@@ -46,6 +48,7 @@ import {
   sandboxSupports,
   seededRng,
   sessionDone,
+  shortAnswersToCheck,
   streakStatus,
   xpForAnswer,
   type Answer,
@@ -64,6 +67,8 @@ import {
   type Stats,
   type StreakState,
 } from '@lumo/core';
+import { judgeShort } from './reader';
+import { publishProfile } from './together';
 
 /**
  * Browser-only Lumo: the same rules as the server, run in the page and saved in this browser.
@@ -121,6 +126,8 @@ interface DB {
     streak: StreakState;
     stats: Stats;
     createdAt: number;
+    week?: { id: string; xp: number };
+    liveRewarded?: string[];
   };
   decks: Deck[];
   states: Record<string, ConceptStateView>;
@@ -231,6 +238,8 @@ function award(xp: number, events: GameEvent[]): Rewards {
   if (xp > 0) {
     const before = levelFromXp(d.user.xp);
     d.user.xp += xp;
+    const wk = weekId(now());
+    d.user.week = d.user.week?.id === wk ? { id: wk, xp: d.user.week.xp + xp } : { id: wk, xp };
     r.xp = xp;
     all.push({ type: 'xp', amount: xp });
     for (let level = before + 1; level <= levelFromXp(d.user.xp); level++) {
@@ -409,7 +418,7 @@ function finish(s: StoredSession) {
   };
 }
 
-function answer(sessionId: string, questionId: string, a: Answer) {
+async function answer(sessionId: string, questionId: string, a: Answer) {
   const t = now();
   const s = getSession(sessionId);
   if (s.status !== 'active') throw new LocalError(409, 'session_done');
@@ -419,7 +428,11 @@ function answer(sessionId: string, questionId: string, a: Answer) {
   }
   const q = s.current;
   if (!q || q.id !== questionId) throw new LocalError(409, 'stale_question');
-  const g = grade(q, a);
+  // Same meaning in other words ("round" for "circular"): ask Claude when the word list says no.
+  const checks = shortAnswersToCheck(q, a);
+  const meaning = checks.length ? await judgeShort(q.prompt, checks, q.language) : {};
+  if (s.current?.id !== questionId) throw new LocalError(409, 'stale_question');
+  const g = grade(q, a, undefined, meaning);
   const d = load();
   const u = d.user;
 
@@ -531,9 +544,20 @@ function completeActivity(id: string, score: number) {
   return { xp, streak: { days: st.state.days, extended: st.extended }, rewards };
 }
 
+/** Friends see my stats: publish them a moment after a change (only when the page can share data). */
+let shareTimer: ReturnType<typeof setTimeout> | null = null;
+function shareStats() {
+  if (shareTimer) clearTimeout(shareTimer);
+  shareTimer = setTimeout(() => {
+    const u = load().user;
+    const wk = weekId(now());
+    void publishProfile({ level: levelFromXp(u.xp), xp: u.xp, weekId: wk, weeklyXp: u.week?.id === wk ? u.week.xp : 0, streak: u.streak.days, lastDay: u.streak.lastDay, decks: load().decks.length });
+  }, 1500);
+}
+
 // ------------------------------------------------------------------ router
 
-type Handler = (m: RegExpMatchArray, body: Record<string, unknown>) => unknown;
+type Handler = (m: RegExpMatchArray, body: Record<string, unknown>) => unknown | Promise<unknown>;
 const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/api\/auth\/providers$/, () => ({ google: false, email: false, guest: false, dev: false })],
   ['GET', /^\/api\/me$/, () => ({ user: profile() })],
@@ -704,11 +728,28 @@ const routes: [string, RegExp, Handler][] = [
   ],
   ['POST', /^\/api\/sandbox\/([\w-]+)\/complete$/, (m, b) => completeActivity(m[1]!, Number(b.score) || 0)],
 
+  [
+    'POST',
+    /^\/api\/local\/live-reward$/,
+    (_m, b) => {
+      // Once per game: everyone gets something, the podium gets more (same rule as the server).
+      const u = load().user;
+      const code = String(b.code ?? '');
+      if (!code || (u.liveRewarded ?? []).includes(code)) throw new LocalError(409, 'already_rewarded');
+      u.liveRewarded = [...(u.liveRewarded ?? []), code].slice(-50);
+      const rank = Math.max(1, Number(b.rank) || 1);
+      const players = Math.max(1, Math.min(50, Number(b.players) || 1));
+      const r = liveRewards(rank, players, Math.max(0, Math.min(50, Number(b.correct) || 0)));
+      u.coins += r.coins;
+      const rewards = award(r.xp, [{ type: 'live_done', rank, players }]);
+      return { rank, xp: r.xp, coins: r.coins, rewards };
+    },
+  ],
   ['GET', /^\/api\/game\/overview$/, () => ({ quests: [], chests: 0, boostUntil: null, pet: null, hasPets: true })],
   [
     'GET',
     /^\/api\/game\/badges$/,
-    () => ({ stats: { ...emptyStats(), ...load().user.stats }, badges: BADGES.filter((b) => !b.id.startsWith('live_') && !b.id.endsWith('_league') && b.id !== 'chest_hunter' && b.id !== 'pet_pal').map((b) => ({ id: b.id, emoji: b.emoji, earnedAt: load().badges[b.id] ? new Date(load().badges[b.id]!).toISOString() : null })) }),
+    () => ({ stats: { ...emptyStats(), ...load().user.stats }, badges: BADGES.filter((b) => !b.id.endsWith('_league') && b.id !== 'chest_hunter' && b.id !== 'pet_pal').map((b) => ({ id: b.id, emoji: b.emoji, earnedAt: load().badges[b.id] ? new Date(load().badges[b.id]!).toISOString() : null })) }),
   ],
 ];
 
@@ -720,8 +761,9 @@ export async function localApi<T>(method: string, path: string, body: unknown): 
     const match = p.match(re);
     if (!match) continue;
     try {
-      const out = fn(match, (body ?? {}) as Record<string, unknown>);
+      const out = await fn(match, (body ?? {}) as Record<string, unknown>);
       save();
+      shareStats();
       return structuredClone(out) as T;
     } catch (e) {
       save();
