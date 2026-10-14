@@ -251,6 +251,7 @@
     "conceptsPracticed": "Notions travaillées",
     "backToDeck": "Retour au paquet",
     "errors": {
+      "error": "Un problème est survenu. Réessaie — si ça continue, recharge la page.",
       "no_hearts": "Plus de cœurs. Fais une révision pour les recharger.",
       "stale_question": "Cette question a déjà été répondue.",
       "session_done": "Cette séance est déjà terminée.",

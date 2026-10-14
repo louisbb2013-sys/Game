@@ -251,6 +251,7 @@
     "conceptsPracticed": "Concepts practiced",
     "backToDeck": "Back to deck",
     "errors": {
+      "error": "Something went wrong. Try again — if it keeps happening, reload the page.",
       "no_hearts": "No hearts left. Try a Review session to refill them.",
       "stale_question": "This question was already answered.",
       "session_done": "This session is already finished.",

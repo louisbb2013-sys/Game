@@ -29,7 +29,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import type { LivePublic, LiveReward, RoomStatus } from '../lib/live';
 import { judgeShort } from './reader';
-import { namesFor, together } from './together';
+import { namesFor, plain, together } from './together';
 
 /**
  * Live games in the browser-only build. The HOST's page runs the game (the same core state machine the
@@ -265,7 +265,7 @@ export function useOpenGames() {
           (snap: Any) =>
             setGames(
               snap.docs
-                .map((d: Any) => d.data() as GameDoc)
+                .map((d: Any) => plain(d.data()) as GameDoc)
                 .filter((g: GameDoc) => Date.now() - g.updatedAt < 30 * 60_000)
                 .map((g: GameDoc) => ({ code: g.code, title: g.title, hostId: g.hostId, players: g.view?.players?.length ?? 0 })),
             ),
@@ -317,7 +317,7 @@ export function useLocalLiveRoom(code: string) {
         .limit(1)
         .onSnapshot(
           (snap: Any) => {
-            const doc = snap.docs[0]?.data() as GameDoc | undefined;
+            const doc = plain(snap.docs[0]?.data()) as GameDoc | undefined;
             if (!doc) {
               if (seen) setStatus('closed');
               else {

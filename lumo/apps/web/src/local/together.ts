@@ -15,6 +15,9 @@ import { useEffect, useState } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
+/** A plain copy of data handed over by the viewer (its objects may not survive copying as-is). */
+export const plain = <T>(x: T): T => (x === undefined ? x : (JSON.parse(JSON.stringify(x)) as T));
+
 const use = (name: string): Promise<Any | null> => {
   const c = (window as Any).claude;
   if (!c?.use) return Promise.resolve(null);
@@ -122,7 +125,7 @@ export function useProfiles() {
     void together().then((t) => {
       if (!t || !alive) return setList(t ? [] : null);
       unsub = t.db.collection('profiles').limit(500).onSnapshot(
-        (snap: Any) => setList(snap.docs.map((d: Any) => ({ id: d.id, ...d.data() }) as PublicProfile)),
+        (snap: Any) => setList(snap.docs.map((d: Any) => ({ id: d.id, ...plain(d.data()) }) as PublicProfile)),
         () => setList([]),
       );
     });
@@ -178,7 +181,7 @@ export function useFriends() {
     void together().then((t) => {
       if (!t || !alive) return;
       unsub = t.db.doc(`data/users/${t.me}/me`).onSnapshot(
-        (snap: Any) => setFriends(((snap.exists ? snap.data()?.friends : []) as string[]) ?? []),
+        (snap: Any) => setFriends(((snap.exists ? plain(snap.data()?.friends) : []) as string[]) ?? []),
         () => setFriends([]),
       );
     });
@@ -221,7 +224,7 @@ export async function myPublicDecks(): Promise<PublicDeck[]> {
   const t = await together();
   if (!t) return [];
   const snap = await t.db.doc(`decks/${t.me}`).get().catch(() => null);
-  return (snap?.exists ? (snap.data()?.decks as PublicDeck[]) : []) ?? [];
+  return (snap?.exists ? (plain(snap.data()?.decks) as PublicDeck[]) : []) ?? [];
 }
 
 /** Everyone's public decks, live, with the owner's id. */
@@ -235,7 +238,7 @@ export function useSharedDecks() {
       unsub = t.db.collection('decks').limit(300).onSnapshot(
         (snap: Any) =>
           setDecks(
-            snap.docs.flatMap((d: Any) => ((d.data()?.decks ?? []) as PublicDeck[]).map((x) => ({ ...x, ownerId: d.id }))).sort((a: PublicDeck, b: PublicDeck) => b.updatedAt - a.updatedAt),
+            snap.docs.flatMap((d: Any) => ((plain(d.data()?.decks) ?? []) as PublicDeck[]).map((x) => ({ ...x, ownerId: d.id }))).sort((a: PublicDeck, b: PublicDeck) => b.updatedAt - a.updatedAt),
           ),
         () => setDecks([]),
       );

@@ -68,7 +68,7 @@ import {
   type StreakState,
 } from '@lumo/core';
 import { judgeShort, withTimeout } from './reader';
-import { goOnline, publishProfile, together } from './together';
+import { goOnline, plain, publishProfile, together } from './together';
 
 /**
  * Browser-only Lumo: the same rules as the server, run in the page and saved in this browser.
@@ -229,7 +229,7 @@ function boot(): Promise<void> {
     let docs: { id: string; exists: boolean; data: () => unknown }[] = [];
     try {
       const snap = await withTimeout<any>(t.db.doc(`${base}/main`).get(), 8000); // eslint-disable-line @typescript-eslint/no-explicit-any
-      main = snap.exists ? (snap.data() as Partial<DB> & { deckIds?: string[] }) : null;
+      main = snap.exists ? (plain(snap.data()) as Partial<DB> & { deckIds?: string[] }) : null;
       if (main) docs = (await withTimeout<{ docs: typeof docs }>(t.db.collection(base).limit(300).get(), 10_000)).docs;
     } catch {
       return; // can't read the account copy: never risk overwriting it
@@ -239,7 +239,7 @@ function boot(): Promise<void> {
     const cloudDecks = new Map<string, Deck>();
     for (const d of docs) {
       if (!d.exists || !d.id.startsWith('deck-')) continue;
-      const dk = d.data() as Deck;
+      const dk = plain(d.data()) as Deck;
       if (dk?.id && Array.isArray(dk.concepts)) cloudDecks.set(dk.id, dk);
     }
     if (main?.user) {
@@ -907,6 +907,16 @@ const routes: [string, RegExp, Handler][] = [
   ],
 ];
 
+/** Keeps the last few unexpected errors in the learner's own private space, so they can be fixed. */
+function reportProblem(where: string, e: unknown) {
+  if (!cloud) return;
+  const err = e instanceof Error ? e : new Error(String(e));
+  const entry = { at: now(), where, message: String(err.message).slice(0, 500), stack: String(err.stack ?? '').slice(0, 2000), ua: navigator.userAgent.slice(0, 200) };
+  problems = [entry, ...problems].slice(0, 10);
+  void cloud.db.doc(`data/users/${cloud.me}/problems`).set({ list: problems }).catch(() => {});
+}
+let problems: { at: number; where: string; message: string; stack: string; ua: string }[] = [];
+
 /** Handles an API call in the page, as if a server had answered. */
 export async function localApi<T>(method: string, path: string, body: unknown): Promise<T> {
   // The account copy loads in the background; never keep a tap waiting on it for long.
@@ -917,14 +927,15 @@ export async function localApi<T>(method: string, path: string, body: unknown): 
     const match = p.match(re);
     if (!match) continue;
     try {
-      const out = await fn(match, (body ?? {}) as Record<string, unknown>);
+      const out = await fn(match, plain(body ?? {}) as Record<string, unknown>);
       save();
       shareStats();
-      return structuredClone(out) as T;
+      return plain(out) as T;
     } catch (e) {
       save();
       if (e instanceof LocalError) throw e;
       console.error(e);
+      reportProblem(`${method} ${p}`, e);
       throw new LocalError(500, 'error');
     }
   }

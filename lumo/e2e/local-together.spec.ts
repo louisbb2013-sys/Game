@@ -100,6 +100,19 @@ test('progress and username come back after the browser forgets everything', asy
   await expect(a.getByText('Cells — the basics')).toBeVisible();
   await a.getByRole('link', { name: 'Me', exact: true }).click();
   await expect(a.locator('main p.text-xl').first()).toHaveText(name);
+
+  // Studying works on progress that came back from the account.
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByText('Cells — the basics').click();
+  await a.getByRole('button', { name: /Practice/ }).click();
+  for (let i = 0; i < 3; i++) {
+    const section = a.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    await answerCurrent(a, (await section.getAttribute('data-format'))!);
+    await a.getByRole('button', { name: 'Check' }).click();
+    await expect(a.getByRole('status').getByRole('button', { name: /Continue|See results/ })).toBeVisible();
+    await a.getByRole('status').getByRole('button', { name: /Continue|See results/ }).click();
+  }
 });
 
 test('on a phone every study button answers a tap, and a slow Claude never blocks Check', async ({ browser }) => {
