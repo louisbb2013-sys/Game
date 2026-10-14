@@ -1,5 +1,5 @@
 import { devices, expect, test, type Page } from '@playwright/test';
-import { answerCurrent } from './helpers';
+import { answerCurrent, closeHatch } from './helpers';
 
 // Browser-only build + a stand-in for the Claude viewer (shared data and rooms between tabs).
 // Run with MULTI_URL=http://localhost:8765/multi.html
@@ -111,6 +111,7 @@ test('progress and username come back after the browser forgets everything', asy
     await answerCurrent(a, (await section.getAttribute('data-format'))!);
     await a.getByRole('button', { name: 'Check' }).click();
     await expect(a.getByRole('status').getByRole('button', { name: /Continue|See results/ })).toBeVisible();
+    await closeHatch(a);
     await a.getByRole('status').getByRole('button', { name: /Continue|See results/ }).click();
   }
 });
@@ -146,6 +147,7 @@ test('on a phone every study button answers a tap, and a slow Claude never block
     await p.getByRole('button', { name: 'Check' }).tap();
     const btn = p.getByRole('status').getByRole('button', { name: /Continue|See results/ });
     await expect(btn).toBeVisible({ timeout: 15_000 });
+    await closeHatch(p);
     const last = /See results/.test((await btn.textContent()) ?? '');
     await btn.tap();
     if (last) break;
@@ -228,4 +230,68 @@ test('website Live: 100 questions, the host ends early', async ({ browser }) => 
   await a.getByRole('button', { name: 'Tap to end' }).click();
   await expect(a.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible();
   await expect(b.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 15_000 });
+});
+
+test('website game: the study egg hatches, a round earns a chest, quests and shop work', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  const errors: string[] = [];
+  a.on('pageerror', (e) => errors.push(e.message));
+  await a.goto(process.env.MULTI_URL!);
+  await a.evaluate(() => localStorage.clear());
+  await open(a, 'u_g');
+  // Home shows the egg and today's quests.
+  await expect(a.getByText('Common egg')).toBeVisible();
+  await expect(a.getByRole('heading', { name: /Quests/ })).toBeVisible();
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await a.getByRole('button', { name: /Practice/ }).click();
+  let hatched = false;
+  for (let i = 0; i < 30; i++) {
+    const section = a.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    await answerCurrent(a, (await section.getAttribute('data-format'))!);
+    await a.getByRole('button', { name: 'Check' }).click();
+    const btn = a.getByRole('status').getByRole('button', { name: /Continue|See results/ });
+    await expect(btn).toBeVisible();
+    const dialog = a.getByRole('dialog', { name: 'Your egg hatched!' });
+    await a.waitForTimeout(250);
+    if (await dialog.count()) {
+      await expect(dialog.getByRole('heading', { name: /You got|again!/ })).toBeVisible({ timeout: 5000 });
+      if (!hatched) await a.screenshot({ path: 'e2e/screens/web-hatch.png' });
+      await dialog.getByRole('button', { name: 'Keep going' }).click();
+      hatched = true;
+    }
+    const last = /See results/.test((await btn.textContent()) ?? '');
+    await btn.click();
+    if (last) break;
+  }
+  expect(hatched).toBe(true);
+  await expect(a.getByRole('heading', { name: 'Session complete!' })).toBeVisible();
+  // The round's chest is waiting: open it.
+  await a.getByRole('link', { name: 'Home', exact: true }).click();
+  await a.getByRole('link', { name: /chests? to open/ }).click();
+  await a.getByRole('button', { name: /^Open / }).first().click();
+  await expect(a.getByText('You got')).toBeVisible({ timeout: 10_000 });
+  await a.screenshot({ path: 'e2e/screens/web-chest.png' });
+  // The new pet shows on the home screen.
+  await a.goto(`${process.env.MULTI_URL}?uid=u_g`);
+  await expect(a.locator('a[href="/pets"]').first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('website: a deck from just a topic (Claude researches it)', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(`${process.env.MULTI_URL}?uid=u_h&sample=ok`);
+  await a.evaluate(() => localStorage.clear());
+  await a.goto(`${process.env.MULTI_URL}?uid=u_h&sample=ok`);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByLabel('Just type a topic').fill('récit psychologique français secondaire 2');
+  await a.getByLabel('Just type a topic').press('Enter');
+  await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });
+  await a.getByRole('button', { name: /Practice/ }).click();
+  await expect(a.locator('section[data-format]')).toBeVisible();
 });

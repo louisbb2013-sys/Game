@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 import { CameraIcon, CoinIcon, FlameIcon, HeartIcon } from '../components/icons';
 import { Lumo, type LumoMood } from '../components/Lumo';
 import { api, ApiError, LOCAL } from '../lib/api';
+import { EggRing, type EggState } from '../components/Egg';
 import { useAuth } from '../lib/auth';
 import { play } from '../lib/sound';
 import { PetAvatar, type PetView } from './Pets';
@@ -25,6 +26,23 @@ interface Overview {
   boostUntil: string | null;
   pet: PetView | null;
   hasPets: boolean;
+  /** Website: the study egg that hatches as you answer questions. */
+  egg?: EggState;
+}
+
+function EggCard({ egg }: { egg: EggState }) {
+  const { t } = useTranslation();
+  const left = Math.max(0, egg.target - egg.progress);
+  return (
+    <Link to="/learn" className="flex items-center gap-4 rounded-3xl bg-gradient-to-r from-amber-glow/20 to-fuchsia-400/10 p-4 ring-1 ring-amber-glow/60">
+      <EggRing egg={egg} />
+      <div className="min-w-0 flex-1">
+        <h2 className="font-black">{t('egg.title', { rarity: t(`pets.rarity.${egg.rarity}`) })}</h2>
+        <p className="text-sm">{t('egg.left', { count: left })}</p>
+      </div>
+      <span className="text-2xl text-muted">›</span>
+    </Link>
+  );
 }
 
 export function Home() {
@@ -98,16 +116,12 @@ export function Home() {
           value={user.hearts.current}
           label={minutesToHeart ? t('stats.nextHeart', { minutes: minutesToHeart }) : t('stats.full')}
         />
-        {LOCAL ? (
+        <Link to="/shop">
           <Tile icon={<CoinIcon size={28} />} value={user.coins} label={t('stats.coins')} />
-        ) : (
-          <Link to="/shop">
-            <Tile icon={<CoinIcon size={28} />} value={user.coins} label={t('stats.coins')} />
-          </Link>
-        )}
+        </Link>
       </section>
 
-      {!LOCAL && (user.streak.freezes > 0 || repairable) && (
+      {(user.streak.freezes > 0 || repairable) && (
         <section className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface p-3 text-sm font-bold ring-1 ring-line">
           {user.streak.freezes > 0 && <span>🧊 {t('home.freezes', { count: user.streak.freezes })}</span>}
           {repairable && (
@@ -130,7 +144,9 @@ export function Home() {
         </Link>
       )}
 
-      {ov && !LOCAL && (
+      {ov?.egg && <EggCard egg={ov.egg} />}
+
+      {ov && (
         <section className="space-y-2 rounded-3xl bg-surface p-4 ring-1 ring-line" aria-labelledby="quests-title">
           <h2 id="quests-title" className="font-black">
             📜 {t('home.quests')}
@@ -173,7 +189,7 @@ export function Home() {
         </section>
       )}
 
-      {ov && !LOCAL && (
+      {ov && (
         <Link to="/pets" className="flex items-center gap-4 rounded-3xl bg-surface p-4 ring-1 ring-line">
           {ov.pet ? <PetAvatar pet={ov.pet} size="sm" /> : <span className="grid size-14 place-items-center rounded-full bg-surface-2 text-3xl">🥚</span>}
           <div className="min-w-0 flex-1">

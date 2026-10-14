@@ -1,5 +1,6 @@
 import { BADGES } from '@lumo/core';
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useConfetti } from './confetti';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { play } from './sound';
@@ -9,6 +10,12 @@ export interface Rewards {
   levelUp: { level: number; coins: number; chest?: string } | null;
   badges: string[];
   questsCompleted: string[];
+  /** Website: a pet hatched from the study egg. */
+  hatched?: { species: string; emoji: string; rarity: string; duplicate: boolean };
+  /** Website: a chest earned for finishing a round. */
+  chest?: string;
+  /** Website: the study egg after this answer. */
+  egg?: { rarity: 'common' | 'rare' | 'epic' | 'legendary'; progress: number; target: number };
 }
 
 interface Toast {
@@ -25,6 +32,7 @@ const Ctx = createContext<(r: Rewards | null | undefined) => void>(() => {});
 export function RewardsProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [hatch, setHatch] = useState<NonNullable<Rewards['hatched']> | null>(null);
 
   const show = useCallback(
     (r: Rewards | null | undefined) => {
@@ -42,6 +50,8 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       for (const b of r.badges) {
         next.push({ id: Math.random(), emoji: BADGES.find((x) => x.id === b)?.emoji ?? '🏅', title: t('rewards.badge'), body: t(`badges.${b}.name`), link: '/me' });
       }
+      if (r.hatched) setHatch(r.hatched);
+      if (r.chest) next.push({ id: Math.random(), emoji: r.chest === 'rare' ? '💼' : '🎁', title: t('rewards.chest', { chest: t(`chests.${r.chest}`) }), body: t('rewards.chestOpen'), link: '/shop?tab=mine' });
       if (r.questsCompleted.length) {
         next.push({ id: Math.random(), emoji: '📜', title: t('rewards.quest', { count: r.questsCompleted.length }), body: t('rewards.questClaim'), link: '/' });
       }
@@ -56,6 +66,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={show}>
       {children}
+      {hatch && <HatchCelebration pet={hatch} onClose={() => setHatch(null)} />}
       <div className="pointer-events-none fixed inset-x-0 top-3 z-[70] mx-auto flex max-w-md flex-col gap-2 px-3" aria-live="polite">
         {toasts.map((x) => {
           const inner = (
@@ -95,3 +106,46 @@ export const TIER_STYLE: Record<string, { emoji: string; color: string }> = {
   amethyst: { emoji: '💜', color: '#7C3AED' },
   diamond: { emoji: '💎', color: '#0EA5E9' },
 };
+
+/** Full-screen moment when the study egg hatches: the egg shakes, cracks, and a pet pops out. */
+function HatchCelebration({ pet, onClose }: { pet: NonNullable<Rewards['hatched']>; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    play('tap');
+    const a = setTimeout(() => {
+      setOpen(true);
+      play('finish');
+    }, 1500);
+    return () => clearTimeout(a);
+  }, []);
+  useConfetti(open);
+  const name = t(`pets.species.${pet.species}`);
+  return (
+    <div role="dialog" aria-modal="true" aria-label={t('egg.hatched')} className="fixed inset-0 z-[80] grid place-items-center bg-night/80 p-6 backdrop-blur-sm" onClick={() => open && onClose()}>
+      <div className="relative w-full max-w-sm rounded-3xl bg-surface p-6 text-center shadow-2xl ring-2 ring-amber-glow">
+        <div className="relative mx-auto grid size-44 place-items-center">
+          {open && <span className="hatch-rays absolute inset-0" aria-hidden />}
+          {open ? <span className="hatch-pop relative text-8xl">{pet.emoji}</span> : <span className="egg-shake text-8xl">🥚</span>}
+        </div>
+        {open ? (
+          <>
+            <p className="mt-2 text-sm font-black tracking-wide text-amber-glow uppercase">{t(`pets.rarity.${pet.rarity}`)}</p>
+            <h2 className="text-2xl font-black">{pet.duplicate ? t('egg.duplicate', { name }) : t('egg.newPet', { name })}</h2>
+            <p className="mt-1 text-sm text-muted">{pet.duplicate ? t('egg.duplicateBody') : t('egg.newPetBody')}</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Link to="/pets" onClick={onClose} className="rounded-2xl bg-surface-2 py-3 font-black">
+                {t('egg.seePets')}
+              </Link>
+              <button autoFocus onClick={onClose} className="rounded-2xl bg-brand py-3 font-black text-brand-ink">
+                {t('egg.keepGoing')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="mt-4 text-lg font-black">{t('egg.hatching')}</p>
+        )}
+      </div>
+    </div>
+  );
+}

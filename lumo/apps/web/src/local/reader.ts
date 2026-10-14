@@ -109,6 +109,43 @@ export async function readPhotos(files: File[], language: Locale, extra: string,
   return { title: str(raw.title, 120), subject: str(raw.subject, 80), summary: str(raw.summary, 1000), language, concepts };
 }
 
+const TOPIC_PROMPT = (topic: string, language: Locale, research: boolean) => `You are Lumo, a study helper for school students. A student typed what they want to study, with no notes:
+"""${topic.slice(0, 500)}"""
+It may name a school level or program (for example "secondaire 2" is Québec grade 8, age 13-14; "Year 9", "5e", "Grade 10"). Match that level and that school system's curriculum.
+${research ? 'First search the web for reliable sources on this topic at that level (curriculum pages, school or teacher sites, encyclopedias), then build the deck from what you found.' : 'Build the deck from what a teacher would expect at that level.'}
+Cover what a student must understand for a test on it: the key ideas, the vocabulary, how things work and why, typical examples, and the usual mistakes.
+Write everything in ${language === 'fr' ? 'French' : 'English'}. Be accurate; leave out anything you are unsure of.
+Reply with only one JSON object, no other text:
+{"title": string (short), "subject": string, "summary": string (one sentence),
+ "concepts": [{"topic": string, "kind": one of ${CONCEPT_KINDS.filter((k) => k !== 'formula').join(' | ')},
+   "term": string (the key word or idea, short), "summary": string (one clear sentence that explains it, without repeating the term),
+   "keyPoints": string[] (2-4 short facts a good answer mentions), "examples": string[] (1-2 examples),
+   "misconceptions": string[] (0-2 common mistakes), "synonyms": string[],
+   "steps"?: string[] (only for processes, in order), "causeEffects"?: [{"cause": string, "effect": string}]}]}
+Aim for 12-20 concepts. If the request is not a school topic, reply {"title": "", "concepts": []}.`;
+
+/** Can this view ask Claude at all (to read photos or build a deck from a topic)? */
+export async function canAskClaude(): Promise<boolean> {
+  return (await getSample()) !== null;
+}
+
+/** Just a topic (no notes): Claude researches it and builds a deck draft. */
+export async function deckFromTopic(topic: string, language: Locale, signal?: AbortSignal) {
+  const s = await getSample();
+  if (!s) throw new ReaderError('unavailable');
+  // The standalone site's Claude can search the web first; inside the Claude viewer it uses what it knows.
+  const research = (s as unknown as { canResearch?: boolean }).canResearch === true;
+  let raw: { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
+  try {
+    raw = await s.json(TOPIC_PROMPT(topic, language, research), { signal, modelTier: 'default', ...(research ? { research: true } : {}) });
+  } catch (e) {
+    throw new ReaderError(String((e as { code?: string })?.code ?? 'upstream_error'));
+  }
+  const concepts = clean(raw?.concepts);
+  if (concepts.length === 0) throw new ReaderError('nothing_found');
+  return { title: str(raw.title, 120) || topic.slice(0, 120), subject: str(raw.subject, 80), summary: str(raw.summary, 1000), language, concepts };
+}
+
 /** Short answers in other words: Claude decides if each means the same as an expected answer. */
 export async function judgeShort(question: string, checks: { key: string; given: string; expected: string[] }[], language: Locale): Promise<Record<string, boolean>> {
   if (checks.length === 0) return {};

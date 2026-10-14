@@ -1,4 +1,34 @@
 import {
+  addFreeze,
+  addPetXp,
+  advanceQuest,
+  canRepair,
+  currentFullness,
+  DUPLICATE_PET_XP,
+  EGG_EMOJI,
+  EGG_TARGET,
+  feedPet,
+  FIRST_EGG_TARGET,
+  hatch,
+  hatchRarity,
+  ITEMS,
+  petMood,
+  petXpPerk,
+  questDef,
+  questsFor,
+  repairStreak,
+  rollChest,
+  rollEggRarity,
+  speciesOf,
+  STARTER_PETS,
+  validateUsername,
+  XP_BOOST_BONUS,
+  XP_BOOST_MS,
+  type ChestKind,
+  type ItemId,
+  type PetSpeciesId,
+  type PetState,
+  type Rarity,
   applyAnswer,
   applyStats,
   BADGES,
@@ -139,6 +169,31 @@ interface DB {
   plans: Record<string, { examDay: string; minutesPerDay: number }>;
   /** Decks deleted on purpose, so another device's copy doesn't bring them back. */
   deletedDecks?: string[];
+  /** Eggs, pets, chests, quests, items. */
+  game?: GameData;
+}
+
+interface LocalPet {
+  id: string;
+  species: PetSpeciesId;
+  name: string;
+  level: number;
+  xp: number;
+  fullness: number;
+  fedAt: number;
+  equipped: boolean;
+}
+interface GameData {
+  inventory: Partial<Record<ItemId, number>>;
+  chests: { id: string; kind: ChestKind; source: string; at: number }[];
+  pets: LocalPet[];
+  /** `${periodKey}:${questId}` -> progress */
+  quests: Record<string, { progress: number; claimed: boolean }>;
+  boostUntil: number | null;
+  theme: string;
+  /** The study egg: answering questions hatches it. */
+  egg: { rarity: Rarity; progress: number; target: number };
+  hatched: number;
 }
 
 const KEY = 'lumo_local_v1';
@@ -366,14 +421,250 @@ function profile() {
     hearts: { current: hearts.hearts, nextRefillAt: hearts.nextRefillAt },
     streak: { ...u.streak, status: streakStatus(u.streak, dayKey(t, u.timezone)) },
     leagueTier: 'bronze',
-    theme: 'default',
-    boostUntil: null,
+    theme: game().theme,
+    boostUntil: inventoryView().boostUntil,
     createdAt: new Date(u.createdAt).toISOString(),
   };
 }
 
-type Rewards = { xp: number; levelUp: { level: number; coins: number } | null; badges: string[]; questsCompleted: string[] };
+type Hatched = { species: PetSpeciesId; emoji: string; rarity: Rarity; duplicate: boolean };
+type Rewards = {
+  xp: number;
+  levelUp: { level: number; coins: number; chest?: ChestKind } | null;
+  badges: string[];
+  questsCompleted: string[];
+  hatched?: Hatched;
+  chest?: ChestKind;
+  egg?: GameData['egg'];
+};
 const emptyRewards = (): Rewards => ({ xp: 0, levelUp: null, badges: [], questsCompleted: [] });
+
+// ------------------------------------------------------------------ game: eggs, pets, chests, quests
+
+const lootRng = () => seededRng(crypto.getRandomValues(new Uint32Array(1))[0]! >>> 1);
+
+function game(): GameData {
+  const d = load();
+  if (!d.game) d.game = { inventory: {}, chests: [], pets: [], quests: {}, boostUntil: null, theme: 'default', egg: { rarity: 'common', progress: 0, target: FIRST_EGG_TARGET }, hatched: 0 };
+  return d.game;
+}
+const petState = (p: LocalPet): PetState => ({ species: p.species, level: p.level, xp: p.xp, fullness: p.fullness, fedAt: p.fedAt });
+const equipped = () => game().pets.find((p) => p.equipped);
+
+function addItem(id: ItemId, qty: number) {
+  const g = game();
+  g.inventory[id] = (g.inventory[id] ?? 0) + qty;
+}
+function takeItem(id: ItemId) {
+  const g = game();
+  if (!g.inventory[id]) throw new LocalError(409, 'not_enough_items');
+  g.inventory[id] = g.inventory[id]! - 1;
+}
+function giveChest(kind: ChestKind, source: string) {
+  game().chests.push({ id: uid(), kind, source, at: now() });
+}
+
+/** A new pet joins (or, if you have it already, your existing one powers up). */
+function addPet(species: PetSpeciesId): { pet: LocalPet; duplicate: boolean } {
+  const g = game();
+  const have = g.pets.find((p) => p.species === species);
+  const rarity = speciesOf(species)!.rarity;
+  if (have) {
+    Object.assign(have, addPetXp(petState(have), DUPLICATE_PET_XP[rarity]));
+    return { pet: have, duplicate: true };
+  }
+  const pet: LocalPet = { id: uid(), species, name: '', level: 1, xp: 0, fullness: 80, fedAt: now(), equipped: !g.pets.some((p) => p.equipped) };
+  g.pets.push(pet);
+  return { pet, duplicate: false };
+}
+
+function petView(p: LocalPet) {
+  const u = load().user;
+  const t = now();
+  const st = petState(p);
+  const mood = petMood(st, t, streakStatus(u.streak, dayKey(t, u.timezone)));
+  const s = speciesOf(p.species)!;
+  return { id: p.id, species: p.species, emoji: s.emoji, rarity: s.rarity, color: s.color, name: p.name, level: p.level, xp: p.xp, fullness: currentFullness(st, t), mood, perk: petXpPerk(st, mood), equipped: p.equipped };
+}
+
+/** XP multiplier bonus from an active boost and the pet you take along. */
+function boostNow(): number {
+  const g = game();
+  let b = g.boostUntil && g.boostUntil > now() ? XP_BOOST_BONUS : 0;
+  const p = equipped();
+  if (p) b += petViewPerk(p);
+  return b;
+}
+const petViewPerk = (p: LocalPet) => petView(p).perk;
+
+function questPeriods() {
+  const u = load().user;
+  return { daily: dayKey(now(), u.timezone), weekly: weekId(now()) };
+}
+function currentQuests() {
+  const g = game();
+  const p = questPeriods();
+  const list = [...questsFor(load().user.id, p.daily, 'daily').map((q) => ({ q, key: p.daily, period: 'daily' as const })), ...questsFor(load().user.id, p.weekly, 'weekly').map((q) => ({ q, key: p.weekly, period: 'weekly' as const }))];
+  // Forget quests from past days and weeks.
+  for (const k of Object.keys(g.quests)) if (!k.startsWith(`${p.daily}:`) && !k.startsWith(`${p.weekly}:`)) delete g.quests[k];
+  return list.map(({ q, key, period }) => {
+    const st = (g.quests[`${key}:${q.id}`] ??= { progress: 0, claimed: false });
+    return { id: q.id, period, metric: q.metric, progress: st.progress, target: q.target, claimed: st.claimed, reward: q.reward, st };
+  });
+}
+const publicQuests = () => currentQuests().map(({ st: _s, ...q }) => q);
+
+function inventoryView() {
+  const g = game();
+  return {
+    coins: load().user.coins,
+    items: (Object.entries(g.inventory) as [ItemId, number][]).filter(([, n]) => n > 0).sort().map(([id, qty]) => ({ id, qty, emoji: ITEMS[id]?.emoji })),
+    chests: g.chests.map(({ id, kind, source }) => ({ id, kind, source })),
+    boostUntil: g.boostUntil && g.boostUntil > now() ? new Date(g.boostUntil).toISOString() : null,
+    theme: g.theme,
+  };
+}
+
+function checkPetName(name: string): string {
+  const n = String(name ?? '').trim().replace(/\s+/g, ' ');
+  if (n.length < 1 || n.length > 16 || !/^[\p{L}\p{N} '-]+$/u.test(n)) throw new LocalError(400, 'bad_pet_name');
+  if (validateUsername(n.replace(/[^A-Za-z0-9]/g, '') || 'pet') === 'blocked') throw new LocalError(400, 'bad_pet_name');
+  return n;
+}
+
+function useItem(itemId: ItemId, petId?: string) {
+  const g = game();
+  const def = ITEMS[itemId];
+  if (!def) throw new LocalError(404, 'unknown_item');
+  const u = load().user;
+  if (def.kind === 'cosmetic') {
+    if (!g.inventory[itemId]) throw new LocalError(409, 'not_enough_items');
+    g.theme = itemId;
+    return { theme: itemId };
+  }
+  switch (itemId) {
+    case 'streak_freeze':
+      if (u.streak.freezes >= 3) throw new LocalError(409, 'max_freezes');
+      takeItem(itemId);
+      u.streak = addFreeze(u.streak);
+      return { ok: true };
+    case 'heart_refill':
+      takeItem(itemId);
+      u.hearts = MAX_HEARTS;
+      u.heartsUpdatedAt = now();
+      return { ok: true };
+    case 'xp_boost':
+      takeItem(itemId);
+      g.boostUntil = Math.max(g.boostUntil ?? 0, now()) + XP_BOOST_MS;
+      return { boostUntil: new Date(g.boostUntil).toISOString() };
+    case 'pet_food': {
+      const pet = g.pets.find((p) => p.id === petId);
+      if (!pet) throw new LocalError(404, 'pet_not_found');
+      takeItem(itemId);
+      Object.assign(pet, feedPet(petState(pet), now()));
+      award(0, [{ type: 'pet_fed' }]);
+      return { pet: petView(pet) };
+    }
+    case 'egg_common':
+    case 'egg_rare': {
+      takeItem(itemId);
+      const { pet, duplicate } = addPet(hatch(itemId, lootRng()));
+      g.hatched++;
+      return { pet: petView(pet), duplicate };
+    }
+    default:
+      throw new LocalError(400, 'cannot_use');
+  }
+}
+
+/** Every question answered warms the study egg; when it's ready, it hatches. */
+function warmEgg(answers: number): Hatched | undefined {
+  if (answers <= 0) return;
+  const g = game();
+  g.egg.progress += answers;
+  if (g.egg.progress < g.egg.target) return;
+  const rng = lootRng();
+  const species = hatchRarity(g.egg.rarity, rng);
+  const { duplicate } = addPet(species);
+  g.hatched++;
+  const s = speciesOf(species)!;
+  const next = rollEggRarity(rng);
+  g.egg = { rarity: next, progress: 0, target: EGG_TARGET[next] };
+  return { species, emoji: s.emoji, rarity: s.rarity, duplicate };
+}
+
+const gameRoutes: [string, RegExp, Handler][] = [
+  ['GET', /^\/api\/game\/overview$/, () => {
+    const g = game();
+    const p = equipped();
+    return { quests: publicQuests(), chests: g.chests.length, boostUntil: inventoryView().boostUntil, pet: p ? petView(p) : null, hasPets: g.pets.length > 0, egg: { ...g.egg, emoji: EGG_EMOJI[g.egg.rarity] } };
+  }],
+  ['GET', /^\/api\/game\/inventory$/, () => inventoryView()],
+  ['GET', /^\/api\/game\/quests$/, () => ({ quests: publicQuests() })],
+  ['GET', /^\/api\/game\/pets$/, () => ({ pets: [...game().pets].sort((a, b) => Number(b.equipped) - Number(a.equipped)).map(petView) })],
+  ['POST', /^\/api\/game\/shop\/buy$/, (_m, b) => {
+    const id = String(b.itemId) as ItemId;
+    const def = ITEMS[id];
+    if (!def || def.price === null) throw new LocalError(404, 'not_for_sale');
+    const u = load().user;
+    if (def.kind === 'cosmetic' && game().inventory[id]) throw new LocalError(409, 'already_owned');
+    if (u.coins < def.price) throw new LocalError(402, 'not_enough_coins');
+    u.coins -= def.price;
+    if (def.kind === 'chest') giveChest('common', 'shop');
+    else addItem(id, 1);
+    return { coins: u.coins };
+  }],
+  ['POST', /^\/api\/game\/chests\/([\w-]+)\/open$/, (m) => {
+    const g = game();
+    const chest = g.chests.find((c) => c.id === m[1]);
+    if (!chest) throw new LocalError(404, 'chest_not_found');
+    g.chests = g.chests.filter((c) => c !== chest);
+    const loot = rollChest(chest.kind, lootRng());
+    load().user.coins += loot.coins;
+    for (const i of loot.items) addItem(i.id, i.qty);
+    const r = award(0, [{ type: 'chest_opened' }]);
+    return { kind: chest.kind, loot, badges: r.badges };
+  }],
+  ['POST', /^\/api\/game\/items\/use$/, (_m, b) => useItem(String(b.itemId) as ItemId, b.petId ? String(b.petId) : undefined)],
+  ['POST', /^\/api\/game\/pets\/adopt$/, (_m, b) => {
+    const species = String(b.species) as PetSpeciesId;
+    if (!STARTER_PETS.includes(species)) throw new LocalError(400, 'not_a_starter');
+    if (game().pets.length) throw new LocalError(409, 'already_has_pet');
+    const name = checkPetName(String(b.name ?? ''));
+    const { pet } = addPet(species);
+    pet.name = name;
+    return petView(pet);
+  }],
+  ['PATCH', /^\/api\/game\/pets\/([\w-]+)$/, (m, b) => {
+    const g = game();
+    const pet = g.pets.find((p) => p.id === m[1]);
+    if (!pet) throw new LocalError(404, 'pet_not_found');
+    if (b.name !== undefined) pet.name = checkPetName(String(b.name));
+    if (b.equipped) for (const p of g.pets) p.equipped = p === pet;
+    return petView(pet);
+  }],
+  ['POST', /^\/api\/game\/quests\/([\w-]+)\/claim$/, (m) => {
+    const q = currentQuests().find((x) => x.id === m[1]);
+    const def = questDef(m[1]!);
+    if (!q || !def) throw new LocalError(404, 'quest_not_found');
+    if (q.st.claimed) throw new LocalError(409, 'already_claimed');
+    if (q.st.progress < q.target) throw new LocalError(409, 'not_done');
+    q.st.claimed = true;
+    load().user.coins += def.reward.coins;
+    if (def.reward.chest) giveChest(def.reward.chest, `quest_${def.id}`);
+    return def.reward;
+  }],
+  ['POST', /^\/api\/game\/streak\/repair$/, () => {
+    const PRICE = 150;
+    const u = load().user;
+    if (!canRepair(u.streak, today())) throw new LocalError(409, 'cannot_repair');
+    if (u.coins < PRICE) throw new LocalError(402, 'not_enough_coins');
+    u.streak = repairStreak(u.streak, today());
+    u.coins -= PRICE;
+    award(0, [{ type: 'streak', days: u.streak.days }]);
+    return { days: u.streak.days };
+  }],
+];
 
 /** Same idea as the server's award(): XP, level-up coins, stats and badges in one place. */
 function award(xp: number, events: GameEvent[]): Rewards {
@@ -390,10 +681,25 @@ function award(xp: number, events: GameEvent[]): Rewards {
     for (let level = before + 1; level <= levelFromXp(d.user.xp); level++) {
       const lu = levelUpRewards(level);
       d.user.coins += lu.coins;
-      r.levelUp = { level, coins: lu.coins };
+      if (lu.chest) giveChest(lu.chest, `level_${level}`);
+      r.levelUp = { level, coins: lu.coins, chest: lu.chest };
       all.push({ type: 'level', level });
     }
+    // The pet you take along grows a little with every bit of study.
+    const pet = equipped();
+    if (pet) Object.assign(pet, addPetXp(petState(pet), xp * 0.2));
   }
+  // Quests
+  for (const q of currentQuests()) {
+    const def = questDef(q.id)!;
+    const next = Math.min(q.target, all.reduce((acc, e) => advanceQuest(def.metric, acc, e), q.st.progress));
+    if (q.st.progress < q.target && next >= q.target) r.questsCompleted.push(q.id);
+    q.st.progress = next;
+  }
+  // The study egg
+  const hatched = warmEgg(events.filter((e) => e.type === 'answer').length);
+  if (hatched) r.hatched = hatched;
+  r.egg = { ...game().egg };
   const statsBefore = { ...emptyStats(), ...d.user.stats };
   const statsAfter = all.reduce(applyStats, statsBefore);
   for (const b of newBadges(statsBefore, statsAfter)) {
@@ -543,6 +849,12 @@ function finish(s: StoredSession) {
     { type: 'session_done', perfect: accuracy === 1 && s.state.answered >= 5, answered: s.state.answered },
     ...(st.extended ? [{ type: 'streak' as const, days: st.state.days }] : []),
   ]);
+  // A finished round earns a chest (a better one for a perfect round).
+  if (s.state.answered >= 5) {
+    const kind: ChestKind = accuracy === 1 ? 'rare' : 'common';
+    giveChest(kind, 'round');
+    rewards.chest = kind;
+  }
   const ids = [...new Set(s.state.history.map((h) => h.conceptId))];
   const terms = new Map(deck(s.deckId).concepts.map((c) => [c.id, c.term]));
   return {
@@ -589,7 +901,7 @@ async function answer(sessionId: string, questionId: string, a: Answer) {
 
   const firstTry = !isRetry(s.state, q.conceptId);
   const comboAfter = g.correct ? s.state.combo + 1 : 0;
-  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: 0 });
+  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() });
   const outcome = applyAnswer(s.state, { conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, variantKey: q.variantKey }, xp);
   s.state = { ...s.state, ...outcome.state };
   s.attempts.push({ conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, at: t });
@@ -605,7 +917,7 @@ async function answer(sessionId: string, questionId: string, a: Answer) {
   s.current = null;
   const next = sessionDone(s.state) ? null : serveNext(s);
   const summary = next ? null : finish(s);
-  if (summary) rewards = { ...rewards, badges: [...rewards.badges, ...summary.rewards.badges], levelUp: summary.rewards.levelUp ?? rewards.levelUp };
+  if (summary) rewards = { ...rewards, badges: [...rewards.badges, ...summary.rewards.badges], levelUp: summary.rewards.levelUp ?? rewards.levelUp, chest: summary.rewards.chest, questsCompleted: [...rewards.questsCompleted, ...summary.rewards.questsCompleted] };
   const { gradedBy: _g, ...result } = g;
   return {
     rewards,
@@ -895,15 +1207,16 @@ const routes: [string, RegExp, Handler][] = [
       const players = Math.max(1, Math.min(50, Number(b.players) || 1));
       const r = liveRewards(rank, players, Math.max(0, Math.min(100, Number(b.correct) || 0)));
       u.coins += r.coins;
-      const rewards = award(r.xp, [{ type: 'live_done', rank, players }]);
+      const correct = Math.max(0, Math.min(100, Number(b.correct) || 0));
+      const rewards = award(r.xp, [{ type: 'live_done', rank, players }, ...Array.from({ length: correct }, () => ({ type: 'answer' as const, correct: true, combo: 0 }))]);
       return { rank, xp: r.xp, coins: r.coins, rewards };
     },
   ],
-  ['GET', /^\/api\/game\/overview$/, () => ({ quests: [], chests: 0, boostUntil: null, pet: null, hasPets: true })],
+  ...gameRoutes,
   [
     'GET',
     /^\/api\/game\/badges$/,
-    () => ({ stats: { ...emptyStats(), ...load().user.stats }, badges: BADGES.filter((b) => !b.id.endsWith('_league') && b.id !== 'chest_hunter' && b.id !== 'pet_pal').map((b) => ({ id: b.id, emoji: b.emoji, earnedAt: load().badges[b.id] ? new Date(load().badges[b.id]!).toISOString() : null })) }),
+    () => ({ stats: { ...emptyStats(), ...load().user.stats }, badges: BADGES.filter((b) => !b.id.endsWith('_league')).map((b) => ({ id: b.id, emoji: b.emoji, earnedAt: load().badges[b.id] ? new Date(load().badges[b.id]!).toISOString() : null })) }),
   ],
 ];
 

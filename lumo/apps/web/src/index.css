@@ -176,3 +176,30 @@ html[data-reduce-motion='true'] *::after {
 :root[data-theme='dark'][data-skin='theme_ocean'] { --lumo-brand: #38bdf8; }
 :root[data-theme='dark'][data-skin='theme_forest'] { --lumo-brand: #4ade80; }
 :root[data-theme='dark'][data-skin='theme_galaxy'] { --lumo-brand: #c084fc; }
+
+/* The study egg */
+@keyframes egg-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-9deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  80% { transform: rotate(3deg); }
+}
+.egg-wobble { display: inline-block; animation: egg-wobble 1.4s ease-in-out infinite; transform-origin: 50% 85%; }
+@keyframes egg-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  10%, 50%, 90% { transform: translateX(-6px) rotate(-10deg); }
+  30%, 70% { transform: translateX(6px) rotate(10deg); }
+}
+.egg-shake { display: inline-block; animation: egg-shake 0.5s ease-in-out 3; }
+@keyframes hatch-pop {
+  0% { transform: scale(0.2) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.25) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+.hatch-pop { display: inline-block; animation: hatch-pop 0.7s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes rays { to { transform: rotate(360deg); } }
+.hatch-rays { background: repeating-conic-gradient(from 0deg, rgb(245 165 36 / 0.35) 0deg 12deg, transparent 12deg 30deg); animation: rays 8s linear infinite; border-radius: 9999px; }
+@media (prefers-reduced-motion: reduce) {
+  .egg-wobble, .egg-shake, .hatch-pop, .hatch-rays { animation: none; }
+}

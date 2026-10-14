@@ -1,4 +1,4 @@
-import type { Answer, PublicQuestion } from '@lumo/core';
+import { EGG_EMOJI, type Answer, type PublicQuestion } from '@lumo/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
@@ -11,6 +11,7 @@ import type { AnswerResponse, AnswerResult, PublicSession, SessionSummary } from
 import { play, setSoundEnabled } from '../lib/sound';
 import { useConfetti } from '../lib/confetti';
 import { useRewards, type Rewards } from '../lib/rewards';
+import { EggRing } from '../components/Egg';
 
 type Phase = 'answering' | 'grading' | 'followup' | 'feedback' | 'summary';
 
@@ -37,6 +38,14 @@ export function Quiz() {
   const [comboFlash, setComboFlash] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
   const showRewards = useRewards();
+  const [egg, setEgg] = useState<Rewards['egg'] | null>(null);
+  const takeRewards = useCallback(
+    (r: Rewards | undefined) => {
+      if (r?.egg) setEgg(r.egg);
+      showRewards(r);
+    },
+    [showRewards],
+  );
 
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
 
@@ -75,7 +84,7 @@ export function Quiz() {
         }
         if (data.session.mode === 'exam') {
           // Mock exam: no feedback until the end, like a real test.
-          showRewards((res as AnswerResponse & { rewards?: Rewards }).rewards);
+          takeRewards((res as AnswerResponse & { rewards?: Rewards }).rewards);
           if (res.summary || !res.next) {
             navigate(`/exam/${data.session.id}`, { replace: true });
             return;
@@ -86,7 +95,7 @@ export function Quiz() {
           return;
         }
         setResult(res.result);
-        showRewards((res as AnswerResponse & { rewards?: Rewards }).rewards);
+        takeRewards((res as AnswerResponse & { rewards?: Rewards }).rewards);
         setNext(res.next);
         setSummary(res.summary);
         setData((d) => (d ? { ...d, session: res.session } : d));
@@ -106,7 +115,7 @@ export function Quiz() {
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, followUp, showRewards, navigate],
+    [answer, data, phase, followUp, takeRewards, navigate],
   );
 
   const proceed = () => {
@@ -168,6 +177,11 @@ export function Quiz() {
           </span>
         )}
         {s.mode !== 'exam' && <ComboBadge combo={s.combo} />}
+        {egg && (
+          <Link to="/pets" aria-label={t('egg.progress', { done: egg.progress, total: egg.target })} title={t('egg.progress', { done: egg.progress, total: egg.target })}>
+            <EggRing egg={{ ...egg, emoji: EGG_EMOJI[egg.rarity] }} size={38} />
+          </Link>
+        )}
       </div>
 
       {comboFlash && (

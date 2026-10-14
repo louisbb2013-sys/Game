@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { answerCurrent } from './helpers';
+import { answerCurrent, closeHatch } from './helpers';
 
 // Browser-only build (no server). Run with LOCAL_URL pointing at a page that embeds dist-local/lumo.html.
 test.skip(!process.env.LOCAL_URL, 'needs the browser-only build');
@@ -29,6 +29,7 @@ test('browser-only Lumo: deck, quiz, exam, sandbox, notes, progress kept after r
     await page.getByRole('button', { name: 'Check' }).click();
     const btn = page.getByRole('status').getByRole('button', { name: /Continue|See results/ });
     await expect(btn).toBeVisible();
+    await closeHatch(page);
     if (i === 0) await page.screenshot({ path: 'e2e/screens/local-quiz.png' });
     await btn.click();
   }

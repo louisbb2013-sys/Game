@@ -67,3 +67,13 @@ export async function answerCurrent(page: Page, format: string) {
       throw new Error('unhandled format ' + format);
   }
 }
+
+/** Website: close the "egg hatched" celebration if one popped up. */
+export async function closeHatch(page: Page) {
+  const dialog = page.getByRole('dialog', { name: 'Your egg hatched!' });
+  await page.waitForTimeout(200);
+  if (await dialog.count()) {
+    await dialog.getByRole('button', { name: 'Keep going' }).click({ timeout: 5000 });
+    await expect(dialog).toHaveCount(0);
+  }
+}

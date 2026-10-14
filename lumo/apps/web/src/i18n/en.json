@@ -490,7 +490,9 @@
     "badge": "Badge unlocked!",
     "quest_one": "Quest complete!",
     "quest_other": "{{count}} quests complete!",
-    "questClaim": "Claim your reward on Home."
+    "questClaim": "Claim your reward on Home.",
+    "chest": "You earned a {{chest}}!",
+    "chestOpen": "Tap to open it"
   },
   "chests": {
     "common": "chest",
@@ -611,7 +613,7 @@
     "fullness": "Fullness",
     "perk": "Gives you +{{pct}}% XP",
     "getFood": "Get snacks in the shop",
-    "tip": "Pets get sad if your streak breaks. Study every day to keep them happy!",
+    "tip": "Your pet grows with every question you answer. Study a little every day to watch it level up!",
     "eggs": "Eggs",
     "collection": "Collection ({{n}} of {{total}} species)",
     "equip": "Take along",
@@ -623,7 +625,15 @@
       "crystal_cat": "Crystal Cat",
       "star_jelly": "Star Jelly",
       "bubble_octo": "Bubble Octo",
-      "ember_dragon": "Ember Dragon"
+      "ember_dragon": "Ember Dragon",
+      "puddle_frog": "Puddle Frog",
+      "acorn_squirrel": "Acorn Squirrel",
+      "snow_penguin": "Snow Penguin",
+      "lucky_bunny": "Lucky Bunny",
+      "rock_dino": "Rock Dino",
+      "mystic_unicorn": "Mystic Unicorn",
+      "cosmic_whale": "Cosmic Whale",
+      "aurora_peacock": "Aurora Peacock"
     },
     "rarity": {
       "common": "Common",
@@ -1038,6 +1048,17 @@
       "refused": "Claude couldn't read these photos. Try different ones.",
       "session_expired": "Please sign in to Claude again.",
       "upstream_error": "Something went wrong while reading. Try again."
+    },
+    "topicTitle": "Just type a topic",
+    "topicBody": "No notes? Type what you're studying and your grade — Lumo researches it and makes the quiz.",
+    "topicPlaceholder": "e.g. Récit psychologique, français secondaire 2",
+    "makeFromTopic": "Research and make my quiz",
+    "researching": "Lumo is researching your topic… (about 20–40 seconds)",
+    "topicErrors": {
+      "nothing_found": "Lumo couldn't build a study deck from that. Try naming the subject and your grade.",
+      "unavailable": "Researching a topic needs Claude, which isn't available here.",
+      "not_granted": "Allow Lumo to use Claude to research topics.",
+      "rate_limited": "Too many requests right now. Try again in a minute."
     }
   },
   "together": {
@@ -1078,5 +1099,19 @@
     "onlineNow_other": "Online now ({{count}})",
     "nobodyOnline": "Nobody else has Lumo open right now.",
     "friend": "Friend"
+  },
+  "egg": {
+    "title": "{{rarity}} egg",
+    "left_one": "Answer {{count}} more question to hatch it!",
+    "left_other": "Answer {{count}} more questions to hatch it!",
+    "progress": "Egg: {{done}} of {{total}} questions",
+    "hatching": "Something is hatching…",
+    "hatched": "Your egg hatched!",
+    "newPet": "You got {{name}}!",
+    "newPetBody": "A new friend joins your collection. Take it along to earn bonus XP.",
+    "duplicate": "{{name}} again!",
+    "duplicateBody": "Your {{name}} got stronger and levelled up.",
+    "seePets": "See my pets",
+    "keepGoing": "Keep going"
   }
 }

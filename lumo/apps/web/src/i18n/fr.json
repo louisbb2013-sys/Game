@@ -490,7 +490,9 @@
     "badge": "Badge débloqué !",
     "quest_one": "Quête terminée !",
     "quest_other": "{{count}} quêtes terminées !",
-    "questClaim": "Réclame ta récompense sur l’Accueil."
+    "questClaim": "Réclame ta récompense sur l’Accueil.",
+    "chest": "Tu as gagné un {{chest}} !",
+    "chestOpen": "Touche pour l’ouvrir"
   },
   "chests": {
     "common": "coffre",
@@ -611,7 +613,7 @@
     "fullness": "Satiété",
     "perk": "Te donne +{{pct}} % d’XP",
     "getFood": "Achète des collations à la boutique",
-    "tip": "Les compagnons sont tristes si ta série se brise. Étudie chaque jour pour qu’ils restent heureux !",
+    "tip": "Ton compagnon grandit à chaque question. Étudie un peu chaque jour pour le voir monter de niveau !",
     "eggs": "Œufs",
     "collection": "Collection ({{n}} sur {{total}} espèces)",
     "equip": "Emmener",
@@ -623,7 +625,15 @@
       "crystal_cat": "Chat cristal",
       "star_jelly": "Méduse étoile",
       "bubble_octo": "Poulpe bulle",
-      "ember_dragon": "Dragon braise"
+      "ember_dragon": "Dragon braise",
+      "puddle_frog": "Grenouille flaque",
+      "acorn_squirrel": "Écureuil gland",
+      "snow_penguin": "Manchot des neiges",
+      "lucky_bunny": "Lapin chanceux",
+      "rock_dino": "Dino rocheux",
+      "mystic_unicorn": "Licorne mystique",
+      "cosmic_whale": "Baleine cosmique",
+      "aurora_peacock": "Paon aurore"
     },
     "rarity": {
       "common": "Commun",
@@ -1038,6 +1048,17 @@
       "refused": "Claude n’a pas pu lire ces photos. Essaies-en d’autres.",
       "session_expired": "Reconnecte-toi à Claude.",
       "upstream_error": "Un problème est survenu pendant la lecture. Réessaie."
+    },
+    "topicTitle": "Tape juste un sujet",
+    "topicBody": "Pas de notes ? Écris ce que tu étudies et ton niveau — Lumo fait la recherche et crée le quiz.",
+    "topicPlaceholder": "ex. : Récit psychologique, français secondaire 2",
+    "makeFromTopic": "Chercher et créer mon quiz",
+    "researching": "Lumo fait des recherches sur ton sujet… (20 à 40 secondes)",
+    "topicErrors": {
+      "nothing_found": "Lumo n’a pas pu créer un paquet avec ça. Précise la matière et ton niveau.",
+      "unavailable": "La recherche d’un sujet a besoin de Claude, qui n’est pas disponible ici.",
+      "not_granted": "Autorise Lumo à utiliser Claude pour chercher des sujets.",
+      "rate_limited": "Trop de demandes en ce moment. Réessaie dans une minute."
     }
   },
   "together": {
@@ -1078,5 +1099,19 @@
     "onlineNow_other": "En ligne maintenant ({{count}})",
     "nobodyOnline": "Personne d’autre n’a Lumo ouvert en ce moment.",
     "friend": "Ami"
+  },
+  "egg": {
+    "title": "Œuf {{rarity}}",
+    "left_one": "Réponds à encore {{count}} question pour le faire éclore !",
+    "left_other": "Réponds à encore {{count}} questions pour le faire éclore !",
+    "progress": "Œuf : {{done}} sur {{total}} questions",
+    "hatching": "Quelque chose éclot…",
+    "hatched": "Ton œuf a éclos !",
+    "newPet": "Tu as obtenu {{name}} !",
+    "newPetBody": "Un nouvel ami rejoint ta collection. Emmène-le pour gagner de l’XP bonus.",
+    "duplicate": "Encore {{name}} !",
+    "duplicateBody": "Ton {{name}} est devenu plus fort et a monté de niveau.",
+    "seePets": "Mes compagnons",
+    "keepGoing": "Continuer"
   }
 }

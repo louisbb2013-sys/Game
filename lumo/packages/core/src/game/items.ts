@@ -15,6 +15,14 @@ export const PET_SPECIES = [
   { id: 'star_jelly', emoji: '🪼', rarity: 'epic', color: '#C084FC' },
   { id: 'bubble_octo', emoji: '🐙', rarity: 'epic', color: '#F472B6' },
   { id: 'ember_dragon', emoji: '🐉', rarity: 'legendary', color: '#EF4444' },
+  { id: 'puddle_frog', emoji: '🐸', rarity: 'common', color: '#4ADE80' },
+  { id: 'acorn_squirrel', emoji: '🐿️', rarity: 'common', color: '#B45309' },
+  { id: 'snow_penguin', emoji: '🐧', rarity: 'rare', color: '#60A5FA' },
+  { id: 'lucky_bunny', emoji: '🐰', rarity: 'rare', color: '#F9A8D4' },
+  { id: 'rock_dino', emoji: '🦖', rarity: 'epic', color: '#16A34A' },
+  { id: 'mystic_unicorn', emoji: '🦄', rarity: 'epic', color: '#A78BFA' },
+  { id: 'cosmic_whale', emoji: '🐋', rarity: 'legendary', color: '#3B82F6' },
+  { id: 'aurora_peacock', emoji: '🦚', rarity: 'legendary', color: '#14B8A6' },
 ] as const satisfies readonly { id: string; emoji: string; rarity: Rarity; color: string }[];
 export type PetSpeciesId = (typeof PET_SPECIES)[number]['id'];
 export const STARTER_PETS: PetSpeciesId[] = ['moss_turtle', 'cloud_sheep', 'pixel_owl'];
@@ -69,6 +77,36 @@ export function hatch(egg: 'egg_common' | 'egg_rare', rng: Rng): PetSpeciesId {
   const options = PET_SPECIES.filter((s) => s.rarity === rarity);
   return options[Math.floor(rng() * options.length)]!.id;
 }
+
+// ---------------- the study egg (Gizmo-style: answering questions hatches it) ----------------
+
+/** Questions to answer before an egg of each rarity hatches. */
+export const EGG_TARGET: Record<Rarity, number> = { common: 10, rare: 20, epic: 40, legendary: 60 };
+/** The very first egg hatches quickly, so the reward comes on day one. */
+export const FIRST_EGG_TARGET = 5;
+export const EGG_EMOJI: Record<Rarity, string> = { common: '🥚', rare: '🪺', epic: '🔮', legendary: '🌟' };
+
+/** A new egg's rarity: mostly common, sometimes something special. */
+export function rollEggRarity(rng: Rng): Rarity {
+  return pickWeighted(
+    [
+      { item: 'common' as Rarity, weight: 68 },
+      { item: 'rare' as Rarity, weight: 24 },
+      { item: 'epic' as Rarity, weight: 6 },
+      { item: 'legendary' as Rarity, weight: 2 },
+    ],
+    rng,
+  );
+}
+
+/** Which pet comes out of an egg of this rarity. */
+export function hatchRarity(rarity: Rarity, rng: Rng): PetSpeciesId {
+  const options = PET_SPECIES.filter((s) => s.rarity === rarity);
+  return options[Math.floor(rng() * options.length)]!.id;
+}
+
+/** A duplicate pet isn't wasted: it powers up the one you already have. */
+export const DUPLICATE_PET_XP: Record<Rarity, number> = { common: 40, rare: 80, epic: 160, legendary: 320 };
 
 // ---------------- chests ----------------
 
