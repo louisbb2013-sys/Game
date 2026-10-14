@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  allAnswered, createLive, generateLocal, joinLive, LIVE_MAX_PLAYERS, liveRewards, livePoints, nextLive, openAnswersToJudge, perfectAnswer, publicView,
+  allAnswered, createLive, endLive, generateLocal, joinLive, LIVE_MAX_PLAYERS, liveRewards, livePoints, nextLive, openAnswersToJudge, perfectAnswer, publicView,
   ranking, revealLive, SAMPLE_DECKS, seededRng, setConnected, startLive, submitLive, timeIsUp, type Question,
 } from '../src';
 
@@ -74,6 +74,19 @@ describe('live game engine', () => {
     expect(s.players.find((p) => p.id === 'p1')!.connected).toBe(true);
     s = startLive(s, 'h', T);
     expect(() => joinLive(s, { id: 'new', name: 'N', avatar: '' }, T)).toThrow('started');
+  });
+
+  it('the host can end a long game early, straight to the podium', () => {
+    let s = createLive('ABC123', host, 'Cells', qs, T);
+    s = joinLive(s, { id: 'p1', name: 'Ana', avatar: 'b' }, T);
+    expect(() => endLive(s, 'h')).toThrow('wrong_phase'); // not before it starts
+    s = startLive(s, 'h', T);
+    s = submitLive(s, 'p1', s.questions[0]!.id, perfectAnswer(s.questions[0]!), T + 1000);
+    s = revealLive(s);
+    expect(() => endLive(s, 'p1')).toThrow('not_host');
+    s = endLive(s, 'h');
+    expect(s.phase).toBe('podium');
+    expect(ranking(s)[0]!.id).toBe('p1');
   });
 
   it('points and rewards', () => {

@@ -196,3 +196,36 @@ test('decks made on two devices are both kept', async ({ browser }) => {
   await expect(a.getByText('Cells — the basics')).toBeVisible();
   await expect(a.getByText('The Water Cycle')).toBeVisible();
 });
+
+test('website Live: 100 questions, the host ends early', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  const b = await ctx.newPage();
+  await a.goto(process.env.MULTI_URL!);
+  await a.evaluate(() => localStorage.clear());
+  await open(a, 'u_e');
+  await open(b, 'u_f');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+  await a.getByRole('link', { name: 'Live', exact: true }).click();
+  await a.getByRole('button', { name: '100', exact: true }).click();
+  await a.getByRole('button', { name: /Create game/ }).click();
+  await expect(a.getByTestId('live-code')).toBeVisible();
+  await b.getByRole('link', { name: 'Live', exact: true }).click();
+  await b.getByRole('button', { name: /Cells — the basics/ }).click({ timeout: 15_000 });
+  await expect(a.getByRole('button', { name: 'Start with 2 players' })).toBeVisible({ timeout: 10_000 });
+  await a.getByRole('button', { name: 'Start with 2 players' }).click();
+  await expect(b.getByText('Question 1 of 100')).toBeVisible({ timeout: 15_000 });
+  for (const p of [a, b]) {
+    const section = p.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    await answerCurrent(p, (await section.getAttribute('data-format'))!);
+    await p.getByRole('button', { name: 'Lock in answer' }).click();
+  }
+  await a.getByRole('button', { name: 'End game' }).click({ timeout: 15_000 });
+  await a.getByRole('button', { name: 'Tap to end' }).click();
+  await expect(a.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible();
+  await expect(b.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 15_000 });
+});

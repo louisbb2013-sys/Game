@@ -197,6 +197,13 @@ export function nextLive(s: LiveState, by: string, now: Millis): LiveState {
   return openQuestion(s, s.index + 1, now);
 }
 
+/** The host stops a long game early: straight to the podium with the scores so far. */
+export function endLive(s: LiveState, by: string): LiveState {
+  if (by !== s.hostId) throw new LiveError('not_host');
+  if (s.phase !== 'question' && s.phase !== 'reveal') throw new LiveError('wrong_phase');
+  return { ...s, phase: 'podium', startedAt: null };
+}
+
 export function ranking(s: LiveState): LivePlayer[] {
   return s.players.slice().sort((a, b) => b.score - a.score || a.joinedAt - b.joinedAt);
 }

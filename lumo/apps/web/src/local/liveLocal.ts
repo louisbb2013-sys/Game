@@ -8,6 +8,7 @@ import {
   LIVE_FORMATS,
   LiveError,
   newProgress,
+  endLive,
   nextLive,
   publicView,
   removePlayer,
@@ -180,6 +181,12 @@ class HostGame {
     this.changed();
   }
 
+  end() {
+    if (this.revealing) throw new LiveError('wrong_phase');
+    this.state = endLive(this.state, this.t.me);
+    this.changed();
+  }
+
   private async reveal() {
     if (this.state.phase !== 'question' || this.revealing) return;
     this.revealing = true;
@@ -216,14 +223,20 @@ function makeQuestions(concepts: Concept[], language: Locale, count: number): Qu
   const order = shuffle(concepts, rng);
   const progress = new Map<string, ConceptProgress>();
   const out: Question[] = [];
-  for (let i = 0; out.length < count && i < count * 3; i++) {
+  const seen = new Set<string>();
+  // Long games go round the deck many times: skip exact repeats while fresh questions can still be made.
+  for (let i = 0; out.length < count && i < count * 5; i++) {
     const c = order[i % order.length]!;
     const p = progress.get(c.id) ?? newProgress();
     const choice = chooseFormat(c, concepts, p, rng, { allowed: LIVE_FORMATS });
     if (!choice) continue;
     const q = generateLocal(c, choice.format, choice.bloom, { deck: concepts, language, rng });
     progress.set(c.id, { ...p, recentFormats: [choice.format, ...p.recentFormats].slice(0, 4) });
-    if (q) out.push(q);
+    if (!q) continue;
+    const key = JSON.stringify([q.prompt, (q as { text?: string }).text ?? '', q.conceptId, q.format]);
+    if (seen.has(key) && i < count * 4) continue;
+    seen.add(key);
+    out.push(q);
   }
   return out;
 }
@@ -383,6 +396,7 @@ export function useLocalLiveRoom(code: string) {
       try {
         if (event === 'live:start') host.start();
         else if (event === 'live:next') host.next();
+        else if (event === 'live:end') host.end();
         else if (event === 'live:kick') host.kick(String((body as { playerId?: string }).playerId));
         return { ok: true as const };
       } catch (e) {

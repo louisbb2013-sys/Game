@@ -769,6 +769,8 @@
     "streak": "{{n}} d’affilée",
     "answerWas": "Réponse",
     "leaderboard": "Classement",
+    "endGame": "Terminer",
+    "endSure": "Confirmer",
     "showPodium": "Voir le podium",
     "next": "Question suivante",
     "waitingNext": "En attente de l’hôte…",

@@ -118,3 +118,30 @@ test('live: two players play a full game to the podium', async ({ browser }) => 
   await host.context.close();
   await guest.context.close();
 });
+
+test('live: a 100-question game the host ends early', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const host = await newPlayer(browser, 'eh');
+  const guest = await newPlayer(browser, 'eg');
+  const deckId = (await (await host.page.request.post('/api/decks/sample', { data: { language: 'en' } })).json()).id;
+  await host.page.goto(`/decks/${deckId}`);
+  await host.page.getByRole('link', { name: /Play Live with friends/ }).click();
+  await host.page.getByRole('button', { name: '100', exact: true }).click();
+  await host.page.getByRole('button', { name: /Create game/ }).click();
+  const code = (await host.page.getByTestId('live-code').textContent())!.trim();
+  await guest.page.goto('/live');
+  await guest.page.getByLabel('Game code').fill(code);
+  await guest.page.getByRole('button', { name: 'Join', exact: true }).click();
+  await expect(host.page.getByText(guest.username)).toBeVisible();
+  await host.page.getByRole('button', { name: 'Start with 2 players' }).click();
+  await expect(guest.page.getByText('Question 1 of 100')).toBeVisible();
+  await playQuestion(host.page);
+  await playQuestion(guest.page, true);
+  await host.page.getByRole('button', { name: 'End game' }).click();
+  await host.page.getByRole('button', { name: 'Tap to end' }).click();
+  await expect(host.page.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible();
+  await expect(guest.page.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible();
+  await expect(guest.page.getByRole('status').filter({ hasText: 'XP' })).toBeVisible();
+  await host.context.close();
+  await guest.context.close();
+});

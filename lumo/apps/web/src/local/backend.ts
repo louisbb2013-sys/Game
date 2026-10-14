@@ -893,7 +893,7 @@ const routes: [string, RegExp, Handler][] = [
       u.liveRewarded = [...(u.liveRewarded ?? []), code].slice(-50);
       const rank = Math.max(1, Number(b.rank) || 1);
       const players = Math.max(1, Math.min(50, Number(b.players) || 1));
-      const r = liveRewards(rank, players, Math.max(0, Math.min(50, Number(b.correct) || 0)));
+      const r = liveRewards(rank, players, Math.max(0, Math.min(100, Number(b.correct) || 0)));
       u.coins += r.coins;
       const rewards = award(r.xp, [{ type: 'live_done', rank, players }]);
       return { rank, xp: r.xp, coins: r.coins, rewards };

@@ -21,6 +21,9 @@ import { play, setSoundEnabled } from '../lib/sound';
 const errText = (t: TFunction, code: string) => t(`live.errors.${code}`, { defaultValue: t('signin.errors.network') });
 
 /** Live tab: join with a code, host a game from a deck, and shortcuts to friends and groups. */
+/** How many questions a Live game can have. */
+const LIVE_COUNTS = [5, 10, 20, 50, 100];
+
 export function LiveHome() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -118,8 +121,8 @@ export function LiveHome() {
             </label>
             <fieldset>
               <legend className="mb-1 text-sm font-bold">{t('live.questions')}</legend>
-              <div className="grid grid-cols-3 gap-2">
-                {[5, 10, 15].map((n) => (
+              <div className="grid grid-cols-5 gap-2">
+                {LIVE_COUNTS.map((n) => (
                   <button key={n} type="button" aria-pressed={count === n} onClick={() => setCount(n)} className={`rounded-xl py-2 font-black ring-2 ${count === n ? 'bg-brand/10 ring-brand' : 'ring-line'}`}>
                     {n}
                   </button>
@@ -393,6 +396,7 @@ function RevealView({ s, me, isHost, send }: { s: LivePublic; me: string; isHost
   useEffect(() => play(mine?.correct ? 'correct' : 'wrong'), [mine?.correct, s.index]);
   const ranked = s.players.slice().sort((a, b) => a.rank - b.rank);
   const last = s.index + 1 >= s.total;
+  const [confirmEnd, setConfirmEnd] = useState(false); // ending early takes two taps
 
   return (
     <section className="space-y-4 pb-28">
@@ -412,9 +416,19 @@ function RevealView({ s, me, isHost, send }: { s: LivePublic; me: string; isHost
       <Board players={ranked.slice(0, 5)} me={me} showMoves />
       <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur">
         {isHost ? (
-          <button onClick={() => void send('live:next')} className="w-full rounded-2xl bg-brand py-4 text-lg font-black text-brand-ink">
-            {last ? t('live.showPodium') : t('live.next')}
-          </button>
+          <div className="flex gap-2">
+            {!last && (
+              <button
+                onClick={() => (confirmEnd ? void send('live:end') : setConfirmEnd(true))}
+                className={`shrink-0 rounded-2xl px-4 py-4 font-black ring-2 ${confirmEnd ? 'bg-bad text-white ring-bad' : 'bg-surface ring-line'}`}
+              >
+                {confirmEnd ? t('live.endSure') : t('live.endGame')}
+              </button>
+            )}
+            <button onClick={() => void send('live:next')} className="min-w-0 flex-1 rounded-2xl bg-brand py-4 text-lg font-black text-brand-ink">
+              {last ? t('live.showPodium') : t('live.next')}
+            </button>
+          </div>
         ) : (
           <p className="py-3 text-center font-black text-muted">{t('live.waitingNext')}</p>
         )}

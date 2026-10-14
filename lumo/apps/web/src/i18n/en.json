@@ -769,6 +769,8 @@
     "streak": "{{n}} in a row",
     "answerWas": "Answer",
     "leaderboard": "Leaderboard",
+    "endGame": "End game",
+    "endSure": "Tap to end",
     "showPodium": "Show the podium",
     "next": "Next question",
     "waitingNext": "Waiting for the host…",

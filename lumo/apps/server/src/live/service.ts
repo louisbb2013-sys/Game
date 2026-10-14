@@ -10,6 +10,7 @@ import {
   LiveError,
   liveRewards,
   newProgress,
+  endLive,
   nextLive,
   openPart,
   publicView,
@@ -68,7 +69,9 @@ export interface LivePlayerReward {
 
 type Ack = (r: unknown) => void;
 
-const createBody = z.object({ deckId: z.string().uuid(), count: z.number().int().min(3).max(20).default(10) });
+/** At most this many Live questions are written by the AI per game (long games stay fast and cheap). */
+const AI_LIVE_QUESTIONS = 20;
+const createBody = z.object({ deckId: z.string().uuid(), count: z.number().int().min(3).max(100).default(10) });
 const codeBody = z.object({ code: z.string().trim().min(4).max(8) });
 const answerBody = z.object({ code: z.string().max(8), questionId: z.string().max(60), answer: answerSchema });
 const kickBody = z.object({ code: z.string().max(8), playerId: z.string().uuid() });
@@ -163,6 +166,11 @@ export class LiveService {
       });
     }));
     s.on('live:next', safe((b) => this.withGame(codeBody.parse(b).code, (g) => this.advance(g, me.id))));
+    s.on('live:end', safe((b) => this.withGame(codeBody.parse(b).code, (g) => {
+      if (g.revealing) throw new LiveError('wrong_phase');
+      g.state = endLive(g.state, me.id);
+      void this.finish(g);
+    })));
     s.on('live:kick', safe((b) => {
       const { code, playerId } = kickBody.parse(b);
       return this.withGame(code, (g) => {
@@ -266,8 +274,9 @@ export class LiveService {
       return [{ c, ...choice, seed: Math.floor(rng() * 2 ** 31) }];
     });
     const qs = await Promise.all(
-      plans.map(async (x) => {
+      plans.map(async (x, i) => {
         const local = () => generateLocal(x.c, x.format, x.bloom, { deck: concepts, language, rng: seededRng(x.seed) });
+        if (i >= AI_LIVE_QUESTIONS) return local(); // long games: the rest come from the local generator
         try {
           return (await this.ai.generateQuestion({ concept: x.c, format: x.format, bloom: x.bloom, deck: concepts, language, avoidPrompts: [], seed: x.seed })) ?? local();
         } catch (err) {
