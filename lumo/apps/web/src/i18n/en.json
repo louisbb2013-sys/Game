@@ -1062,6 +1062,17 @@
     "peopleHere": "People on this Lumo",
     "searchName": "Search by name",
     "nobodyElse": "Nobody else yet. Share this page with friends (Share menu, Contributor access).",
-    "howToInvite": "To invite someone new: open the page's Share menu and add them with Contributor access. They appear here after they open Lumo once."
+    "howToInvite": "To invite someone new: open the page's Share menu and add them with Contributor access. They appear here after they open Lumo once.",
+    "yourUsername": "Your username (friends type this to add you)",
+    "typeUsername": "Type a friend's username, press Enter",
+    "added": "{{name}} is now your friend!",
+    "cantAdd": "Couldn't add this friend. You need Contributor access to this page.",
+    "notFound": "Nobody is called “{{name}}” here yet. Check the spelling, or ask them to open Lumo once.",
+    "alreadyFriends": "{{name}} is already your friend.",
+    "online": "Online",
+    "onlineNow_one": "Online now ({{count}})",
+    "onlineNow_other": "Online now ({{count}})",
+    "nobodyOnline": "Nobody else has Lumo open right now.",
+    "friend": "Friend"
   }
 }

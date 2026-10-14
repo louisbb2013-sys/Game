@@ -29,10 +29,16 @@ test('friends, a shared deck and a two-player Live game on the website', async (
   // Bruno sees Alice on the Friends page, adds her, and copies the shared deck.
   await b.getByRole('link', { name: 'Me', exact: true }).click();
   await b.getByRole('link', { name: /Friends/ }).click();
-  await expect(b.getByText('Alice')).toBeVisible({ timeout: 10_000 });
-  await b.getByRole('button', { name: 'Add' }).first().click();
-  await expect(b.getByRole('heading', { name: /This week/ })).toBeVisible();
-  await expect(b.locator('li', { hasText: 'Alice' })).toBeVisible();
+  // Alice is online right now; Bruno adds her by typing her username and pressing Enter.
+  await expect(b.getByTestId('my-username')).toHaveText('Bruno');
+  await expect(b.getByRole('heading', { name: /Online now \(1\)/ })).toBeVisible({ timeout: 10_000 });
+  await b.getByLabel("Type a friend's username, press Enter").fill('alice');
+  await b.getByLabel("Type a friend's username, press Enter").press('Enter');
+  await expect(b.getByRole('status')).toHaveText('Alice is now your friend!');
+  await expect(b.locator('ol li', { hasText: 'Alice' })).toBeVisible();
+  await b.getByLabel("Type a friend's username, press Enter").fill('nobody');
+  await b.getByLabel("Type a friend's username, press Enter").press('Enter');
+  await expect(b.getByRole('status')).toContainText('Nobody is called');
   await b.screenshot({ path: 'e2e/screens/web-friends.png', fullPage: true });
   await b.getByRole('link', { name: 'Learn', exact: true }).click();
   await expect(b.getByText('Cells — the basics').first()).toBeVisible();
@@ -69,4 +75,29 @@ test('friends, a shared deck and a two-player Live game on the website', async (
   await expect(b.getByRole('status').filter({ hasText: 'XP' })).toBeVisible({ timeout: 10_000 });
   await b.screenshot({ path: 'e2e/screens/web-podium.png', fullPage: true });
   expect(code).toMatch(/^[A-Z0-9]{6}$/);
+});
+
+test('progress and username come back after the browser forgets everything', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(process.env.MULTI_URL!);
+  await a.evaluate(() => localStorage.clear());
+  await open(a, 'u_c');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+  await a.getByRole('link', { name: 'Me', exact: true }).click();
+  const name = (await a.locator('main p.text-xl').first().textContent())!.trim();
+  await a.waitForTimeout(2500); // the account copy is written a moment after a change
+
+  // Wipe this learner's browser storage (keep the stand-in's shared store), then reopen.
+  await a.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('u_c:')) localStorage.removeItem(k);
+  });
+  await open(a, 'u_c');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await expect(a.getByText('Cells — the basics')).toBeVisible();
+  await a.getByRole('link', { name: 'Me', exact: true }).click();
+  await expect(a.locator('main p.text-xl').first()).toHaveText(name);
 });

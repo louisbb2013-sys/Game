@@ -79,6 +79,8 @@ export function useNames(ids: string[]) {
 
 export interface PublicProfile {
   id: string;
+  /** The Lumo username friends type to add each other. */
+  username: string;
   level: number;
   xp: number;
   weekId: string;
@@ -131,6 +133,40 @@ export function useProfiles() {
   }, []);
   return list;
 }
+
+// ------------------------------------------------------------------ who's online
+
+let onlineSet = false;
+/** Show up as online to everyone with this Lumo open (presence in the page's lobby room). */
+export async function goOnline(username: string) {
+  const t = await together();
+  if (!t?.room) return;
+  onlineSet = true;
+  await t.room.presence({ online: true, username: username.slice(0, 40) }).catch(() => {});
+}
+
+/** Ids of people who have this Lumo open right now (not me). */
+export function useOnlineNow() {
+  const [ids, setIds] = useState<string[]>([]);
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    let alive = true;
+    void together().then((t) => {
+      if (!t?.room || !alive) return;
+      unsub = t.room.onPeers((c: Any) => {
+        const set = new Set<string>();
+        for (const p of c.peers) if (p.by && p.by !== t.me && p.kind === 'viewer') set.add(p.by);
+        setIds([...set]);
+      });
+    });
+    return () => {
+      alive = false;
+      unsub?.();
+    };
+  }, []);
+  return ids;
+}
+export const isOnlineSet = () => onlineSet;
 
 // ------------------------------------------------------------------ friends (private)
 

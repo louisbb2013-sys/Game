@@ -68,7 +68,7 @@ import {
   type StreakState,
 } from '@lumo/core';
 import { judgeShort } from './reader';
-import { publishProfile } from './together';
+import { goOnline, publishProfile, together } from './together';
 
 /**
  * Browser-only Lumo: the same rules as the server, run in the page and saved in this browser.
@@ -112,6 +112,8 @@ interface Activity {
 }
 interface DB {
   v: 1;
+  /** When the content last changed (to pick the newer copy between this device and the account). */
+  savedAt?: number;
   user: {
     id: string;
     username: string;
@@ -186,16 +188,134 @@ function load(): DB {
   db ??= freshDb();
   return db;
 }
+let lastSaved = '';
 function save() {
+  const d = load();
+  // Keep finished sessions small: only the last 30.
+  const done = Object.values(d.sessions).filter((s) => s.status === 'done');
+  for (const s of done.slice(0, Math.max(0, done.length - 30))) delete d.sessions[s.id];
+  const { savedAt: _s, ...content } = d;
+  const str = JSON.stringify(content);
+  if (str === lastSaved) return; // nothing changed (a read)
+  lastSaved = str;
+  d.savedAt = now();
   try {
-    // Keep finished sessions small: only the last 30.
-    const d = load();
-    const done = Object.values(d.sessions).filter((s) => s.status === 'done');
-    for (const s of done.slice(0, Math.max(0, done.length - 30))) delete d.sessions[s.id];
     localStorage.setItem(KEY, JSON.stringify(d));
   } catch {
-    /* storage full or blocked: progress stays for this visit */
+    /* storage full or blocked: the account copy below still keeps it */
   }
+  scheduleCloud();
+}
+
+// ------------------------------------------------------------------ account copy
+
+/*
+ * Browser storage inside the Claude viewer can be wiped between visits, so progress is also kept in
+ * the viewer's own private space of the page's shared store (data/users/<id>/…), tied to their
+ * Claude account: "main" holds progress, and each deck is its own document (size limit per document).
+ */
+let cloud: { db: any; me: string } | null = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+let booting: Promise<void> | null = null;
+const MAIN_LIMIT = 230_000;
+
+function boot(): Promise<void> {
+  booting ??= (async () => {
+    const t = await Promise.race([together(), new Promise<null>((r) => setTimeout(() => r(null), 6000))]);
+    if (!t) return; // no account here: this device only
+    const base = `data/users/${t.me}`;
+    let main: (Partial<DB> & { deckIds?: string[] }) | null = null;
+    try {
+      const snap = await t.db.doc(`${base}/main`).get();
+      main = snap.exists ? (snap.data() as Partial<DB> & { deckIds?: string[] }) : null;
+    } catch {
+      return; // can't read the account copy: never risk overwriting it
+    }
+    const local = load();
+    const localIsNew = !local.savedAt || (local.decks.length === 0 && local.user.xp === 0);
+    if (main?.user && (localIsNew || (main.savedAt ?? 0) >= (local.savedAt ?? 0))) {
+      // The account has the newer progress: bring it to this device.
+      const docs = await t.db.collection(base).limit(300).get().catch(() => null);
+      const decks: Deck[] = [];
+      for (const id of main.deckIds ?? []) {
+        const d = docs?.docs.find((x: { id: string }) => x.id === `deck-${id}`);
+        if (d?.exists) {
+          const dk = d.data() as Deck;
+          decks.push(dk);
+          written.set(dk.id, deckSig(dk));
+        }
+      }
+      db = { ...freshDb(), ...main, decks } as DB;
+      delete (db as Partial<DB> & { deckIds?: string[] }).deckIds;
+      lastSaved = '';
+    } else if (localIsNew) {
+      // First visit with this account: use their first name as the username when it fits.
+      const full = typeof t.user.name === 'function' ? await t.user.name().catch(() => '') : '';
+      const name = String(full || '').split(/\s+/)[0]!.replace(/[^A-Za-z0-9_]/g, '');
+      if (name.length >= 3 && name.length <= 20) local.user.username = name;
+    }
+    cloud = { db: t.db, me: t.me };
+    save();
+    scheduleCloud(true);
+    shareStats(); // friends can find me by username right away
+    void goOnline(load().user.username);
+  })().catch(() => {});
+  return booting;
+}
+
+let cloudTimer: ReturnType<typeof setTimeout> | null = null;
+let cloudBusy = false;
+let cloudAgain = false;
+const written = new Map<string, string>(); // deck id -> content signature last written
+const deckSig = (dk: Deck) => `${dk.title}|${dk.concepts.length}|${JSON.stringify(dk.concepts).length}`;
+
+function scheduleCloud(now = false) {
+  if (!cloud) return;
+  if (cloudTimer) clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(() => void pushCloud(), now ? 0 : 1500);
+}
+
+async function pushCloud() {
+  if (!cloud) return;
+  if (cloudBusy) {
+    cloudAgain = true;
+    return;
+  }
+  cloudBusy = true;
+  const base = `data/users/${cloud.me}`;
+  try {
+    const d = load();
+    for (const dk of d.decks) {
+      const sig = deckSig(dk);
+      if (written.get(dk.id) === sig) continue;
+      await cloud.db.doc(`${base}/deck-${dk.id}`).set(dk as never);
+      written.set(dk.id, sig);
+    }
+    for (const id of [...written.keys()]) {
+      if (d.decks.some((x) => x.id === id)) continue;
+      await cloud.db.doc(`${base}/deck-${id}`).delete().catch(() => {});
+      written.delete(id);
+    }
+    await cloud.db.doc(`${base}/main`).set(mainDoc(d) as never);
+  } catch {
+    /* read-only viewer or a hiccup: the next change tries again */
+  } finally {
+    cloudBusy = false;
+    if (cloudAgain) {
+      cloudAgain = false;
+      scheduleCloud();
+    }
+  }
+}
+
+/** Progress without the decks, trimmed to fit one document. */
+function mainDoc(d: DB) {
+  const { decks, ...rest } = d;
+  const sessions = Object.values(d.sessions).sort((a, b) => (b.attempts.at(-1)?.at ?? 0) - (a.attempts.at(-1)?.at ?? 0));
+  const keep = (n: number) => Object.fromEntries(sessions.filter((s, i) => s.status === 'active' || i < n).map((s) => [s.id, s]));
+  let doc = { ...rest, deckIds: decks.map((x) => x.id), sessions: keep(12), sandbox: d.sandbox.slice(0, 10) };
+  if (JSON.stringify(doc).length > MAIN_LIMIT) doc = { ...doc, sandbox: [], sessions: keep(3) };
+  if (JSON.stringify(doc).length > MAIN_LIMIT) doc = { ...doc, sessions: keep(0) };
+  return doc;
 }
 
 // ------------------------------------------------------------------ helpers
@@ -551,7 +671,7 @@ function shareStats() {
   shareTimer = setTimeout(() => {
     const u = load().user;
     const wk = weekId(now());
-    void publishProfile({ level: levelFromXp(u.xp), xp: u.xp, weekId: wk, weeklyXp: u.week?.id === wk ? u.week.xp : 0, streak: u.streak.days, lastDay: u.streak.lastDay, decks: load().decks.length });
+    void publishProfile({ username: u.username, level: levelFromXp(u.xp), xp: u.xp, weekId: wk, weeklyXp: u.week?.id === wk ? u.week.xp : 0, streak: u.streak.days, lastDay: u.streak.lastDay, decks: load().decks.length });
   }, 1500);
 }
 
@@ -564,12 +684,20 @@ const routes: [string, RegExp, Handler][] = [
   [
     'PATCH',
     /^\/api\/me$/,
-    (_m, b) => {
+    async (_m, b) => {
       const u = load().user;
       if (typeof b.username === 'string') {
         const n = b.username.trim();
         if (n.length < 3 || n.length > 20 || !/^[A-Za-z0-9_]+$/.test(n)) throw new LocalError(400, 'username_characters');
+        // Friends add each other by username, so it must be unique among people on this Lumo.
+        const t = await together();
+        if (t && n.toLowerCase() !== u.username.toLowerCase()) {
+          const snap = await t.db.collection('profiles').limit(1000).get().catch(() => null);
+          const taken = snap?.docs.some((d: { id: string; data: () => { username?: string } }) => d.id !== t.me && d.data()?.username?.toLowerCase() === n.toLowerCase());
+          if (taken) throw new LocalError(409, 'username_taken');
+        }
         u.username = n;
+        void goOnline(n);
       }
       if (b.locale === 'en' || b.locale === 'fr') u.locale = b.locale;
       if (typeof b.timezone === 'string') u.timezone = b.timezone;
@@ -755,6 +883,7 @@ const routes: [string, RegExp, Handler][] = [
 
 /** Handles an API call in the page, as if a server had answered. */
 export async function localApi<T>(method: string, path: string, body: unknown): Promise<T> {
+  await boot();
   const p = path.split('?')[0]!;
   for (const [m, re, fn] of routes) {
     if (m !== method) continue;

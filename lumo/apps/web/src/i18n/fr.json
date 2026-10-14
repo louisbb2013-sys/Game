@@ -1062,6 +1062,17 @@
     "peopleHere": "Personnes sur ce Lumo",
     "searchName": "Chercher un nom",
     "nobodyElse": "Personne d’autre pour l’instant. Partage cette page avec tes amis (menu Partager, accès Contributeur).",
-    "howToInvite": "Pour inviter quelqu’un : ouvre le menu Partager de la page et ajoute-le avec l’accès Contributeur. Il apparaît ici après avoir ouvert Lumo une fois."
+    "howToInvite": "Pour inviter quelqu’un : ouvre le menu Partager de la page et ajoute-le avec l’accès Contributeur. Il apparaît ici après avoir ouvert Lumo une fois.",
+    "yourUsername": "Ton pseudo (tes amis le tapent pour t’ajouter)",
+    "typeUsername": "Tape le pseudo d’un ami, puis Entrée",
+    "added": "{{name}} est maintenant ton ami !",
+    "cantAdd": "Impossible d’ajouter cet ami. Il te faut l’accès Contributeur à cette page.",
+    "notFound": "Personne ne s’appelle « {{name}} » ici. Vérifie l’orthographe, ou demande-lui d’ouvrir Lumo une fois.",
+    "alreadyFriends": "{{name}} est déjà ton ami.",
+    "online": "En ligne",
+    "onlineNow_one": "En ligne maintenant ({{count}})",
+    "onlineNow_other": "En ligne maintenant ({{count}})",
+    "nobodyOnline": "Personne d’autre n’a Lumo ouvert en ce moment.",
+    "friend": "Ami"
   }
 }
