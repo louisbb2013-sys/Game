@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
 import { answerCurrent } from './helpers';
 
 // Browser-only build + a stand-in for the Claude viewer (shared data and rooms between tabs).
@@ -93,11 +93,93 @@ test('progress and username come back after the browser forgets everything', asy
 
   // Wipe this learner's browser storage (keep the stand-in's shared store), then reopen.
   await a.evaluate(() => {
-    for (const k of Object.keys(localStorage)) if (k.startsWith('u_c:')) localStorage.removeItem(k);
+    for (const k of Object.keys(localStorage)) if (k.startsWith('u_c:')) delete localStorage[k]; // the raw key, past the stand-in's prefixing
   });
   await open(a, 'u_c');
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await expect(a.getByText('Cells — the basics')).toBeVisible();
   await a.getByRole('link', { name: 'Me', exact: true }).click();
   await expect(a.locator('main p.text-xl').first()).toHaveText(name);
+});
+
+test('on a phone every study button answers a tap, and a slow Claude never blocks Check', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const { defaultBrowserType: _d, ...phone } = devices['iPhone 13'];
+  const ctx = await browser.newContext(phone);
+  const p = await ctx.newPage();
+  const errors: string[] = [];
+  p.on('pageerror', (e) => errors.push(e.message));
+  // sample=hang: Claude's answer check never replies (like an unanswered permission sheet).
+  const url = `${process.env.MULTI_URL}?uid=u_m&sample=hang`;
+  await p.goto(url);
+  await p.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('u_m:')) delete localStorage[k];
+  });
+  await p.goto(url);
+  await p.getByRole('link', { name: 'Learn', exact: true }).tap();
+  await p.getByRole('button', { name: 'Try a sample deck' }).tap();
+  await expect(p.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+
+  // Locked modes explain themselves instead of doing nothing.
+  await p.getByRole('button', { name: /Review/ }).first().tap();
+  await expect(p.getByRole('alert')).toContainText('first round');
+
+  // A full practice round, all by tapping.
+  await p.getByRole('button', { name: /Practice/ }).tap();
+  for (let i = 0; i < 30; i++) {
+    const section = p.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    await answerCurrent(p, (await section.getAttribute('data-format'))!);
+    await p.getByRole('button', { name: 'Check' }).tap();
+    const btn = p.getByRole('status').getByRole('button', { name: /Continue|See results/ });
+    await expect(btn).toBeVisible({ timeout: 15_000 });
+    const last = /See results/.test((await btn.textContent()) ?? '');
+    await btn.tap();
+    if (last) break;
+  }
+  await expect(p.getByRole('heading', { name: 'Session complete!' })).toBeVisible();
+  await p.getByRole('link', { name: 'Back to deck' }).tap();
+  await expect(p.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+
+  // Every mode starts.
+  for (const mode of [/Review/, /Fix mistakes/, /Challenge/, /Mock exam/]) {
+    await p.getByRole('button', { name: mode }).first().tap();
+    await expect(p.locator('section[data-format]')).toBeVisible();
+    await p.getByRole('button', { name: 'Leave quiz' }).tap();
+    await expect(p.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});
+
+test('decks made on two devices are both kept', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(process.env.MULTI_URL!);
+  await a.evaluate(() => localStorage.clear());
+  // Device 1: makes the sample deck, which goes to the account.
+  await open(a, 'u_d');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+  await a.waitForTimeout(2500);
+  const account = await a.evaluate(() => localStorage.getItem('fake:db'));
+
+  // Device 2 (fresh browser, account not reachable yet): makes its own deck from notes.
+  await a.evaluate(() => {
+    for (const k of Object.keys(localStorage)) delete localStorage[k];
+  });
+  await open(a, 'u_d');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('button', { name: 'Use an example' }).click();
+  await a.getByRole('button', { name: /Make my deck/ }).click();
+  await expect(a.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();
+
+  // Now the account (with device 1's deck) shows up: both decks stay.
+  await a.evaluate((acc) => localStorage.setItem('fake:db', acc!), account);
+  await open(a, 'u_d');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await expect(a.getByText('Cells — the basics')).toBeVisible();
+  await expect(a.getByText('The Water Cycle')).toBeVisible();
 });

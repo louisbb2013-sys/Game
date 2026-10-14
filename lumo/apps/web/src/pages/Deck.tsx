@@ -30,6 +30,7 @@ export function Deck() {
   const [data, setData] = useState<DeckData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<Mode | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -37,8 +38,10 @@ export function Deck() {
   }, [id]);
 
   const start = async (mode: Mode) => {
+    if (starting) return;
     setStarting(mode);
     setError(null);
+    setHint(null);
     try {
       const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode, length: mode === 'review' ? 8 : mode === 'exam' ? Math.min(20, Math.max(8, data?.concepts.length ?? 10)) : 10 } });
       navigate(`/quiz/${res.session.id}`, { state: res });
@@ -102,9 +105,14 @@ export function Deck() {
 
       <section className="grid gap-3">
         <ModeButton primary onClick={() => void start('practice')} busy={starting === 'practice'} title={t('deck.practice')} body={t('deck.practiceBody')} icon="✨" />
+        {(error || hint) && error !== 'deck_not_found' && (
+          <p role="alert" className={`rounded-xl px-3 py-2 text-sm font-bold ${error ? 'bg-bad/10 text-bad' : 'bg-brand/10'}`}>
+            {error ? t(`quiz.errors.${error}`, { defaultValue: t('signin.errors.network') }) : hint}
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
-          <ModeButton onClick={() => void start('review')} busy={starting === 'review'} title={t('deck.review')} body={due ? t('deck.reviewDue', { count: due }) : t('deck.reviewBody')} icon="🔁" disabled={!studied} />
-          <ModeButton onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} icon="🎯" disabled={!studied} />
+          <ModeButton onClick={() => void start('review')} busy={starting === 'review'} title={t('deck.review')} body={due ? t('deck.reviewDue', { count: due }) : t('deck.reviewBody')} icon="🔁" note={!studied ? t('deck.needPractice') : undefined} locked={!studied} onLocked={() => setHint(t('deck.needPractice'))} />
+          <ModeButton onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} icon="🎯" note={!studied ? t('deck.needPractice') : undefined} locked={!studied} onLocked={() => setHint(t('deck.needPractice'))} />
         </div>
         <ModeButton
           onClick={() => void start('challenge')}
@@ -112,7 +120,8 @@ export function Deck() {
           title={t('deck.challenge')}
           body={t('deck.challengeBody')}
           icon={<HeartIcon size={22} className="text-heart" />}
-          disabled={(user?.hearts.current ?? 0) === 0}
+          locked={(user?.hearts.current ?? 0) === 0}
+          onLocked={() => setHint(t('deck.noHearts'))}
           note={(user?.hearts.current ?? 0) === 0 ? t('deck.noHearts') : undefined}
         />
         <ModeButton onClick={() => void start('exam')} busy={starting === 'exam'} title={t('deck.exam')} body={t('deck.examBody', { count: examLength })} icon="📝" />
@@ -137,11 +146,6 @@ export function Deck() {
           </span>
           <span className="text-2xl">›</span>
         </Link>
-        )}
-        {error && error !== 'deck_not_found' && (
-          <p role="alert" className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">
-            {t(`quiz.errors.${error}`, { defaultValue: t('signin.errors.network') })}
-          </p>
         )}
       </section>
 
@@ -209,17 +213,19 @@ export function Deck() {
   );
 }
 
-function ModeButton({ title, body, icon, onClick, busy, primary, disabled, note }: { title: string; body: string; icon: React.ReactNode; onClick: () => void; busy?: boolean; primary?: boolean; disabled?: boolean; note?: string }) {
+function ModeButton({ title, body, icon, onClick, busy, primary, locked, onLocked, note }: { title: string; body: string; icon: React.ReactNode; onClick: () => void; busy?: boolean; primary?: boolean; locked?: boolean; onLocked?: () => void; note?: string }) {
+  // A locked mode still answers a tap (with why), so nothing ever looks broken.
   return (
     <button
-      onClick={onClick}
-      disabled={busy || disabled}
-      className={`flex items-center gap-3 rounded-3xl p-4 text-left transition active:scale-[0.99] disabled:opacity-50 ${
+      type="button"
+      onClick={locked ? onLocked : onClick}
+      disabled={busy}
+      className={`flex items-center gap-3 rounded-3xl p-4 text-left transition touch-manipulation active:scale-[0.99] disabled:opacity-50 ${
         primary ? 'bg-brand text-brand-ink shadow-[0_4px_0_0_rgb(0_0_0/0.18)]' : 'bg-surface ring-1 ring-line hover:ring-brand'
       }`}
     >
       <span className="text-2xl" aria-hidden>
-        {busy ? '⏳' : icon}
+        {busy ? '⏳' : locked ? '🔒' : icon}
       </span>
       <span className="min-w-0">
         <span className="block font-black">{title}</span>

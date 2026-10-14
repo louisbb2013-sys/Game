@@ -67,7 +67,7 @@ import {
   type Stats,
   type StreakState,
 } from '@lumo/core';
-import { judgeShort } from './reader';
+import { judgeShort, withTimeout } from './reader';
 import { goOnline, publishProfile, together } from './together';
 
 /**
@@ -137,6 +137,8 @@ interface DB {
   sandbox: Activity[];
   badges: Record<string, number>;
   plans: Record<string, { examDay: string; minutesPerDay: number }>;
+  /** Decks deleted on purpose, so another device's copy doesn't bring them back. */
+  deletedDecks?: string[];
 }
 
 const KEY = 'lumo_local_v1';
@@ -224,32 +226,55 @@ function boot(): Promise<void> {
     if (!t) return; // no account here: this device only
     const base = `data/users/${t.me}`;
     let main: (Partial<DB> & { deckIds?: string[] }) | null = null;
+    let docs: { id: string; exists: boolean; data: () => unknown }[] = [];
     try {
-      const snap = await t.db.doc(`${base}/main`).get();
+      const snap = await withTimeout<any>(t.db.doc(`${base}/main`).get(), 8000); // eslint-disable-line @typescript-eslint/no-explicit-any
       main = snap.exists ? (snap.data() as Partial<DB> & { deckIds?: string[] }) : null;
+      if (main) docs = (await withTimeout<{ docs: typeof docs }>(t.db.collection(base).limit(300).get(), 10_000)).docs;
     } catch {
       return; // can't read the account copy: never risk overwriting it
     }
     const local = load();
     const localIsNew = !local.savedAt || (local.decks.length === 0 && local.user.xp === 0);
-    if (main?.user && (localIsNew || (main.savedAt ?? 0) >= (local.savedAt ?? 0))) {
-      // The account has the newer progress: bring it to this device.
-      const docs = await t.db.collection(base).limit(300).get().catch(() => null);
-      const decks: Deck[] = [];
-      for (const id of main.deckIds ?? []) {
-        const d = docs?.docs.find((x: { id: string }) => x.id === `deck-${id}`);
-        if (d?.exists) {
-          const dk = d.data() as Deck;
-          decks.push(dk);
-          written.set(dk.id, deckSig(dk));
-        }
+    const cloudDecks = new Map<string, Deck>();
+    for (const d of docs) {
+      if (!d.exists || !d.id.startsWith('deck-')) continue;
+      const dk = d.data() as Deck;
+      if (dk?.id && Array.isArray(dk.concepts)) cloudDecks.set(dk.id, dk);
+    }
+    if (main?.user) {
+      const accountWins = localIsNew || (main.savedAt ?? 0) >= (local.savedAt ?? 0);
+      const deleted = new Set([...(main.deletedDecks ?? []), ...(local.deletedDecks ?? [])]);
+      // Every deck made on any device is kept (newest copy of each), unless it was deleted.
+      const byId = new Map<string, Deck>();
+      for (const dk of [...cloudDecks.values(), ...local.decks]) {
+        if (deleted.has(dk.id)) continue;
+        const had = byId.get(dk.id);
+        if (!had || (dk.updatedAt ?? 0) > (had.updatedAt ?? 0)) byId.set(dk.id, dk);
       }
-      db = { ...freshDb(), ...main, decks } as DB;
-      delete (db as Partial<DB> & { deckIds?: string[] }).deckIds;
+      for (const dk of cloudDecks.values()) if (byId.get(dk.id) === dk) written.set(dk.id, deckSig(dk));
+      const order = [...(accountWins ? (main.deckIds ?? []) : local.decks.map((x) => x.id))];
+      const decks = [...byId.values()].sort((a, b) => {
+        const ia = order.indexOf(a.id);
+        const ib = order.indexOf(b.id);
+        return ia === -1 && ib === -1 ? b.updatedAt - a.updatedAt : ia === -1 ? -1 : ib === -1 ? 1 : ia - ib;
+      });
+      const winner = (accountWins ? { ...freshDb(), ...main } : local) as DB & { deckIds?: string[] };
+      const loser = (accountWins ? local : { ...freshDb(), ...main }) as DB;
+      db = {
+        ...winner,
+        decks,
+        deletedDecks: [...deleted].slice(-200),
+        states: { ...loser.states, ...winner.states },
+        sessions: { ...loser.sessions, ...winner.sessions },
+        badges: { ...loser.badges, ...winner.badges },
+        plans: { ...loser.plans, ...winner.plans },
+      } as DB;
+      delete (db as DB & { deckIds?: string[] }).deckIds;
       lastSaved = '';
     } else if (localIsNew) {
       // First visit with this account: use their first name as the username when it fits.
-      const full = typeof t.user.name === 'function' ? await t.user.name().catch(() => '') : '';
+      const full = typeof t.user.name === 'function' ? await withTimeout(t.user.name(), 3000).catch(() => '') : '';
       const name = String(full || '').split(/\s+/)[0]!.replace(/[^A-Za-z0-9_]/g, '');
       if (name.length >= 3 && name.length <= 20) local.user.username = name;
     }
@@ -311,7 +336,7 @@ async function pushCloud() {
 function mainDoc(d: DB) {
   const { decks, ...rest } = d;
   const sessions = Object.values(d.sessions).sort((a, b) => (b.attempts.at(-1)?.at ?? 0) - (a.attempts.at(-1)?.at ?? 0));
-  const keep = (n: number) => Object.fromEntries(sessions.filter((s, i) => s.status === 'active' || i < n).map((s) => [s.id, s]));
+  const keep = (n: number) => Object.fromEntries(sessions.filter((s, i) => (s.status === 'active' && i < 20) || i < n).map((s) => [s.id, s]));
   let doc = { ...rest, deckIds: decks.map((x) => x.id), sessions: keep(12), sandbox: d.sandbox.slice(0, 10) };
   if (JSON.stringify(doc).length > MAIN_LIMIT) doc = { ...doc, sandbox: [], sessions: keep(3) };
   if (JSON.stringify(doc).length > MAIN_LIMIT) doc = { ...doc, sessions: keep(0) };
@@ -765,6 +790,7 @@ const routes: [string, RegExp, Handler][] = [
       const d = load();
       deck(m[1]!);
       d.decks = d.decks.filter((x) => x.id !== m[1]);
+      d.deletedDecks = [...(d.deletedDecks ?? []), m[1]!].slice(-200);
       delete d.plans[m[1]!];
       return { ok: true };
     },
@@ -883,7 +909,8 @@ const routes: [string, RegExp, Handler][] = [
 
 /** Handles an API call in the page, as if a server had answered. */
 export async function localApi<T>(method: string, path: string, body: unknown): Promise<T> {
-  await boot();
+  // The account copy loads in the background; never keep a tap waiting on it for long.
+  await withTimeout(boot(), 12_000).catch(() => {});
   const p = path.split('?')[0]!;
   for (const [m, re, fn] of routes) {
     if (m !== method) continue;

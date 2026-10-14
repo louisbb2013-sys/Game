@@ -21,6 +21,14 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = '
 }
 
 export function play(kind: 'correct' | 'wrong' | 'combo' | 'finish' | 'tap') {
+  try {
+    playUnsafe(kind);
+  } catch {
+    /* sound is a bonus: never break a tap */
+  }
+}
+
+function playUnsafe(kind: 'correct' | 'wrong' | 'combo' | 'finish' | 'tap') {
   if (!enabled) return;
   try {
     ctx ??= new AudioContext();

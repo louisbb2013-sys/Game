@@ -179,6 +179,7 @@
     "challenge": "Défi",
     "challengeBody": "Une mauvaise réponse coûte un cœur. Montre ce que tu sais !",
     "noHearts": "Plus de cœurs — fais une révision pour les recharger.",
+    "needPractice": "Se débloque après ta première série.",
     "masteryMap": "Carte de maîtrise",
     "masteryRule": "Une notion est maîtrisée quand tu as réussi 3 types de questions différents, à plus d’un niveau de profondeur.",
     "formatsPassed_one": "Réussie dans {{count}} type de question",

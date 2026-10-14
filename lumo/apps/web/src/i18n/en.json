@@ -179,6 +179,7 @@
     "challenge": "Challenge",
     "challengeBody": "Wrong answers cost a heart. Show what you know!",
     "noHearts": "No hearts left — do a Review to refill.",
+    "needPractice": "Unlocks after your first round.",
     "masteryMap": "Mastery map",
     "masteryRule": "A concept is mastered when you’ve got it right in 3 different question types, at more than one level of depth.",
     "formatsPassed_one": "Passed in {{count}} question type",

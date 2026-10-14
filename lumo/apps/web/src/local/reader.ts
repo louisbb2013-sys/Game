@@ -11,6 +11,23 @@ type Sample = ((input: string, options?: object) => Promise<{ text: string }>) &
 };
 
 let samplePromise: Promise<Sample | null> | null = null;
+/** Rejects when `p` takes longer than `ms` (the platform call itself is left to settle on its own). */
+export function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    p.then(
+      (v) => (clearTimeout(t), resolve(v)),
+      (e) => (clearTimeout(t), reject(e)),
+    );
+  });
+}
+
+function use<T>(name: string): Promise<T | null> {
+  const u = (window as unknown as { claude?: { use?: (n: string) => Promise<unknown> } }).claude?.use;
+  if (!u) return Promise.resolve(null);
+  return withTimeout(u(name) as Promise<T | null>, 3000).then((x) => x ?? null, () => null);
+}
+
 export function getSample(): Promise<Sample | null> {
   const use = (window as unknown as { claude?: { use?: (n: string) => Promise<unknown> } }).claude?.use;
   if (!use) return Promise.resolve(null);
@@ -94,8 +111,14 @@ export async function readPhotos(files: File[], language: Locale, extra: string,
 
 /** Short answers in other words: Claude decides if each means the same as an expected answer. */
 export async function judgeShort(question: string, checks: { key: string; given: string; expected: string[] }[], language: Locale): Promise<Record<string, boolean>> {
-  const s = await getSample();
-  if (!s || checks.length === 0) return {};
+  if (checks.length === 0) return {};
+  // Only when the viewer already allowed Claude here: a consent sheet popping up mid-quiz (on a
+  // phone it can cover the Check button) must never hold up an answer.
+  const perms = await use<{ state: (n: string) => Promise<string> }>('permissions');
+  const state = perms ? await withTimeout(perms.state('sample'), 2000).catch(() => 'unavailable') : 'granted';
+  if (state !== 'granted') return {};
+  const s = await withTimeout(getSample(), 3000).catch(() => null);
+  if (!s) return {};
   const prompt = [
     `A student answered a quiz question (${language === 'fr' ? 'French' : 'English'}). Question: ${question.slice(0, 1500)}`,
     "For each item, decide like a fair teacher if the student's short answer means the same thing as one of the expected answers: accept synonyms, everyday wording, another word form or a short phrase with the same meaning; reject vague, partly right, opposite or unrelated answers.",
@@ -103,13 +126,12 @@ export async function judgeShort(question: string, checks: { key: string; given:
     'Reply with only a JSON object mapping each item key to true or false, for example {"0": true}.',
   ].join('\n');
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 15_000);
   try {
-    const r = await s.json<Record<string, unknown>>(prompt, { modelTier: 'quick', signal: ctl.signal });
+    // A hard deadline of our own: the answer is graded either way.
+    const r = await withTimeout(s.json<Record<string, unknown>>(prompt, { modelTier: 'quick', signal: ctl.signal }), 8000);
     return Object.fromEntries(checks.map((c) => [c.key, r?.[c.key] === true]));
   } catch {
-    return {}; // no consent, offline or slow: the word list decides
-  } finally {
-    clearTimeout(timer);
+    ctl.abort();
+    return {}; // offline or slow: the word list decides
   }
 }
