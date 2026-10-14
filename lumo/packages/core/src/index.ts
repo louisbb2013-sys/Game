@@ -14,6 +14,8 @@ export * from './quiz/expr';
 export * from './quiz/grade';
 export * from './quiz/formats';
 export * from './quiz/generate';
+export * from './quiz/build';
+export * from './quiz/bank';
 export * from './quiz/planner';
 export * from './quiz/session';
 export * from './quiz/samples';

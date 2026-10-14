@@ -7,6 +7,7 @@ import { CameraIcon, CoinIcon, FlameIcon, HeartIcon } from '../components/icons'
 import { Lumo, type LumoMood } from '../components/Lumo';
 import { api, ApiError, LOCAL } from '../lib/api';
 import { EggRing, type EggState } from '../components/Egg';
+import { Creature3D } from '../components/Pet3D';
 import { useAuth } from '../lib/auth';
 import { play } from '../lib/sound';
 import { PetAvatar, type PetView } from './Pets';
@@ -35,7 +36,7 @@ function EggCard({ egg }: { egg: EggState }) {
   const left = Math.max(0, egg.target - egg.progress);
   return (
     <Link to="/learn" className="flex items-center gap-4 rounded-3xl bg-gradient-to-r from-amber-glow/20 to-fuchsia-400/10 p-4 ring-1 ring-amber-glow/60">
-      <EggRing egg={egg} />
+      <EggRing egg={egg} size={76} three />
       <div className="min-w-0 flex-1">
         <h2 className="font-black">{t('egg.title', { rarity: t(`pets.rarity.${egg.rarity}`) })}</h2>
         <p className="text-sm">{t('egg.left', { count: left })}</p>
@@ -92,7 +93,15 @@ export function Home() {
   return (
     <div className="space-y-5">
       <section className="flex items-center gap-4 rounded-3xl bg-night p-4 text-white shadow-lg">
-        <Lumo size={92} mood={mood} glow={Math.min(1, 0.4 + user.streak.days / 20)} />
+        {ov?.pet ? (
+          <Link to="/pets" aria-label={t('pets.title')} className="-my-4 -ml-3 block size-[118px] shrink-0">
+            <Creature3D species={ov.pet.species} rarity={ov.pet.rarity} className="size-full">
+              <Lumo size={92} mood={mood} glow={Math.min(1, 0.4 + user.streak.days / 20)} />
+            </Creature3D>
+          </Link>
+        ) : (
+          <Lumo size={92} mood={mood} glow={Math.min(1, 0.4 + user.streak.days / 20)} />
+        )}
         <div className="min-w-0">
           <h1 className="text-xl font-black">{t(greetingKey, { name: user.username })}</h1>
           <p className="mt-1 text-sm text-indigo-100">{streakMsg}</p>
@@ -191,7 +200,7 @@ export function Home() {
 
       {ov && (
         <Link to="/pets" className="flex items-center gap-4 rounded-3xl bg-surface p-4 ring-1 ring-line">
-          {ov.pet ? <PetAvatar pet={ov.pet} size="sm" /> : <span className="grid size-14 place-items-center rounded-full bg-surface-2 text-3xl">🥚</span>}
+          {ov.pet ? <PetAvatar pet={ov.pet} size="sm" three /> : <span className="grid size-14 place-items-center rounded-full bg-surface-2 text-3xl">🥚</span>}
           <div className="min-w-0 flex-1">
             <h2 className="font-black">{ov.pet ? ov.pet.name || t(`pets.species.${ov.pet.species}`) : t('home.adoptPet')}</h2>
             <p className="text-sm text-muted">{ov.pet ? t(`pets.moodLine.${ov.pet.mood}`) : t('home.adoptPetBody')}</p>

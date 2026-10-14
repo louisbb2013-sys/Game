@@ -30,6 +30,8 @@ import {
   type PetState,
   type Rarity,
   applyAnswer,
+  openPart,
+  pickFromBank,
   applyStats,
   BADGES,
   buildStudyPlan,
@@ -97,6 +99,7 @@ import {
   type Stats,
   type StreakState,
 } from '@lumo/core';
+import { gradeOpenWithClaude } from './bank';
 import { judgeShort, withTimeout } from './reader';
 import { goOnline, plain, publishProfile, together } from './together';
 
@@ -119,6 +122,9 @@ interface Deck {
   summary: string;
   concepts: Concept[];
   updatedAt: number;
+  /** Real test questions written by Claude for this deck (see local/bank.ts). */
+  bank?: Question[];
+  bankAt?: number;
 }
 interface StoredSession {
   id: string;
@@ -171,6 +177,8 @@ interface DB {
   deletedDecks?: string[];
   /** Eggs, pets, chests, quests, items. */
   game?: GameData;
+  /** When each bank question (by variant key) was last asked, so they come back spaced out. */
+  seen?: Record<string, number>;
 }
 
 interface LocalPet {
@@ -347,7 +355,7 @@ let cloudTimer: ReturnType<typeof setTimeout> | null = null;
 let cloudBusy = false;
 let cloudAgain = false;
 const written = new Map<string, string>(); // deck id -> content signature last written
-const deckSig = (dk: Deck) => `${dk.title}|${dk.concepts.length}|${JSON.stringify(dk.concepts).length}`;
+const deckSig = (dk: Deck) => `${dk.title}|${dk.concepts.length}|${JSON.stringify(dk.concepts).length}|${dk.bankAt ?? 0}`;
 
 function scheduleCloud(now = false) {
   if (!cloud) return;
@@ -729,6 +737,7 @@ function masteryMap(id: string) {
   const t = now();
   return {
     deck: { id: dk.id, title: dk.title, subject: dk.subject, language: dk.language, mine: true },
+    bankSize: dk.bank?.length ?? 0,
     concepts: dk.concepts.map((c) => {
       const s = load().states[c.id];
       const p = s?.progress ?? newProgress();
@@ -755,7 +764,20 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]):
   const sessionFormats = s.state.history.filter((h) => h.conceptId === conceptId).map((h) => h.format).reverse();
   const progress: ConceptProgress = { ...stored, recentFormats: [...new Set([...sessionFormats, ...stored.recentFormats])].slice(0, 4) };
   const rng = seededRng(hashString(`${conceptId}:${now()}:${s.state.answered}`));
-  const tried: Format[] = [];
+  // Real test questions from the deck's bank come first; the built-in generator fills any gap.
+  const bank = deck(s.deckId).bank;
+  if (bank?.length && rng() < 0.9) {
+    const d = load();
+    const picked = pickFromBank(bank, conceptId, progress, { allowed: s.state.formats ?? LOCAL_FORMATS, usedThisSession: new Set(s.state.history.map((h) => h.variantKey)), lastSeen: d.seen ?? {}, now: now() }, rng);
+    if (picked) {
+      d.seen = { ...(d.seen ?? {}), [picked.variantKey]: now() };
+      const keys = Object.keys(d.seen);
+      if (keys.length > 3000) for (const k of keys.slice(0, keys.length - 3000)) delete d.seen[k];
+      return { ...structuredClone(picked), id: uid() };
+    }
+  }
+  // With a bank, the built-in generator never falls back to blanks lifted from the notes.
+  const tried: Format[] = bank?.length ? ['fill_blank'] : [];
   for (let i = 0; i < 4; i++) {
     const choice = chooseFormat(c, concepts, progress, rng, { exclude: tried, allowed: s.state.formats ?? LOCAL_FORMATS });
     if (!choice) return null;
@@ -892,9 +914,10 @@ async function answer(sessionId: string, questionId: string, a: Answer) {
   if (!q || q.id !== questionId) throw new LocalError(409, 'stale_question');
   // Same meaning in other words ("round" for "circular"): ask Claude when the word list says no.
   const checks = shortAnswersToCheck(q, a);
-  const meaning = checks.length ? await judgeShort(q.prompt, checks, q.language) : {};
+  const need = openPart(q, a);
+  const [meaning, open] = await Promise.all([checks.length ? judgeShort(q.prompt, checks, q.language) : Promise.resolve({}), need ? gradeOpenWithClaude(q, need, q.language) : Promise.resolve(undefined)]);
   if (s.current?.id !== questionId) throw new LocalError(409, 'stale_question');
-  const g = grade(q, a, undefined, meaning);
+  const g = grade(q, a, open, meaning);
   const d = load();
   const u = d.user;
 
@@ -1103,6 +1126,20 @@ const routes: [string, RegExp, Handler][] = [
   ],
   ['GET', /^\/api\/decks\/([\w-]+)$/, (m) => masteryMap(m[1]!)],
   [
+    'PUT',
+    /^\/api\/local\/decks\/([\w-]+)\/bank$/,
+    (m, b) => {
+      const dk = deck(m[1]!);
+      const ids = new Set(dk.concepts.map((c) => c.id));
+      let list = (Array.isArray(b.questions) ? (b.questions as Question[]) : []).filter((q) => q && typeof q === 'object' && ids.has(q.conceptId) && typeof q.prompt === 'string' && typeof q.variantKey === 'string');
+      // Keep the deck under the account copy's size limit.
+      while (list.length > 1 && JSON.stringify(list).length > 170_000) list = list.slice(0, Math.floor(list.length * 0.9));
+      dk.bank = list;
+      dk.bankAt = now();
+      return { count: list.length };
+    },
+  ],
+  [
     'DELETE',
     /^\/api\/decks\/([\w-]+)$/,
     (m) => {
@@ -1120,7 +1157,7 @@ const routes: [string, RegExp, Handler][] = [
     /^\/api\/decks\/([\w-]+)\/offline$/,
     (m) => {
       const d = deck(m[1]!);
-      return { deck: { id: d.id, title: d.title, subject: d.subject, language: d.language }, concepts: d.concepts, savedAt: now() };
+      return { deck: { id: d.id, title: d.title, subject: d.subject, language: d.language }, concepts: d.concepts, bank: d.bank ?? [], savedAt: now() };
     },
   ],
   ['GET', /^\/api\/decks\/([\w-]+)\/plan$/, (m) => plan(m[1]!)],

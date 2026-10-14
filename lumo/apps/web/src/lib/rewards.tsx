@@ -1,5 +1,8 @@
 import { BADGES } from '@lumo/core';
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import type { Rarity } from '@lumo/core';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Creature3D, Egg3D } from '../components/Pet3D';
+import type { Handle } from '../three/stage';
 import { useConfetti } from './confetti';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -111,22 +114,43 @@ export const TIER_STYLE: Record<string, { emoji: string; color: string }> = {
 function HatchCelebration({ pet, onClose }: { pet: NonNullable<Rewards['hatched']>; onClose: () => void }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const egg = useRef<Handle | null>(null);
+  const creature = useRef<Handle | null>(null);
+  const rarity = (['common', 'rare', 'epic', 'legendary'].includes(pet.rarity) ? pet.rarity : 'common') as Rarity;
   useEffect(() => {
     play('tap');
+    const shakes = [200, 700, 1150].map((ms) => setTimeout(() => egg.current?.jump(), ms));
+    const crack = setTimeout(() => egg.current?.crack(), 1450);
     const a = setTimeout(() => {
       setOpen(true);
       play('finish');
-    }, 1500);
-    return () => clearTimeout(a);
+    }, 1650);
+    return () => [...shakes, crack, a].forEach(clearTimeout);
   }, []);
+  useEffect(() => {
+    if (!open) return;
+    const b = setTimeout(() => {
+      creature.current?.jump(1);
+      creature.current?.burst(40);
+    }, 350);
+    return () => clearTimeout(b);
+  }, [open]);
   useConfetti(open);
   const name = t(`pets.species.${pet.species}`);
   return (
     <div role="dialog" aria-modal="true" aria-label={t('egg.hatched')} className="fixed inset-0 z-[80] grid place-items-center bg-night/80 p-6 backdrop-blur-sm" onClick={() => open && onClose()}>
       <div className="relative w-full max-w-sm rounded-3xl bg-surface p-6 text-center shadow-2xl ring-2 ring-amber-glow">
-        <div className="relative mx-auto grid size-44 place-items-center">
-          {open && <span className="hatch-rays absolute inset-0" aria-hidden />}
-          {open ? <span className="hatch-pop relative text-8xl">{pet.emoji}</span> : <span className="egg-shake text-8xl">🥚</span>}
+        <div className="relative mx-auto grid size-52 place-items-center">
+          {open && <span className="hatch-rays absolute inset-2" aria-hidden />}
+          {open ? (
+            <Creature3D ref={creature} species={pet.species} rarity={rarity} className="absolute inset-0">
+              <span className="hatch-pop relative text-8xl">{pet.emoji}</span>
+            </Creature3D>
+          ) : (
+            <Egg3D ref={egg} rarity={rarity} progress={1} className="absolute inset-0">
+              <span className="egg-shake text-8xl">🥚</span>
+            </Egg3D>
+          )}
         </div>
         {open ? (
           <>

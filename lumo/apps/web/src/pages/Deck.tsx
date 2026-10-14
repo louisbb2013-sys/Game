@@ -6,6 +6,7 @@ import { StudyPlan } from '../components/StudyPlan';
 import { ShareDeckToggle } from '../components/SharedDecks';
 import { offlineDeck, saveDeckOffline } from '../lib/offline';
 import { Lumo } from '../components/Lumo';
+import { QuestionBank } from '../components/QuestionBank';
 import { api, ApiError, LOCAL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { MasteryItem, Mode } from '../lib/quiz';
@@ -13,6 +14,8 @@ import type { MasteryItem, Mode } from '../lib/quiz';
 interface DeckData {
   deck: { id: string; title: string; subject: string; language: string; mine: boolean };
   concepts: MasteryItem[];
+  /** Website: how many real test questions the deck's bank holds. */
+  bankSize?: number;
 }
 
 const BAND_STYLE: Record<MasteryItem['band'], string> = {
@@ -102,6 +105,8 @@ export function Deck() {
           </p>
         </div>
       </header>
+
+      {LOCAL && <QuestionBank deckId={data.deck.id} bankSize={data.bankSize ?? 0} onBuilt={() => void api<DeckData>(`/api/decks/${id}`).then(setData)} />}
 
       <section className="grid gap-3">
         <ModeButton primary onClick={() => void start('practice')} busy={starting === 'practice'} title={t('deck.practice')} body={t('deck.practiceBody')} icon="✨" />

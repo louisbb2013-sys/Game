@@ -230,8 +230,20 @@ class HostGame {
 
 let host: HostGame | null = null;
 
-function makeQuestions(concepts: Concept[], language: Locale, count: number): Question[] {
+function makeQuestions(concepts: Concept[], language: Locale, count: number, bank: Question[] = []): Question[] {
   const rng = seededRng(hashString(`${Date.now()}:${Math.random()}`));
+  // The deck's real test questions first (the formats that work in a timed game), then the generator.
+  const fromBank = shuffle(
+    bank.filter((q) => LIVE_FORMATS.includes(q.format)),
+    rng,
+  )
+    .slice(0, count)
+    .map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` }));
+  if (fromBank.length >= count) return fromBank;
+  return [...fromBank, ...makeGenerated(concepts, language, count - fromBank.length, rng)];
+}
+
+function makeGenerated(concepts: Concept[], language: Locale, count: number, rng: ReturnType<typeof seededRng>): Question[] {
   const order = shuffle(concepts, rng);
   const progress = new Map<string, ConceptProgress>();
   const out: Question[] = [];
@@ -258,8 +270,8 @@ export async function hostLocalGame(deckId: string, count: number): Promise<stri
   const t = await together();
   if (!t?.room) throw new LiveError('not_in_game');
   if (!t.canWrite) throw Object.assign(new Error('read_only'), { code: 'read_only' });
-  const deck = await api<{ deck: { title: string; language: Locale }; concepts: Concept[] }>(`/api/decks/${deckId}/offline`);
-  const questions = makeQuestions(deck.concepts, deck.deck.language, count);
+  const deck = await api<{ deck: { title: string; language: Locale }; concepts: Concept[]; bank?: Question[] }>(`/api/decks/${deckId}/offline`);
+  const questions = makeQuestions(deck.concepts, deck.deck.language, count, deck.bank ?? []);
   if (questions.length < 3) throw Object.assign(new Error('deck_too_small'), { code: 'deck_too_small' });
   if (host) await host.close();
   let code = '';

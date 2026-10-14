@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { generateLocal, seededRng, type OpenGrade, type Question, type ShortCheck } from '@lumo/core';
 import { z } from 'zod';
-import { buildQuestion, DRAFT_KIND, DRAFT_SCHEMAS } from './build.ts';
+import { buildQuestion, DRAFT_KIND, DRAFT_SCHEMAS } from '@lumo/core';
 import type { AiProvider, DeckDraft, ExtractInput, GenerateInput, GradeOpenInput, TutorInput } from './provider.ts';
 import { NeedsAiError } from './provider.ts';
 import { checkFor, type Concept, type Locale, type SandboxData, type SandboxKind } from '@lumo/core';

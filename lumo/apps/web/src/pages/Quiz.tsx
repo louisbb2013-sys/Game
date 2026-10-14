@@ -1,11 +1,13 @@
-import { EGG_EMOJI, type Answer, type PublicQuestion } from '@lumo/core';
+import { EGG_EMOJI, type Answer, type PublicQuestion, type Rarity } from '@lumo/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { CoinIcon, FlameIcon, HeartIcon } from '../components/icons';
 import { Lumo, type LumoMood } from '../components/Lumo';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, LOCAL } from '../lib/api';
+import { Creature3D } from '../components/Pet3D';
+import type { Handle } from '../three/stage';
 import { useAuth } from '../lib/auth';
 import type { AnswerResponse, AnswerResult, PublicSession, SessionSummary } from '../lib/quiz';
 import { play, setSoundEnabled } from '../lib/sound';
@@ -39,6 +41,12 @@ export function Quiz() {
   const startedAt = useRef(Date.now());
   const showRewards = useRewards();
   const [egg, setEgg] = useState<Rewards['egg'] | null>(null);
+  const [buddy, setBuddy] = useState<{ species: string; rarity: Rarity } | null>(null);
+  const buddyRef = useRef<Handle | null>(null);
+  useEffect(() => {
+    if (!LOCAL) return;
+    void api<{ pet: { species: string; rarity: Rarity } | null }>('/api/game/overview').then((o) => o.pet && setBuddy({ species: o.pet.species, rarity: o.pet.rarity }), () => {});
+  }, []);
   const takeRewards = useCallback(
     (r: Rewards | undefined) => {
       if (r?.egg) setEgg(r.egg);
@@ -100,6 +108,10 @@ export function Quiz() {
         setSummary(res.summary);
         setData((d) => (d ? { ...d, session: res.session } : d));
         play(res.result.correct ? 'correct' : 'wrong');
+        if (res.result.correct) {
+          buddyRef.current?.jump(res.result.combo >= 3 ? 1.1 : 0.8);
+          buddyRef.current?.burst(res.result.combo >= 3 ? 36 : 18);
+        }
         if (res.result.correct && [3, 5, 10].includes(res.result.combo)) {
           setComboFlash(res.result.combo);
           play('combo');
@@ -197,7 +209,14 @@ export function Quiz() {
             <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-extrabold text-brand">{t(`bloom.${q.bloom}`)}</span>
           </div>
           <div className="mb-5 flex items-start gap-3">
-            <Lumo size={56} mood={mood} />
+            {buddy ? (
+              // Your pet keeps you company and jumps for joy on a right answer.
+              <Creature3D ref={buddyRef} species={buddy.species} rarity={buddy.rarity} className="-my-3 -ml-3 size-[84px] shrink-0">
+                <Lumo size={56} mood={mood} />
+              </Creature3D>
+            ) : (
+              <Lumo size={56} mood={mood} />
+            )}
             <h1 className="pop-in min-w-0 flex-1 rounded-2xl rounded-tl-sm bg-surface p-3.5 text-lg leading-snug font-extrabold whitespace-pre-line ring-1 ring-line">{q.prompt}</h1>
           </div>
 

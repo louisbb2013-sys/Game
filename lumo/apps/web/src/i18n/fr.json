@@ -1126,5 +1126,23 @@
     "domainError": "Ce site n’est pas encore autorisé. Ajoute-le dans Firebase → Authentication → Settings → Authorized domains.",
     "signOut": "Se déconnecter",
     "signedInAs": "Connecté avec Google"
+  },
+  "bank": {
+    "writing": "Lumo écrit de vraies questions d’examen…",
+    "writingBody": "Mises en situation, extraits, questions « pourquoi » et réponses courtes, comme à un vrai examen. Tu peux déjà pratiquer en attendant.",
+    "ready_one": "{{count}} vraie question d’examen",
+    "ready_other": "{{count}} vraies questions d’examen",
+    "readyBody": "Écrites pour ce paquet comme le ferait un prof, au-delà de tes notes.",
+    "cta": "Obtenir de vraies questions d’examen",
+    "ctaBody": "Lumo écrit des questions style examen pour ce paquet (environ 30 secondes).",
+    "make": "Les écrire",
+    "redo": "Nouvelles",
+    "errors": {
+      "upstream_error": "Impossible d’écrire les questions pour l’instant. Réessaie.",
+      "unavailable": "Il faut Claude, qui n’est pas disponible ici.",
+      "not_granted": "Autorise Lumo à utiliser Claude pour écrire les questions.",
+      "rate_limited": "Trop de demandes. Réessaie dans une minute.",
+      "nothing_found": "Impossible d’écrire des questions pour ce paquet. Réessaie."
+    }
   }
 }

@@ -2,6 +2,7 @@ import { PET_SPECIES, petXpForLevel, STARTER_PETS } from '@lumo/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
+import { Creature3D } from '../components/Pet3D';
 import { api, ApiError } from '../lib/api';
 import { play } from '../lib/sound';
 
@@ -23,12 +24,20 @@ export interface PetView {
 const MOOD_FACE = { happy: '😄', content: '🙂', hungry: '😋', sad: '😢' };
 const RARITY_RING = { common: 'ring-slate-300', rare: 'ring-sky-400', epic: 'ring-fuchsia-400', legendary: 'ring-amber-400' };
 
-export function PetAvatar({ pet, size = 'lg' }: { pet: Pick<PetView, 'emoji' | 'color' | 'mood' | 'rarity'>; size?: 'sm' | 'lg' }) {
+export function PetAvatar({ pet, size = 'lg', three = false }: { pet: Pick<PetView, 'emoji' | 'color' | 'mood' | 'rarity'> & { species?: string }; size?: 'sm' | 'lg'; three?: boolean }) {
   const big = size === 'lg';
+  const face = <span className={pet.mood === 'sad' ? '' : pet.mood === 'happy' ? 'lumo-bounce' : 'lumo-float'}>{pet.emoji}</span>;
   return (
     <span className={`relative grid shrink-0 place-items-center rounded-full ring-4 ${RARITY_RING[pet.rarity]} ${big ? 'size-32 text-7xl' : 'size-14 text-3xl'}`} style={{ background: `${pet.color}33` }}>
-      <span className={pet.mood === 'sad' ? '' : pet.mood === 'happy' ? 'lumo-bounce' : 'lumo-float'}>{pet.emoji}</span>
-      <span className={`absolute -right-1 -bottom-1 rounded-full bg-surface ${big ? 'p-1 text-2xl' : 'text-base'}`} aria-hidden>
+      {three && pet.species ? (
+        // The pet in 3D, a little bigger than its circle so it can hop out of it.
+        <Creature3D species={pet.species} rarity={pet.rarity} className={`absolute ${big ? '-inset-6' : '-inset-3'}`}>
+          {face}
+        </Creature3D>
+      ) : (
+        face
+      )}
+      <span className={`absolute -right-1 -bottom-1 z-[1] rounded-full bg-surface ${big ? 'p-1 text-2xl' : 'text-base'}`} aria-hidden>
         {MOOD_FACE[pet.mood]}
       </span>
     </span>
@@ -102,7 +111,7 @@ export function Pets() {
     <div className="space-y-5">
       <h1 className="text-2xl font-black">{t('pets.title')}</h1>
       <section className="relative flex flex-col items-center gap-3 overflow-hidden rounded-3xl bg-surface p-5 text-center ring-1 ring-line">
-        <PetAvatar pet={main} />
+        <PetAvatar pet={main} three />
         {hearts && <span className="combo-pop absolute top-6 text-4xl">💕</span>}
         {renaming ? (
           <form

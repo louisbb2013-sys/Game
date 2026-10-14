@@ -1,14 +1,7 @@
-import {
-  computeVariantKey,
-  correctAnswerText,
-  makeId,
-  seededRng,
-  shuffle,
-  type Bloom,
-  type Format,
-  type Locale,
-  type Question,
-} from '@lumo/core';
+import { seededRng, shuffle } from '../rng';
+import type { Bloom, Format, Locale } from '../types';
+import { makeId } from './generate';
+import { computeVariantKey, correctAnswerText, type Question } from './question';
 import { z } from 'zod';
 
 /**

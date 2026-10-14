@@ -1126,5 +1126,23 @@
     "domainError": "This site isn't allowed to sign in yet. Add it in Firebase → Authentication → Settings → Authorized domains.",
     "signOut": "Sign out",
     "signedInAs": "Signed in with Google"
+  },
+  "bank": {
+    "writing": "Lumo is writing real test questions…",
+    "writingBody": "Scenarios, excerpts, \"why\" questions and short answers, like on a real exam. You can already practise meanwhile.",
+    "ready_one": "{{count}} real test question",
+    "ready_other": "{{count}} real test questions",
+    "readyBody": "Written for this deck like a teacher would, beyond your notes.",
+    "cta": "Get real test questions",
+    "ctaBody": "Lumo writes exam-style questions for this deck (about 30 seconds).",
+    "make": "Write them",
+    "redo": "New ones",
+    "errors": {
+      "upstream_error": "Couldn't write the questions right now. Try again.",
+      "unavailable": "This needs Claude, which isn't available here.",
+      "not_granted": "Allow Lumo to use Claude to write questions.",
+      "rate_limited": "Too many requests. Try again in a minute.",
+      "nothing_found": "Couldn't write questions for this deck. Try again."
+    }
   }
 }

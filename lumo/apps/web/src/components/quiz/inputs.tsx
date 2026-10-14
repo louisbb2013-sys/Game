@@ -103,7 +103,8 @@ function ChoiceInput({ q, value, onChange, reveal }: InputProps) {
             aria-checked={isChosen}
             disabled={!!reveal}
             onClick={() => onChange({ kind: 'choice', optionId: o.id })}
-            className={`flex items-start gap-3 rounded-2xl p-3.5 text-left font-bold ring-2 transition active:scale-[0.99] ${optionStyle(state)}`}
+            className={`press rise-in flex items-start gap-3 rounded-2xl p-3.5 text-left font-bold ring-2 ${state === 'right' ? 'press-right' : state === 'wrong' ? 'press-wrong' : ''} ${optionStyle(state)}`}
+            style={{ ['--d' as string]: `${i * 0.06}s` }}
           >
             <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface-2 text-sm font-black">{LETTERS[i]}</span>
             <span className="pt-0.5">{o.text}</span>

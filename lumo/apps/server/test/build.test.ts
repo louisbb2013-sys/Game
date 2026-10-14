@@ -1,6 +1,6 @@
 import { grade, perfectAnswer } from '@lumo/core';
 import { describe, expect, it } from 'vitest';
-import { buildQuestion } from '../src/ai/build.ts';
+import { buildQuestion } from '@lumo/core';
 
 const meta = (format: any) => ({ conceptId: 'c1', format, bloom: 'understand' as const, language: 'en' as const, seed: 42 });
 

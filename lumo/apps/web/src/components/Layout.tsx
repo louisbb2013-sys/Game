@@ -26,6 +26,7 @@ export function Layout() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
+      <div className="aurora" aria-hidden />
       <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur">
         <span className="text-xl font-black tracking-tight text-ink">
           lumo<span className="text-amber-glow">.</span>
@@ -49,6 +50,7 @@ export function Layout() {
       </main>
 
       <nav
+        data-bottom-nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl border-t border-line bg-surface/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1 backdrop-blur"
       >

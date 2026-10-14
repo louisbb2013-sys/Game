@@ -295,3 +295,38 @@ test('website: a deck from just a topic (Claude researches it)', async ({ browse
   await a.getByRole('button', { name: /Practice/ }).click();
   await expect(a.locator('section[data-format]')).toBeVisible();
 });
+
+test('website: Claude writes a bank of real test questions, and practice uses them', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  const url = `${process.env.MULTI_URL}?uid=u_q&sample=ok`;
+  await a.goto(url);
+  await a.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('u_q:')) delete localStorage[k];
+  });
+  await a.goto(url);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  // Built on its own, then shown on the deck page.
+  await expect(a.getByText(/\d+ real test questions/)).toBeVisible({ timeout: 20_000 });
+  await a.screenshot({ path: 'e2e/screens/web-bank.png', fullPage: true });
+  await a.getByRole('button', { name: /Practice/ }).click();
+  let fromBank = 0;
+  for (let i = 0; i < 6; i++) {
+    const section = a.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    const prompt = (await section.locator('h1').first().textContent()) ?? '';
+    if (/^Bank (scenario|question)/.test(prompt)) fromBank++;
+    const format = (await section.getAttribute('data-format'))!;
+    if (format === 'explain') await section.locator('textarea').fill('It names the idea because it matters.');
+    else await answerCurrent(a, format);
+    await a.getByRole('button', { name: 'Check' }).click();
+    const btn = a.getByRole('status').getByRole('button', { name: /Continue|See results/ });
+    await expect(btn).toBeVisible();
+    if (format === 'explain') await expect(a.getByText('Good start: add the reason.')).toBeVisible();
+    await closeHatch(a);
+    await btn.click();
+  }
+  expect(fromBank).toBeGreaterThanOrEqual(4);
+});

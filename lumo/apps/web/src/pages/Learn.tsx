@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router';
 import { CameraIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { SharedDecks } from '../components/SharedDecks';
+import { deckColors, tilt } from '../lib/tilt';
 import { api, LOCAL } from '../lib/api';
 import type { DeckListItem } from '../lib/quiz';
 
@@ -65,24 +66,24 @@ export function Learn() {
         </div>
       ) : (
         <ul className="space-y-3">
-          {decks.map((d) => {
+          {decks.map((d, i) => {
             const ratio = d.conceptCount ? d.masteredCount / d.conceptCount : 0;
             return (
               <li key={d.id}>
-                <Link to={`/decks/${d.id}`} className="block rounded-3xl bg-surface p-4 ring-1 ring-line transition hover:ring-brand">
+                <Link to={`/decks/${d.id}`} {...tilt} className="holo rise-in block rounded-3xl p-4 text-white shadow-lg" style={{ background: deckColors(d.title), ['--d' as string]: `${Math.min(i, 8) * 0.05}s` }}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-lg font-black">{d.title}</p>
-                      <p className="text-sm text-muted">
+                      <p className="truncate text-lg font-black drop-shadow-sm">{d.title}</p>
+                      <p className="text-sm font-bold text-white/85">
                         {d.subject} · {t('learn.concepts', { count: d.conceptCount })}
                       </p>
                     </div>
                     {d.dueCount > 0 && <span className="shrink-0 rounded-full bg-amber-glow px-2 py-0.5 text-xs font-black text-night">{t('learn.due', { count: d.dueCount })}</span>}
                   </div>
-                  <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-surface-2">
-                    <div className="h-full rounded-full bg-amber-glow" style={{ width: `${Math.max(3, ratio * 100)}%` }} />
+                  <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/25">
+                    <div className="shimmer h-full rounded-full bg-amber-glow" style={{ width: `${Math.max(3, ratio * 100)}%` }} />
                   </div>
-                  <p className="mt-1 text-xs font-bold text-muted">{t('learn.mastered', { done: d.masteredCount, total: d.conceptCount })}</p>
+                  <p className="mt-1 text-xs font-black text-white/90">{t('learn.mastered', { done: d.masteredCount, total: d.conceptCount })}</p>
                 </Link>
               </li>
             );
