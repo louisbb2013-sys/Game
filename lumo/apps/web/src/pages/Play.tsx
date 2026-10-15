@@ -296,7 +296,11 @@ export function Play() {
           body: { questionId: data.question.id, answer: a, timeMs: Date.now() - startedAt.current },
         });
         if (ending.current) return; // the speed run's clock ran out while this answer was on its way
-        if (res.summary && res.rewards) endWith(res.rewards);
+        if (res.summary && res.rewards && mode === 'exam') {
+          // The paper is handed in: its report has no results screen, so everything celebrates there.
+          showRewards(mergeRewards(held.current, res.rewards));
+          held.current = null;
+        } else if (res.summary && res.rewards) endWith(res.rewards);
         else takeRewards(res.rewards);
         if (res.followUp) {
           setFollowUp(res.followUp);
@@ -344,7 +348,7 @@ export function Play() {
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, mode, takeRewards, endWith, navigate, effects, refresh, followUp],
+    [answer, data, phase, mode, takeRewards, endWith, showRewards, navigate, effects, refresh, followUp],
   );
 
   // Speed run: no explanation panel, straight to the next question. Boss: a right answer moves on by itself.
@@ -657,12 +661,12 @@ export function Play() {
 
 /** Rewards held back during a round, added up. */
 function mergeRewards(a: Rewards | null, b: Rewards): Rewards {
-  if (!a) return b;
+  if (!a) return { ...b, badges: b.badges ?? [], questsCompleted: b.questsCompleted ?? [] };
   return {
-    xp: a.xp + b.xp,
+    xp: (a.xp ?? 0) + (b.xp ?? 0),
     levelUp: a.levelUp && b.levelUp ? { level: b.levelUp.level, coins: a.levelUp.coins + b.levelUp.coins, chest: b.levelUp.chest ?? a.levelUp.chest } : (b.levelUp ?? a.levelUp),
-    badges: [...new Set([...a.badges, ...b.badges])],
-    questsCompleted: [...new Set([...a.questsCompleted, ...b.questsCompleted])],
+    badges: [...new Set([...(a.badges ?? []), ...(b.badges ?? [])])],
+    questsCompleted: [...new Set([...(a.questsCompleted ?? []), ...(b.questsCompleted ?? [])])],
     hatched: b.hatched ?? a.hatched,
     chest: b.chest ?? a.chest,
     egg: b.egg ?? a.egg,
