@@ -1,6 +1,6 @@
 import type { PublicQuestion } from '@lumo/core';
 
-export type Mode = 'practice' | 'review' | 'challenge' | 'wrong_only' | 'exam';
+export type Mode = 'practice' | 'review' | 'challenge' | 'wrong_only' | 'exam' | 'speed' | 'boss';
 
 export interface PublicSession {
   id: string;
@@ -15,6 +15,19 @@ export interface PublicSession {
   hearts: number;
   done: boolean;
   endsAt?: number;
+  /** Website game modes. */
+  coins?: number;
+  timeLimitMs?: number;
+  points?: number;
+  best?: number;
+  boss?: { hp: number; max: number; shields: number };
+  /** Chests waiting to be picked. */
+  chests?: number;
+  /** The current question is a lightning one: answer within this many ms for double XP. */
+  lightning?: number;
+  language?: 'en' | 'fr';
+  /** The current question asks again about an idea missed earlier in the round. */
+  retry?: boolean;
 }
 
 export interface AnswerResult {
@@ -31,9 +44,33 @@ export interface AnswerResult {
   multiplier: number;
   retryScheduled: boolean;
   mastered: boolean;
+  /** Why the wrong option picked is wrong (multiple choice). */
+  chosenNote?: string;
+  points?: number;
+  damage?: number;
+  shield?: 'lost' | 'mended';
+  /** A chest to pick was earned with this answer. */
+  chest?: boolean;
+  lightning?: boolean;
+}
+
+export interface MissedItem {
+  prompt: string;
+  context?: string;
+  answer: string;
+  explanation: string;
+  note?: string;
 }
 
 export interface SessionSummary {
+  mode?: Mode;
+  stars?: number;
+  points?: number;
+  best?: number;
+  newBest?: boolean;
+  boss?: { hp: number; max: number; shields: number };
+  chestsLeft?: number;
+  missed?: MissedItem[];
   answered: number;
   correct: number;
   accuracy: number;
@@ -42,12 +79,12 @@ export interface SessionSummary {
   bestCombo: number;
   streak: { days: number; extended: boolean };
   heartsGained: number;
-  endedReason: 'done' | 'out_of_hearts';
+  endedReason: 'done' | 'out_of_hearts' | 'time_up' | 'boss_defeated' | 'boss_escaped';
   concepts: { id: string; term: string; score: number; band: string }[];
 }
 
 export interface AnswerResponse {
-  result: AnswerResult;
+  result: AnswerResult | null;
   followUp?: string;
   session: PublicSession;
   next: PublicQuestion | null;

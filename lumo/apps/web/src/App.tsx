@@ -20,7 +20,8 @@ const League = lazy(() => import('./pages/League').then((m) => ({ default: m.Lea
 const Pets = lazy(() => import('./pages/Pets').then((m) => ({ default: m.Pets })));
 const Shop = lazy(() => import('./pages/Shop').then((m) => ({ default: m.Shop })));
 const Learn = lazy(() => import('./pages/Learn').then((m) => ({ default: m.Learn })));
-const Quiz = lazy(() => import('./pages/Quiz').then((m) => ({ default: m.Quiz })));
+const Play = lazy(() => import('./pages/Play').then((m) => ({ default: m.Play })));
+const Flashcards = lazy(() => import('./pages/Flashcards').then((m) => ({ default: m.Flashcards })));
 const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const AddFriend = lazy(() => import('./pages/Friends').then((m) => ({ default: m.AddFriend })));
@@ -110,7 +111,8 @@ function AppRoutes() {
             <Route path="me" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
           </Route>
-          <Route path="quiz/:sessionId" element={<Quiz />} />
+          <Route path="quiz/:sessionId" element={<Play />} />
+          <Route path="cards/:deckId" element={<Flashcards />} />
           <Route element={<Bare />}>
             <Route path="live/:code" element={<LiveRoom />} />
             <Route path="offline/:deckId" element={<OfflineReview />} />

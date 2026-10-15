@@ -4,6 +4,7 @@ import type { Concept } from './concept';
 /** The depths each format can test. */
 export const FORMAT_BLOOM: Record<Format, readonly Bloom[]> = {
   multiple_choice: ['remember', 'understand', 'apply'],
+  true_false: ['remember', 'understand'],
   multiple_select: ['understand', 'analyze'],
   type_answer: ['remember'],
   fill_blank: ['remember'],
@@ -29,6 +30,8 @@ export function supportsFormat(c: Concept, f: Format, deck: readonly Concept[]):
   switch (f) {
     case 'multiple_choice':
       return others.length >= 3 || c.misconceptions.length >= 2;
+    case 'true_false':
+      return false; // written by Claude only (a statement built from the notes would just copy them)
     case 'multiple_select':
       return c.keyPoints.length >= 2 && c.misconceptions.length + others.reduce((n, o) => n + o.keyPoints.length, 0) >= 2;
     case 'type_answer':

@@ -4,6 +4,7 @@ import type { Answer, Question } from './question';
 export function perfectAnswer(q: Question): Answer {
   switch (q.format) {
     case 'multiple_choice':
+    case 'true_false':
     case 'cause_effect':
       return { kind: 'choice', optionId: q.correctId };
     case 'multiple_select':

@@ -172,6 +172,7 @@ export function OfflineReview() {
       </div>
       <section key={q.id} data-format={q.format}>
         <span className="mb-2 inline-block rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-extrabold text-muted">{t(`formats.${q.format}`)}</span>
+        {q.context && <p className="doc mb-3 p-3.5 leading-relaxed whitespace-pre-line">{q.context}</p>}
         <h1 className="pop-in mb-4 rounded-2xl bg-surface p-3.5 text-lg leading-snug font-extrabold whitespace-pre-line ring-1 ring-line">{q.prompt}</h1>
         <fieldset disabled={!!result} className="min-w-0">
           <QuestionInput q={pq} value={answer} onChange={setAnswer} onSubmit={check} reveal={result ? { correct: result.correct, correctAnswer: result.correctAnswer, itemResults: result.itemResults } : null} />

@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { answerCurrent, closeHatch } from './helpers';
+import { answerAndCheck, answerCurrent, closeHatch, continueRound, ONE_TAP } from './helpers';
 
 // The standalone (Netlify) site against the local Firebase emulators.
 // Run with NETLIFY_URL=http://127.0.0.1:8899/ (a build made with VITE_FIREBASE_EMULATOR=127.0.0.1).
@@ -27,16 +27,17 @@ test('sign in with Google, make a deck from a topic, progress follows the accoun
   await a.getByLabel('Just type a topic').fill('récit psychologique français secondaire 2');
   await a.getByLabel('Just type a topic').press('Enter');
   await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 15_000 });
-  await a.getByRole('button', { name: /Practice/ }).click();
+  // Claude writes the test questions right after the deck is made.
+  await expect(a.getByText(/\d+ test questions/)).toBeVisible({ timeout: 20_000 });
+  await a.getByRole('button', { name: /^Play\b/ }).click();
   for (let i = 0; i < 3; i++) {
     const section = a.locator('section[data-format]');
     await expect(section).toBeVisible();
-    await answerCurrent(a, (await section.getAttribute('data-format'))!);
-    await a.getByRole('button', { name: 'Check' }).click();
-    const btn = a.getByRole('status').getByRole('button', { name: /Continue|See results/ });
-    await expect(btn).toBeVisible();
+    await answerAndCheck(a, (await section.getAttribute('data-format'))!);
+    await expect(a.getByRole('status').getByRole('button', { name: /Continue|See results/ })).toBeVisible();
     await closeHatch(a);
-    await btn.click();
+    await continueRound(a);
+    await closeHatch(a);
   }
   await a.getByRole('button', { name: 'Leave quiz' }).click();
   await a.waitForTimeout(3000); // the account copy is written a moment after a change
@@ -90,8 +91,9 @@ test('two Google accounts: add a friend by username, share a deck, play Live', a
     for (const p of [a, b]) {
       const section = p.locator('section[data-format]');
       await expect(section).toBeVisible();
-      await answerCurrent(p, (await section.getAttribute('data-format'))!);
-      await p.getByRole('button', { name: 'Lock in answer' }).click();
+      const f = (await section.getAttribute('data-format'))!;
+      await answerCurrent(p, f);
+      if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Lock in answer' }).click();
     }
     await expect(b.getByText('Waiting for the host…')).toBeVisible({ timeout: 15_000 });
     await a.getByRole('button', { name: i < 5 ? 'Next question' : 'Show the podium' }).click();

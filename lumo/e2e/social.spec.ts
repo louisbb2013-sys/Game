@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { answerCurrent } from './helpers';
+import { answerCurrent, ONE_TAP } from './helpers';
 
 async function newPlayer(browser: Browser, prefix: string) {
   const context = await browser.newContext();
@@ -69,8 +69,8 @@ async function playQuestion(p: Page, last = false) {
   const section = p.locator('section[data-format]');
   await expect(section).toBeVisible();
   const format = (await section.getAttribute('data-format'))!;
-  await answerCurrent(p, format);
-  await p.getByRole('button', { name: 'Lock in answer' }).click();
+  await answerCurrent(p, format); // a colour tile is sent with one tap
+  if (!ONE_TAP.includes(format)) await p.getByRole('button', { name: 'Lock in answer' }).click();
   // The last player to answer goes straight to the reveal.
   if (!last) await expect(p.getByRole('status').filter({ hasText: 'Locked in!' })).toBeVisible();
 }

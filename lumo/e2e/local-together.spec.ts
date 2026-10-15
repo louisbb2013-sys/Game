@@ -1,5 +1,5 @@
 import { devices, expect, test, type Page } from '@playwright/test';
-import { answerCurrent, closeHatch } from './helpers';
+import { answerAndCheck, answerCurrent, closeHatch, continueRound, ONE_TAP, openChests, ROUND_DONE } from './helpers';
 
 // Browser-only build + a stand-in for the Claude viewer (shared data and rooms between tabs).
 // Run with MULTI_URL=http://localhost:8765/multi.html
@@ -63,8 +63,9 @@ test('friends, a shared deck and a two-player Live game on the website', async (
     for (const p of [a, b]) {
       const section = p.locator('section[data-format]');
       await expect(section).toBeVisible();
-      await answerCurrent(p, (await section.getAttribute('data-format'))!);
-      await p.getByRole('button', { name: 'Lock in answer' }).click();
+      const f = (await section.getAttribute('data-format'))!;
+      await answerCurrent(p, f); // a colour tile is sent with one tap
+      if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Lock in answer' }).click();
     }
     await expect(b.getByText('Waiting for the host…')).toBeVisible({ timeout: 15_000 });
     if (i === 1) await b.screenshot({ path: 'e2e/screens/web-reveal.png', fullPage: true });
@@ -104,15 +105,15 @@ test('progress and username come back after the browser forgets everything', asy
   // Studying works on progress that came back from the account.
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByText('Cells — the basics').click();
-  await a.getByRole('button', { name: /Practice/ }).click();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
   for (let i = 0; i < 3; i++) {
     const section = a.locator('section[data-format]');
     await expect(section).toBeVisible();
-    await answerCurrent(a, (await section.getAttribute('data-format'))!);
-    await a.getByRole('button', { name: 'Check' }).click();
+    await answerAndCheck(a, (await section.getAttribute('data-format'))!);
     await expect(a.getByRole('status').getByRole('button', { name: /Continue|See results/ })).toBeVisible();
     await closeHatch(a);
-    await a.getByRole('status').getByRole('button', { name: /Continue|See results/ }).click();
+    await continueRound(a);
+    await closeHatch(a);
   }
 });
 
@@ -138,28 +139,41 @@ test('on a phone every study button answers a tap, and a slow Claude never block
   await p.getByRole('button', { name: /Review/ }).first().tap();
   await expect(p.getByRole('alert')).toContainText('first round');
 
-  // A full practice round, all by tapping.
-  await p.getByRole('button', { name: /Practice/ }).tap();
+  // A full round, all by tapping (multiple choice and true/false answer with one tap on a tile).
+  await p.getByRole('button', { name: /^Play\b/ }).tap();
   for (let i = 0; i < 30; i++) {
     const section = p.locator('section[data-format]');
     await expect(section).toBeVisible();
-    await answerCurrent(p, (await section.getAttribute('data-format'))!);
-    await p.getByRole('button', { name: 'Check' }).tap();
+    const f = (await section.getAttribute('data-format'))!;
+    await answerCurrent(p, f);
+    if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Check' }).tap();
     const btn = p.getByRole('status').getByRole('button', { name: /Continue|See results/ });
     await expect(btn).toBeVisible({ timeout: 15_000 });
     await closeHatch(p);
     const last = /See results/.test((await btn.textContent()) ?? '');
     await btn.tap();
+    await openChests(p);
+    await closeHatch(p);
     if (last) break;
   }
-  await expect(p.getByRole('heading', { name: 'Session complete!' })).toBeVisible();
+  await expect(p.getByRole('heading', { name: ROUND_DONE })).toBeVisible();
   await p.getByRole('link', { name: 'Back to deck' }).tap();
   await expect(p.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
 
-  // Every mode starts.
-  for (const mode of [/Review/, /Fix mistakes/, /Challenge/, /Mock exam/]) {
+  // Every mode starts (the speed run and the boss open with an intro).
+  for (const [mode, go] of [
+    [/Review|Fix mistakes/, null],
+    [/Speed run/, /GO!/],
+    [/Boss battle/, /Fight!/],
+    [/Mock exam/, null],
+  ] as const) {
     await p.getByRole('button', { name: mode }).first().tap();
     await expect(p.locator('section[data-format]')).toBeVisible();
+    const intro = p.getByRole('dialog', { name: /Speed run|Boss battle/ });
+    if (go) {
+      await intro.getByRole('button', { name: go }).tap();
+      await expect(intro).toHaveCount(0, { timeout: 5000 });
+    } else await expect(intro).toHaveCount(0);
     await p.getByRole('button', { name: 'Leave quiz' }).tap();
     await expect(p.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
   }
@@ -223,8 +237,9 @@ test('website Live: 100 questions, the host ends early', async ({ browser }) => 
   for (const p of [a, b]) {
     const section = p.locator('section[data-format]');
     await expect(section).toBeVisible();
-    await answerCurrent(p, (await section.getAttribute('data-format'))!);
-    await p.getByRole('button', { name: 'Lock in answer' }).click();
+    const f = (await section.getAttribute('data-format'))!;
+    await answerCurrent(p, f);
+    if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Lock in answer' }).click();
   }
   await a.getByRole('button', { name: 'End game' }).click({ timeout: 15_000 });
   await a.getByRole('button', { name: 'Tap to end' }).click();
@@ -246,13 +261,12 @@ test('website game: the study egg hatches, a round earns a chest, quests and sho
   await expect(a.getByRole('heading', { name: /Quests/ })).toBeVisible();
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('button', { name: 'Try a sample deck' }).click();
-  await a.getByRole('button', { name: /Practice/ }).click();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
   let hatched = false;
   for (let i = 0; i < 30; i++) {
     const section = a.locator('section[data-format]');
     await expect(section).toBeVisible();
-    await answerCurrent(a, (await section.getAttribute('data-format'))!);
-    await a.getByRole('button', { name: 'Check' }).click();
+    await answerAndCheck(a, (await section.getAttribute('data-format'))!);
     const btn = a.getByRole('status').getByRole('button', { name: /Continue|See results/ });
     await expect(btn).toBeVisible();
     const dialog = a.getByRole('dialog', { name: 'Your egg hatched!' });
@@ -265,10 +279,15 @@ test('website game: the study egg hatches, a round earns a chest, quests and sho
     }
     const last = /See results/.test((await btn.textContent()) ?? '');
     await btn.click();
+    await openChests(a);
+    if (await a.getByRole('dialog', { name: 'Your egg hatched!' }).count()) {
+      await a.getByRole('dialog', { name: 'Your egg hatched!' }).getByRole('button', { name: 'Keep going' }).click();
+      hatched = true;
+    }
     if (last) break;
   }
   expect(hatched).toBe(true);
-  await expect(a.getByRole('heading', { name: 'Session complete!' })).toBeVisible();
+  await expect(a.getByRole('heading', { name: ROUND_DONE })).toBeVisible();
   // The round's chest is waiting: open it.
   await a.getByRole('link', { name: 'Home', exact: true }).click();
   await a.getByRole('link', { name: /chests? to open/ }).click();
@@ -292,11 +311,16 @@ test('website: a deck from just a topic (Claude researches it)', async ({ browse
   await a.getByLabel('Just type a topic').fill('récit psychologique français secondaire 2');
   await a.getByLabel('Just type a topic').press('Enter');
   await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });
-  await a.getByRole('button', { name: /Practice/ }).click();
-  await expect(a.locator('section[data-format]')).toBeVisible();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
+  // Claude may still be writing: the writing screen lets you start as soon as a few are ready.
+  const section = a.locator('section[data-format]');
+  const writing = a.getByRole('dialog', { name: 'Claude is writing your test' });
+  await expect(section.or(writing).first()).toBeVisible({ timeout: 10_000 });
+  if (await writing.count()) await writing.getByRole('button', { name: /Play now/ }).click({ timeout: 20_000 });
+  await expect(section).toBeVisible();
 });
 
-test('website: Claude writes a bank of real test questions, and practice uses them', async ({ browser }) => {
+test('website: Claude writes real test questions for a new deck, line by line, and the game uses them', async ({ browser }) => {
   test.setTimeout(120_000);
   const ctx = await browser.newContext();
   const a = await ctx.newPage();
@@ -307,26 +331,110 @@ test('website: Claude writes a bank of real test questions, and practice uses th
   });
   await a.goto(url);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('button', { name: 'Try a sample deck' }).click();
-  // Built on its own, then shown on the deck page.
-  await expect(a.getByText(/\d+ real test questions/)).toBeVisible({ timeout: 20_000 });
+  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByLabel('Just type a topic').fill('récit psychologique secondaire 2');
+  await a.getByLabel('Just type a topic').press('Enter');
+  await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });
+  // Claude starts writing as soon as the deck exists; the deck page counts the questions.
+  await expect(a.getByText(/21 test questions/)).toBeVisible({ timeout: 20_000 });
   await a.screenshot({ path: 'e2e/screens/web-bank.png', fullPage: true });
-  await a.getByRole('button', { name: /Practice/ }).click();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
   let fromBank = 0;
-  for (let i = 0; i < 6; i++) {
+  let wrote = false;
+  for (let i = 0; i < 8; i++) {
     const section = a.locator('section[data-format]');
     await expect(section).toBeVisible();
-    const prompt = (await section.locator('h1').first().textContent()) ?? '';
-    if (/^Bank (scenario|question)/.test(prompt)) fromBank++;
+    if (/Bank (scenario|statement|question)/.test((await section.textContent()) ?? '')) fromBank++;
     const format = (await section.getAttribute('data-format'))!;
-    if (format === 'explain') await section.locator('textarea').fill('It names the idea because it matters.');
-    else await answerCurrent(a, format);
-    await a.getByRole('button', { name: 'Check' }).click();
+    if (format === 'explain' || format === 'apply') {
+      await section.locator('textarea').fill('It names the idea because it matters.');
+      await a.getByRole('button', { name: 'Check' }).click();
+    } else await answerAndCheck(a, format);
     const btn = a.getByRole('status').getByRole('button', { name: /Continue|See results/ });
     await expect(btn).toBeVisible();
-    if (format === 'explain') await expect(a.getByText('Good start: add the reason.')).toBeVisible();
+    if (format === 'explain' || format === 'apply') {
+      // Graded against its rubric by Claude.
+      await expect(a.getByText('Good start: add the reason.')).toBeVisible();
+      wrote = true;
+    }
     await closeHatch(a);
-    await btn.click();
+    if (await continueRound(a)) break;
+    await closeHatch(a);
   }
-  expect(fromBank).toBeGreaterThanOrEqual(4);
+  expect(fromBank).toBeGreaterThanOrEqual(6);
+  expect(wrote).toBe(true);
+  // Claude explains a question again, differently, when asked.
+  const back = a.getByRole('link', { name: 'Back to deck' });
+  if (await back.count()) await back.click();
+  else await a.getByRole('button', { name: 'Leave quiz' }).click();
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+});
+
+test('website: "explain it differently" asks Claude for a new explanation', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  const url = `${process.env.MULTI_URL}?uid=u_ex&sample=ok`;
+  await a.goto(url);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
+  const section = a.locator('section[data-format]');
+  await expect(section).toBeVisible();
+  await answerAndCheck(a, (await section.getAttribute('data-format'))!);
+  const sheet = a.getByRole('status').filter({ has: a.getByRole('button', { name: /Continue|See results/ }) });
+  await sheet.getByRole('button', { name: /Explain it to me differently/ }).click();
+  await expect(sheet.getByText('Think of it like a crowded hallway')).toBeVisible();
+});
+
+test('website: an older deck without questions gets them written the first time you play', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  // Made outside Claude: basic questions only.
+  await a.goto(`${process.env.MULTI_URL}?uid=u_old`);
+  await a.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('u_old:')) delete localStorage[k];
+  });
+  await a.goto(`${process.env.MULTI_URL}?uid=u_old`);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('button', { name: 'Use an example' }).click();
+  await a.getByRole('button', { name: /Make my deck/ }).click();
+  await expect(a.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();
+  await expect(a.getByText(/Open Lumo inside Claude/)).toBeVisible();
+  // Back inside Claude (slow to answer, not allowed yet): Play opens the writing screen.
+  await a.goto(`${process.env.MULTI_URL}?uid=u_old&sample=slow`);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByText('The Water Cycle').click();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
+  const writing = a.getByRole('dialog', { name: 'Claude is writing your test' });
+  await expect(writing).toBeVisible();
+  await expect(writing.getByRole('button', { name: /Almost there/ })).toBeDisabled();
+  await writing.getByRole('button', { name: /Play now/ }).click({ timeout: 20_000 });
+  await expect(a.locator('section[data-format]')).toBeVisible();
+  expect(/Bank (scenario|statement|question)/.test((await a.locator('section[data-format]').textContent()) ?? '')).toBe(true);
+});
+
+test('website: saying no to Claude explains how to allow it, and basic questions still work', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(`${process.env.MULTI_URL}?uid=u_no`);
+  await a.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('u_no:')) delete localStorage[k];
+  });
+  await a.goto(`${process.env.MULTI_URL}?uid=u_no`);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('button', { name: 'Use an example' }).click();
+  await a.getByRole('button', { name: /Make my deck/ }).click();
+  await expect(a.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();
+  await a.goto(`${process.env.MULTI_URL}?uid=u_no&sample=deny`);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByText('The Water Cycle').click();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
+  const writing = a.getByRole('dialog', { name: 'Claude is writing your test' });
+  await expect(writing.getByText(/needs your OK to use Claude/)).toBeVisible({ timeout: 10_000 });
+  await expect(writing.getByRole('button', { name: 'Allow Claude' })).toBeVisible();
+  await writing.getByRole('button', { name: /basic questions/ }).click();
+  await expect(a.locator('section[data-format]')).toBeVisible();
 });

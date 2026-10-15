@@ -1,21 +1,25 @@
+import type { Rarity } from '@lumo/core';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
-import { HeartIcon } from '../components/icons';
-import { StudyPlan } from '../components/StudyPlan';
-import { ShareDeckToggle } from '../components/SharedDecks';
-import { offlineDeck, saveDeckOffline } from '../lib/offline';
 import { Lumo } from '../components/Lumo';
-import { QuestionBank } from '../components/QuestionBank';
+import { Creature3D } from '../components/Pet3D';
+import { READY_TO_PLAY, useWriting, WritingScreen } from '../components/play/Writing';
+import { ShareDeckToggle } from '../components/SharedDecks';
+import { StudyPlan } from '../components/StudyPlan';
 import { api, ApiError, LOCAL } from '../lib/api';
-import { useAuth } from '../lib/auth';
+import { offlineDeck, saveDeckOffline } from '../lib/offline';
 import type { MasteryItem, Mode } from '../lib/quiz';
+import { deckColors, tilt } from '../lib/tilt';
+import { canAskClaude } from '../local/reader';
+import { writeQuestions } from '../local/writer';
 
 interface DeckData {
   deck: { id: string; title: string; subject: string; language: string; mine: boolean };
   concepts: MasteryItem[];
-  /** Website: how many real test questions the deck's bank holds. */
+  /** Website: how many test questions Claude has written for the deck. */
   bankSize?: number;
+  best?: { speed?: number; bossWins?: number };
 }
 
 const BAND_STYLE: Record<MasteryItem['band'], string> = {
@@ -25,28 +29,68 @@ const BAND_STYLE: Record<MasteryItem['band'], string> = {
   mastered: 'bg-amber-glow/30 ring-amber-glow text-ink',
 };
 
+/** Is Claude already allowed here (so writing can start without asking)? */
+async function claudeAllowed(): Promise<boolean> {
+  const use = (window as unknown as { claude?: { use?: (n: string) => Promise<{ state?: (n: string) => Promise<string> } | null> } }).claude?.use;
+  if (!use) return false;
+  const p = await use('permissions').catch(() => null);
+  if (!p?.state) return true;
+  return (await p.state('sample').catch(() => 'prompt')) === 'granted';
+}
+
+/** A deck is a game hub: one big Play button, game modes, and the map of what you master. */
 export function Deck() {
   const { id } = useParams();
   const { t } = useTranslation();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState<DeckData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<Mode | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [ai, setAi] = useState(false);
+  const [writingOpen, setWritingOpen] = useState<Mode | null>(null);
+  const [pet, setPet] = useState<{ species: string; rarity: Rarity } | null>(null);
+  const writing = useWriting(id);
 
+  const load = () => api<DeckData>(`/api/decks/${id}`).then(setData, () => setError('deck_not_found'));
   useEffect(() => {
-    api<DeckData>(`/api/decks/${id}`).then(setData, () => setError('deck_not_found'));
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+  // Keep the question count fresh while Claude writes.
+  useEffect(() => {
+    if (writing) setData((d) => (d ? { ...d, bankSize: Math.max(d.bankSize ?? 0, writing.bank) } : d));
+  }, [writing]);
+  useEffect(() => {
+    if (!LOCAL) return;
+    void canAskClaude().then(setAi);
+    void api<{ pet: { species: string; rarity: Rarity } | null }>('/api/game/overview').then((o) => setPet(o.pet), () => {});
+  }, []);
+  // A deck without questions yet: Claude starts writing on its own when it's already allowed here.
+  useEffect(() => {
+    if (!LOCAL || !id || !data || (data.bankSize ?? 0) > 0 || writing) return;
+    void claudeAllowed().then((ok) => {
+      if (ok) void writeQuestions(id);
+    });
+  }, [data, id, writing]);
+
+  const bank = Math.max(data?.bankSize ?? 0, writing?.bank ?? 0);
+  const needsWriting = LOCAL && ai && bank < READY_TO_PLAY;
 
   const start = async (mode: Mode) => {
     if (starting) return;
+    // No questions yet: Claude writes them first (this tap is what lets it ask for permission).
+    if (needsWriting) {
+      void writeQuestions(id!);
+      setWritingOpen(mode);
+      return;
+    }
     setStarting(mode);
     setError(null);
     setHint(null);
     try {
-      const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode, length: mode === 'review' ? 8 : mode === 'exam' ? Math.min(20, Math.max(8, data?.concepts.length ?? 10)) : 10 } });
+      const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode, length: mode === 'review' || mode === 'wrong_only' ? 8 : mode === 'exam' ? Math.min(20, Math.max(8, data?.concepts.length ?? 10)) : 10 } });
       navigate(`/quiz/${res.session.id}`, { state: res });
     } catch (e) {
       setError(e instanceof ApiError ? e.code : 'network');
@@ -87,72 +131,120 @@ export function Deck() {
   const due = data.concepts.filter((c) => c.due).length;
   const wrong = data.concepts.filter((c) => c.band === 'learning').length;
   const studied = data.concepts.some((c) => c.band !== 'new');
-  const examLength = Math.min(20, Math.max(8, data.concepts.length));
+  const pct = data.concepts.length ? Math.round((data.concepts.reduce((s, c) => s + c.score, 0) / data.concepts.length) * 100) : 0;
+  const isWriting = writing?.status === 'writing';
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <Link to="/learn" className="rounded-full bg-surface px-3 py-1 text-sm font-extrabold ring-1 ring-line">
-          ← {t('common.back')}
-        </Link>
-      </div>
-      <header className="flex items-center gap-4">
-        <Lumo size={72} mood={mastered === data.concepts.length && mastered > 0 ? 'cheer' : 'happy'} glow={0.3 + (0.7 * mastered) / Math.max(1, data.concepts.length)} />
-        <div className="min-w-0">
-          <h1 className="text-2xl font-black">{data.deck.title}</h1>
-          <p className="text-sm text-muted">
-            {data.deck.subject} · {t('learn.mastered', { done: mastered, total: data.concepts.length })}
-          </p>
+    <div className="space-y-4">
+      <Link to="/learn" className="inline-block rounded-full bg-surface px-3 py-1 text-sm font-extrabold ring-1 ring-line">
+        ← {t('common.back')}
+      </Link>
+
+      {/* Hero */}
+      <header className="holo rise-in rounded-3xl p-5 text-white shadow-xl" style={{ background: deckColors(data.deck.title) }} {...tilt}>
+        <div className="flex items-center gap-4">
+          <MasteryRing pct={pct}>
+            {pet ? (
+              <Creature3D species={pet.species} rarity={pet.rarity} className="size-16">
+                <Lumo size={48} mood={pct >= 80 ? 'cheer' : 'happy'} />
+              </Creature3D>
+            ) : (
+              <Lumo size={52} mood={pct >= 80 ? 'cheer' : 'happy'} />
+            )}
+          </MasteryRing>
+          <div className="min-w-0">
+            <h1 className="text-2xl leading-tight font-black break-words drop-shadow">{data.deck.title}</h1>
+            <p className="text-sm font-bold opacity-90">{data.deck.subject}</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
+          <span className="rounded-full bg-black/20 px-2.5 py-1">🧠 {t('hub.ideas', { count: data.concepts.length })}</span>
+          {LOCAL && (ai || bank > 0) && (
+            <span className="rounded-full bg-black/20 px-2.5 py-1" aria-live="polite">
+              {isWriting ? `✍️ ${t('hub.writing', { count: bank })}` : `📝 ${t('hub.questions', { count: bank })}`}
+            </span>
+          )}
+          <span className="rounded-full bg-black/20 px-2.5 py-1">⭐ {t('learn.mastered', { done: mastered, total: data.concepts.length })}</span>
         </div>
       </header>
 
-      {LOCAL && <QuestionBank deckId={data.deck.id} bankSize={data.bankSize ?? 0} onBuilt={() => void api<DeckData>(`/api/decks/${id}`).then(setData)} />}
+      {LOCAL && !ai && bank === 0 && (
+        <p className="rounded-2xl bg-amber-glow/15 px-3 py-2 text-sm font-bold ring-1 ring-amber-glow/40">{t('hub.noClaude')}</p>
+      )}
 
-      <section className="grid gap-3">
-        <ModeButton primary onClick={() => void start('practice')} busy={starting === 'practice'} title={t('deck.practice')} body={t('deck.practiceBody')} icon="✨" />
-        {(error || hint) && error !== 'deck_not_found' && (
-          <p role="alert" className={`rounded-xl px-3 py-2 text-sm font-bold ${error ? 'bg-bad/10 text-bad' : 'bg-brand/10'}`}>
-            {error ? t(`quiz.errors.${error}`, { defaultValue: t('signin.errors.network') }) : hint}
-          </p>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          <ModeButton onClick={() => void start('review')} busy={starting === 'review'} title={t('deck.review')} body={due ? t('deck.reviewDue', { count: due }) : t('deck.reviewBody')} icon="🔁" note={!studied ? t('deck.needPractice') : undefined} locked={!studied} onLocked={() => setHint(t('deck.needPractice'))} />
-          <ModeButton onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} icon="🎯" note={!studied ? t('deck.needPractice') : undefined} locked={!studied} onLocked={() => setHint(t('deck.needPractice'))} />
-        </div>
-        <ModeButton
-          onClick={() => void start('challenge')}
-          busy={starting === 'challenge'}
-          title={t('deck.challenge')}
-          body={t('deck.challengeBody')}
-          icon={<HeartIcon size={22} className="text-heart" />}
-          locked={(user?.hearts.current ?? 0) === 0}
-          onLocked={() => setHint(t('deck.noHearts'))}
-          note={(user?.hearts.current ?? 0) === 0 ? t('deck.noHearts') : undefined}
-        />
-        <ModeButton onClick={() => void start('exam')} busy={starting === 'exam'} title={t('deck.exam')} body={t('deck.examBody', { count: examLength })} icon="📝" />
-        <div className="grid grid-cols-2 gap-3">
-          <Link to={`/audio/${data.deck.id}`} className="rounded-2xl bg-surface p-3 ring-1 ring-line">
-            <span className="block font-black">🎧 {t('deck.audio')}</span>
-            <span className="block text-xs text-muted">{t('deck.audioBody')}</span>
-          </Link>
-          {!LOCAL && (
+      {/* Play */}
+      <button
+        type="button"
+        onClick={() => void start('practice')}
+        disabled={!!starting}
+        className="breathe flex w-full items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 py-5 text-2xl font-black text-white shadow-[0_6px_0_0_rgb(0_0_0/0.25)] active:translate-y-1 disabled:opacity-60"
+      >
+        <span className="text-3xl" aria-hidden>
+          {starting === 'practice' ? '⏳' : '▶'}
+        </span>
+        <span className="text-left leading-tight">
+          {t('hub.play')}
+          <span className="block text-sm font-bold opacity-90">{needsWriting ? t('hub.playWrite') : t('hub.playBody')}</span>
+        </span>
+      </button>
+      {(error || hint) && error !== 'deck_not_found' && (
+        <p role="alert" className={`rounded-xl px-3 py-2 text-sm font-bold ${error ? 'bg-bad/10 text-bad' : 'bg-brand/10'}`}>
+          {error ? t(`quiz.errors.${error}`, { defaultValue: t('signin.errors.network') }) : hint}
+        </p>
+      )}
+
+      {/* Game modes */}
+      {LOCAL ? (
+        <section className="grid grid-cols-2 gap-3" aria-label={t('hub.modes')}>
+          <ModeTile tone="from-orange-500 to-amber-400" icon="⚡" title={t('play.modes.speed')} body={data.best?.speed ? t('play.bestScore', { n: data.best.speed }) : t('hub.speedBody')} onClick={() => void start('speed')} busy={starting === 'speed'} />
+          <ModeTile tone="from-rose-600 to-purple-700" icon="🐉" title={t('play.modes.boss')} body={data.best?.bossWins ? t('hub.bossWins', { count: data.best.bossWins }) : t('hub.bossBody')} onClick={() => void start('boss')} busy={starting === 'boss'} />
+          <ModeTile tone="from-sky-500 to-indigo-600" icon="🃏" title={t('play.modes.cards')} body={t('hub.cardsBody')} onClick={() => navigate(`/cards/${id}`)} />
+          {wrong > 0 ? (
+            <ModeTile tone="from-emerald-500 to-teal-600" icon="🎯" title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} />
+          ) : (
+            <ModeTile
+              tone="from-emerald-500 to-teal-600"
+              icon="🔁"
+              title={t('deck.review')}
+              body={due ? t('deck.reviewDue', { count: due }) : studied ? t('deck.reviewBody') : t('deck.needPractice')}
+              onClick={() => (studied ? void start('review') : setHint(t('deck.needPractice')))}
+              busy={starting === 'review'}
+            />
+          )}
+        </section>
+      ) : (
+        <section className="grid grid-cols-2 gap-3">
+          <ModeTile tone="from-emerald-500 to-teal-600" icon="🔁" title={t('deck.review')} body={due ? t('deck.reviewDue', { count: due }) : t('deck.reviewBody')} onClick={() => void start('review')} busy={starting === 'review'} />
+          <ModeTile tone="from-rose-600 to-purple-700" icon="🎯" title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} />
+        </section>
+      )}
+
+      <section className="grid grid-cols-2 gap-3">
+        <button type="button" onClick={() => void start('exam')} disabled={!!starting} className="rounded-2xl bg-surface p-3 text-left ring-1 ring-line hover:ring-brand">
+          <span className="block font-black">📝 {t('deck.exam')}</span>
+          <span className="block text-xs text-muted">{t('deck.examBody', { count: Math.min(20, Math.max(8, data.concepts.length)) })}</span>
+        </button>
+        <Link to={`/live?deck=${data.deck.id}`} className="rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3 text-white">
+          <span className="block font-black">👥 {t('deck.live')}</span>
+          <span className="block text-xs opacity-85">{t('deck.liveBody')}</span>
+        </Link>
+        <Link to={`/audio/${data.deck.id}`} className="rounded-2xl bg-surface p-3 ring-1 ring-line">
+          <span className="block font-black">🎧 {t('deck.audio')}</span>
+          <span className="block text-xs text-muted">{t('deck.audioBody')}</span>
+        </Link>
+        {LOCAL && ai ? (
+          <button type="button" onClick={() => void writeQuestions(id!, { more: true })} disabled={isWriting} className="rounded-2xl bg-surface p-3 text-left ring-1 ring-line hover:ring-brand disabled:opacity-60">
+            <span className="block font-black">✨ {t('hub.more')}</span>
+            <span className="block text-xs text-muted">{isWriting ? t('hub.writing', { count: bank }) : t('hub.moreBody')}</span>
+          </button>
+        ) : !LOCAL ? (
           <button onClick={() => void saveOffline()} disabled={offlineState === 'saving'} className="rounded-2xl bg-surface p-3 text-left ring-1 ring-line disabled:opacity-60">
             <span className="block font-black">{offlineState === 'saved' ? '✅' : '📥'} {offlineState === 'saved' ? t('deck.offlineSaved') : t('deck.offline')}</span>
             <span className="block text-xs text-muted">{offlineState === 'failed' ? t('deck.offlineFailed') : t('deck.offlineBody')}</span>
           </button>
-          )}
-        </div>
-        {(
-        <Link to={`/live?deck=${data.deck.id}`} className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3.5 text-white">
-          <span className="text-2xl">⚡</span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-black">{t('deck.live')}</span>
-            <span className="block text-sm opacity-85">{t('deck.liveBody')}</span>
-          </span>
-          <span className="text-2xl">›</span>
-        </Link>
-        )}
+        ) : null}
       </section>
+      {writing?.status === 'error' && writing.error !== 'cancelled' && bank > 0 && <p className="rounded-xl bg-surface-2 px-3 py-2 text-xs font-bold text-muted">{t(`write.errors.${writing.error}`, { defaultValue: t('write.errors.upstream_error') })}</p>}
 
       {LOCAL && <ShareDeckToggle deckId={data.deck.id} />}
 
@@ -214,27 +306,62 @@ export function Deck() {
           )}
         </div>
       )}
+
+      {writingOpen && (
+        <WritingScreen
+          deckId={id!}
+          bank={bank}
+          onClose={() => setWritingOpen(null)}
+          onPlay={() => {
+            const m = writingOpen;
+            setWritingOpen(null);
+            void load().then(() => start(m));
+          }}
+          onBasic={() => {
+            const m = writingOpen;
+            setWritingOpen(null);
+            setAi(false);
+            void (async () => {
+              setStarting(m);
+              try {
+                const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode: m === 'speed' || m === 'boss' ? 'practice' : m, length: 10 } });
+                navigate(`/quiz/${res.session.id}`, { state: res });
+              } catch (e) {
+                setError(e instanceof ApiError ? e.code : 'network');
+                setStarting(null);
+              }
+            })();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function ModeButton({ title, body, icon, onClick, busy, primary, locked, onLocked, note }: { title: string; body: string; icon: React.ReactNode; onClick: () => void; busy?: boolean; primary?: boolean; locked?: boolean; onLocked?: () => void; note?: string }) {
-  // A locked mode still answers a tap (with why), so nothing ever looks broken.
+function MasteryRing({ pct, children }: { pct: number; children: React.ReactNode }) {
+  const r = 38;
+  const c = 2 * Math.PI * r;
   return (
-    <button
-      type="button"
-      onClick={locked ? onLocked : onClick}
-      disabled={busy}
-      className={`flex items-center gap-3 rounded-3xl p-4 text-left transition touch-manipulation active:scale-[0.99] disabled:opacity-50 ${
-        primary ? 'bg-brand text-brand-ink shadow-[0_4px_0_0_rgb(0_0_0/0.18)]' : 'bg-surface ring-1 ring-line hover:ring-brand'
-      }`}
-    >
-      <span className="text-2xl" aria-hidden>
-        {busy ? '⏳' : locked ? '🔒' : icon}
+    <div className="relative grid size-24 shrink-0 place-items-center" role="img" aria-label={`${pct}%`}>
+      <svg viewBox="0 0 88 88" className="absolute inset-0 -rotate-90" aria-hidden>
+        <circle cx="44" cy="44" r={r} fill="rgb(0 0 0 / 0.2)" stroke="rgb(255 255 255 / 0.25)" strokeWidth="7" />
+        <circle cx="44" cy="44" r={r} fill="none" stroke="#fde047" strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
+      </svg>
+      {children}
+      <span className="absolute -bottom-1 rounded-full bg-night px-2 text-xs font-black text-amber-300">{pct}%</span>
+    </div>
+  );
+}
+
+function ModeTile({ tone, icon, title, body, onClick, busy }: { tone: string; icon: string; title: string; body: string; onClick: () => void; busy?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} disabled={busy} className={`holo rise-in flex min-h-28 flex-col justify-between rounded-3xl bg-gradient-to-br ${tone} p-3.5 text-left text-white shadow-lg active:scale-[0.98] disabled:opacity-60`} {...tilt}>
+      <span className="text-3xl" aria-hidden>
+        {busy ? '⏳' : icon}
       </span>
-      <span className="min-w-0">
-        <span className="block font-black">{title}</span>
-        <span className={`block text-sm ${primary ? 'opacity-90' : 'text-muted'}`}>{note ?? body}</span>
+      <span>
+        <span className="block text-lg leading-tight font-black">{title}</span>
+        <span className="block text-xs font-bold opacity-90">{body}</span>
       </span>
     </button>
   );

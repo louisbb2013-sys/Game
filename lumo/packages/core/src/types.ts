@@ -1,6 +1,7 @@
 /** Question formats. Every concept is asked in many of these, never the same twice in a row. */
 export const FORMATS = [
   'multiple_choice',
+  'true_false',
   'multiple_select',
   'type_answer',
   'fill_blank',

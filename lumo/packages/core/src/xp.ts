@@ -3,6 +3,7 @@ import type { Bloom, Format } from './types';
 /** Harder, more generative formats earn more XP. */
 export const FORMAT_XP: Record<Format, number> = {
   multiple_choice: 10,
+  true_false: 8,
   true_false_justify: 14,
   multiple_select: 12,
   matching: 12,

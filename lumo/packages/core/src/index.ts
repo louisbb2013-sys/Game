@@ -16,6 +16,8 @@ export * from './quiz/formats';
 export * from './quiz/generate';
 export * from './quiz/build';
 export * from './quiz/bank';
+export * from './quiz/draft';
+export * from './quiz/sampleBank';
 export * from './quiz/planner';
 export * from './quiz/session';
 export * from './quiz/samples';

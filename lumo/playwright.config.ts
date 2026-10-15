@@ -6,6 +6,8 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_URL ?? 'http://localhost:5173',
     ...devices['Pixel 7'],
+    // Calm screens for the robot: no breathing buttons, no auto-advance after a right answer.
+    reducedMotion: 'reduce',
     launchOptions: process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
   },
 });

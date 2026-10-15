@@ -81,8 +81,8 @@ describe.each(['en', 'fr'] as const)('generator + grader on the %s sample deck',
         }
       }
     }
-    // label_diagram needs a diagram image, which the sample decks don't have.
-    expect([...covered].sort()).toEqual(FORMATS.filter((f) => f !== 'label_diagram').slice().sort());
+    // label_diagram needs a diagram image, which the sample decks don't have; plain true/false is only written by Claude.
+    expect([...covered].sort()).toEqual(FORMATS.filter((f) => f !== 'label_diagram' && f !== 'true_false').slice().sort());
   });
 
   it('never leaks the answer key to the client', () => {
@@ -158,22 +158,23 @@ describe('planner: anti-memorization', () => {
 });
 
 describe('session', () => {
-  it('schedules a retry two questions later, at most twice per concept', () => {
+  it('schedules a retry three questions later, at most twice per concept', () => {
     let s = newSession('practice', ['a', 'b', 'c', 'd']);
     let o = applyAnswer(s, { conceptId: 'a', format: 'multiple_choice', bloom: 'remember', score: 0, variantKey: 'k' }, 0);
     expect(o.retryScheduled).toBe(true);
-    expect(o.state.queue).toEqual(['b', 'c', 'a', 'd']);
+    expect(o.state.queue).toEqual(['b', 'c', 'd', 'a']);
     expect(o.state.total).toBe(5);
     s = o.state;
     o = applyAnswer(s, { conceptId: 'b', format: 'matching', bloom: 'remember', score: 1, variantKey: 'k' }, 10);
     expect(o.combo).toBe(1);
     s = applyAnswer(o.state, { conceptId: 'c', format: 'matching', bloom: 'remember', score: 1, variantKey: 'k' }, 10).state;
+    s = applyAnswer(s, { conceptId: 'd', format: 'matching', bloom: 'remember', score: 1, variantKey: 'k' }, 10).state;
     o = applyAnswer(s, { conceptId: 'a', format: 'explain', bloom: 'remember', score: 0.2, variantKey: 'k2' }, 0);
     expect(o.firstTry).toBe(false);
     expect(o.state.retries.a).toBe(2);
     o = applyAnswer({ ...o.state, queue: ['a'] }, { conceptId: 'a', format: 'apply', bloom: 'remember', score: 0, variantKey: 'k3' }, 0);
     expect(o.retryScheduled).toBe(false);
-    expect(o.state.bestCombo).toBe(2);
+    expect(o.state.bestCombo).toBe(3);
   });
 
   it('exam mode never inserts retries', () => {

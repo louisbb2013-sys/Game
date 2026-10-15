@@ -16,14 +16,31 @@ export interface SessionState {
   retries: Record<string, number>; // conceptId -> retries inserted
   retryIds: string[]; // concepts whose next question is a retry (no first-try bonus)
   history: { conceptId: string; format: Format; bloom: Bloom; score: number; variantKey: string }[];
-  endedReason?: 'done' | 'out_of_hearts';
+  endedReason?: 'done' | 'out_of_hearts' | 'time_up' | 'boss_defeated' | 'boss_escaped';
 }
 
 export const MAX_RETRIES_PER_CONCEPT = 2;
-export const RETRY_GAP = 2; // ask the retry after this many other questions (spacing helps)
+/** A struggling round still ends: at most this many missed ideas come back. */
+export const MAX_RETRIES_PER_ROUND = 4;
+export const RETRY_GAP = 3; // ask the retry after this many other questions (spacing helps)
 
 export function newSession(mode: SessionMode, conceptIds: string[]): SessionState {
   return { mode, queue: conceptIds.slice(), total: conceptIds.length, answered: 0, correct: 0, combo: 0, bestCombo: 0, xp: 0, retries: {}, retryIds: [], history: [] };
+}
+
+/**
+ * A round that asks each idea twice, with other ideas in between (a b c a d b e c d e): recalling
+ * something again after a short gap is what makes it stick (successive relearning).
+ */
+export function twiceSpaced(ids: readonly string[]): string[] {
+  const uniq = [...new Set(ids)];
+  const out: string[] = [];
+  uniq.forEach((id, i) => {
+    out.push(id);
+    if (i >= 2) out.push(uniq[i - 2]!);
+  });
+  out.push(...uniq.slice(Math.max(0, uniq.length - 2)));
+  return out;
 }
 
 export function nextConcept(s: SessionState): string | null {
@@ -50,7 +67,9 @@ export function applyAnswer(s: SessionState, entry: SessionState['history'][numb
   let total = s.total;
   let retryScheduled = false;
 
-  if (!correct && (retries[entry.conceptId] ?? 0) < MAX_RETRIES_PER_CONCEPT && s.mode !== 'exam') {
+  // A missed concept comes back a little later in another form (not in a mock exam or a race against the clock).
+  const retriesSoFar = Object.values(retries).reduce((a, b) => a + b, 0);
+  if (!correct && (retries[entry.conceptId] ?? 0) < MAX_RETRIES_PER_CONCEPT && retriesSoFar < MAX_RETRIES_PER_ROUND && s.mode !== 'exam' && s.mode !== 'speed') {
     retries[entry.conceptId] = (retries[entry.conceptId] ?? 0) + 1;
     queue.splice(Math.min(RETRY_GAP, queue.length), 0, entry.conceptId);
     retryIds = [...retryIds, entry.conceptId];

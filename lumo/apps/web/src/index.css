@@ -269,3 +269,148 @@ html[data-reduce-motion='true'] *::after {
   .holo, .press, .press-right, .press-wrong, .aurora, .rise-in, .shimmer::after { animation: none !important; transition: none !important; }
   .holo { transform: none; }
 }
+
+/* ---------- The play arena (full-screen game look, always dark) ---------- */
+.arena {
+  --lumo-bg: #120f33;
+  --lumo-surface: #241f5c;
+  --lumo-surface-2: #2f2873;
+  --lumo-ink: #ffffff;
+  --lumo-muted: #cfcaf5;
+  --lumo-line: #463f99;
+  --lumo-brand: #a5b4fc;
+  --lumo-brand-ink: #120f33;
+  --lumo-good: #4ade80;
+  --lumo-bad: #fb7185;
+  color-scheme: dark;
+  color: #fff;
+  isolation: isolate;
+  min-height: 100dvh;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(129 140 248 / 0.45), transparent 60%),
+    radial-gradient(80% 50% at 100% 100%, rgb(236 72 153 / 0.28), transparent 60%),
+    linear-gradient(170deg, #1e1b4b 0%, #2e1065 55%, #3b0764 100%);
+}
+.arena[data-mode='speed'] {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(251 146 60 / 0.45), transparent 60%),
+    radial-gradient(80% 50% at 100% 100%, rgb(250 204 21 / 0.22), transparent 60%),
+    linear-gradient(170deg, #431407 0%, #7c2d12 50%, #4c0519 100%);
+}
+.arena[data-mode='boss'] {
+  background:
+    radial-gradient(110% 55% at 50% 0%, rgb(239 68 68 / 0.45), transparent 60%),
+    radial-gradient(80% 50% at 0% 100%, rgb(168 85 247 / 0.3), transparent 60%),
+    linear-gradient(175deg, #1c0a1f 0%, #450a0a 55%, #1e1b4b 100%);
+}
+.arena[data-mode='exam'] { background: linear-gradient(170deg, #0f172a 0%, #1e293b 100%); }
+.arena-stars { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.55;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 38% 64%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 86% 48%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 22% 86%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 58% 32%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 92% 82%, #fff 50%, transparent 51%);
+  animation: twinkle 4s ease-in-out infinite alternate; }
+@keyframes twinkle { from { opacity: 0.35; } to { opacity: 0.7; } }
+
+/* The question card slides in like a dealt card. */
+.card-in { animation: card-in 0.45s cubic-bezier(.2,.9,.25,1.15) both; }
+@keyframes card-in { from { opacity: 0; transform: translateX(40px) rotate(2deg) scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* Answer tiles: big, colourful, pressable. */
+.tile { position: relative; display: flex; align-items: center; gap: 0.75rem; border-radius: 1.25rem; padding: 0.9rem 1rem; font-weight: 900; text-align: left;
+  color: #fff; box-shadow: 0 6px 0 0 rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.25); transition: transform 0.08s, box-shadow 0.08s, opacity 0.25s, filter 0.25s; touch-action: manipulation; user-select: none; }
+.tile:not(:disabled):active, .tile[data-pressed='true'] { transform: translateY(5px); box-shadow: 0 1px 0 0 rgb(0 0 0 / 0.35); }
+.tile-red { background: linear-gradient(160deg, #dc2626, #b91c1c); }
+.tile-blue { background: linear-gradient(160deg, #2563eb, #1d4ed8); }
+.tile-yellow { background: linear-gradient(160deg, #fde047, #facc15); color: #1e1b4b; }
+.tile-green { background: linear-gradient(160deg, #15803d, #166534); }
+.tile-shape { display: grid; place-items: center; flex-shrink: 0; width: 2.1rem; height: 2.1rem; border-radius: 9999px; background: rgb(0 0 0 / 0.18); }
+.tile-grid .tile { flex-direction: column; justify-content: center; text-align: center; min-height: 7.5rem; }
+.tile[data-state='dim'] { opacity: 0.32; filter: saturate(0.4); }
+.tile[data-state='right'] { box-shadow: 0 0 0 4px #4ade80, 0 0 28px 6px rgb(74 222 128 / 0.55), 0 6px 0 0 rgb(0 0 0 / 0.35); animation: tile-win 0.5s ease-out; }
+.tile[data-state='wrong'] { box-shadow: 0 0 0 4px #fb7185, 0 6px 0 0 rgb(0 0 0 / 0.35); animation: shake 0.45s ease-in-out; }
+.tile[data-state='gone'] { opacity: 0; transform: scale(0.85); pointer-events: none; }
+@keyframes tile-win { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.tile-badge { position: absolute; top: -0.6rem; right: -0.6rem; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9999px; font-size: 1.1rem; box-shadow: 0 2px 8px rgb(0 0 0 / 0.35); animation: combo-pop 0.4s ease-out both; }
+
+/* Paper "document" for ministry-exam style questions. */
+.doc { background: linear-gradient(180deg, #fffdf6, #fdf6e3); color: #1f2937; border-radius: 1rem; box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6); }
+
+/* Effects */
+.fx-spark { position: fixed; z-index: 95; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 2px; pointer-events: none;
+  animation: spark 0.8s cubic-bezier(.15,.7,.3,1) forwards; }
+@keyframes spark { from { transform: translate(0,0) scale(var(--s)) rotate(0deg); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(0) rotate(240deg); opacity: 0.2; } }
+.fx-float { position: fixed; z-index: 96; transform: translate(-50%, -50%); font-weight: 900; font-size: 1.6rem; color: #fde047; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.45), 0 0 18px rgb(0 0 0 / 0.35); animation: float-up 1s ease-out forwards; }
+@keyframes float-up { 0% { opacity: 0; transform: translate(-50%, -30%) scale(0.6); } 20% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, calc(-50% + var(--dy))) scale(1); } }
+.fx-flash { position: fixed; inset: 0; z-index: 94; pointer-events: none; animation: fx-flash 0.45s ease-out forwards; }
+.fx-flash-good { background: radial-gradient(circle at 50% 60%, rgb(74 222 128 / 0.35), transparent 70%); }
+.fx-flash-bad { background: radial-gradient(circle at 50% 60%, rgb(244 63 94 / 0.35), transparent 70%); }
+.fx-flash-gold { background: radial-gradient(circle at 50% 40%, rgb(250 204 21 / 0.45), transparent 70%); }
+@keyframes fx-flash { from { opacity: 1; } to { opacity: 0; } }
+
+/* HUD bits */
+.bump { animation: bump 0.35s ease-out; }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.combo-hot { background: linear-gradient(90deg, #f97316, #facc15); color: #1e1b4b; box-shadow: 0 0 16px rgb(250 204 21 / 0.6); }
+.bar-tip { position: relative; }
+.bar-tip::after { content: ''; position: absolute; right: -2px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 9999px; background: #fff; box-shadow: 0 0 12px 4px rgb(255 255 255 / 0.7); }
+
+/* Boss */
+.boss-hit { animation: boss-hit 0.45s ease-out; }
+@keyframes boss-hit { 0% { transform: translateX(0) scale(1); filter: none; } 15% { transform: translateX(-10px) scale(0.95); filter: brightness(2) saturate(0.5) hue-rotate(-30deg); } 35% { transform: translateX(9px); } 55% { transform: translateX(-6px); } 100% { transform: none; filter: none; } }
+.boss-idle { animation: boss-idle 2.6s ease-in-out infinite; }
+@keyframes boss-idle { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.03); } }
+.boss-idle.boss-hit { animation: boss-hit 0.45s ease-out; }
+.boss-dead { animation: boss-dead 0.9s ease-in forwards; }
+@keyframes boss-dead { 0% { transform: scale(1); opacity: 1; filter: brightness(1); } 40% { transform: scale(1.25) rotate(-8deg); filter: brightness(3); } 100% { transform: scale(0.2) rotate(30deg); opacity: 0; } }
+.shield-crack { animation: shield-crack 0.5s ease-out; }
+@keyframes shield-crack { 0% { transform: scale(1); } 30% { transform: scale(1.5) rotate(-15deg); } 100% { transform: scale(1); } }
+
+/* Countdown 3-2-1 */
+.count-pop { animation: count-pop 0.6s cubic-bezier(.2,1.5,.4,1) both; }
+@keyframes count-pop { 0% { transform: scale(2.4); opacity: 0; } 40% { transform: scale(0.9); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+
+/* Lightning question ring */
+.ring-track { stroke: rgb(255 255 255 / 0.18); }
+.ring-fill { stroke: #fde047; transition: stroke-dashoffset 0.1s linear; }
+
+/* Chests to pick */
+.chest-bob { animation: chest-bob 1.6s ease-in-out infinite; animation-delay: var(--d, 0s); }
+@keyframes chest-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
+.chest-open { animation: chest-open 0.6s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes chest-open { 0% { transform: scale(1); } 30% { transform: scale(0.85) rotate(-6deg); } 70% { transform: scale(1.25) rotate(4deg); } 100% { transform: scale(1.1); } }
+
+/* Stars at the end of a round */
+.star-pop { animation: star-pop 0.55s cubic-bezier(.2,1.6,.4,1) both; animation-delay: var(--d, 0s); }
+@keyframes star-pop { 0% { transform: scale(0) rotate(-40deg); opacity: 0; } 70% { transform: scale(1.3) rotate(8deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+
+/* Flashcards flip */
+.flip { perspective: 1200px; }
+.flip-inner { position: relative; width: 100%; height: 100%; transition: transform 0.55s cubic-bezier(.2,.8,.2,1); transform-style: preserve-3d; }
+.flip[data-flipped='true'] .flip-inner { transform: rotateY(180deg); }
+.flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-back { transform: rotateY(180deg); }
+.swipe-out-right { animation: swipe-right 0.35s ease-in forwards; }
+.swipe-out-left { animation: swipe-left 0.35s ease-in forwards; }
+@keyframes swipe-right { to { transform: translateX(120%) rotate(18deg); opacity: 0; } }
+@keyframes swipe-left { to { transform: translateX(-120%) rotate(-18deg); opacity: 0; } }
+
+/* The big play button breathes. */
+.breathe { animation: breathe 2.2s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { transform: scale(1); box-shadow: 0 6px 0 0 rgb(0 0 0 / 0.25), 0 0 0 0 rgb(165 180 252 / 0.0); } 50% { transform: scale(1.02); box-shadow: 0 6px 0 0 rgb(0 0 0 / 0.25), 0 0 0 10px rgb(165 180 252 / 0.18); } }
+
+/* Writing screen: a quill bobbing over paper. */
+.write-bob { animation: write-bob 1.1s ease-in-out infinite; }
+@keyframes write-bob { 0%, 100% { transform: translate(0, 0) rotate(-12deg); } 50% { transform: translate(8px, -4px) rotate(4deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .card-in, .tile, .fx-spark, .fx-float, .bump, .boss-hit, .boss-idle, .boss-dead, .count-pop, .chest-bob, .chest-open, .star-pop, .breathe, .write-bob, .arena-stars { animation: none !important; }
+  .flip-inner { transition: none; }
+}
+html[data-reduce-motion='true'] .flip-inner { transition: none; }
+@keyframes fill-bar { from { width: 0; } to { width: 100%; } }

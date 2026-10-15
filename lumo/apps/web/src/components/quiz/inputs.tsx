@@ -45,6 +45,7 @@ export function isReady(q: PublicQuestion, a: Answer | null): boolean {
 export function QuestionInput(p: InputProps) {
   switch (p.q.format) {
     case 'multiple_choice':
+    case 'true_false':
     case 'cause_effect':
       return <ChoiceInput {...p} />;
     case 'multiple_select':

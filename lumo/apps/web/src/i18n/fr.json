@@ -146,7 +146,8 @@
     "shareRevoke": "Couper",
     "tooManyLinks": "Tu peux avoir 5 liens au maximum. Coupes-en un d’abord.",
     "export": "Télécharger mes données",
-    "exportHint": "Un fichier avec tout ce que Lumo garde sur toi."
+    "exportHint": "Un fichier avec tout ce que Lumo garde sur toi.",
+    "haptics": "Vibration aux réponses"
   },
   "common": {
     "loading": "Chargement…",
@@ -1059,7 +1060,8 @@
       "unavailable": "La recherche d’un sujet a besoin de Claude, qui n’est pas disponible ici.",
       "not_granted": "Autorise Lumo à utiliser Claude pour chercher des sujets.",
       "rate_limited": "Trop de demandes en ce moment. Réessaie dans une minute."
-    }
+    },
+    "readingNotes": "Claude lit tes notes…"
   },
   "together": {
     "helpTitle": "Jouer ensemble dans Claude",
@@ -1144,5 +1146,170 @@
       "rate_limited": "Trop de demandes. Réessaie dans une minute.",
       "nothing_found": "Impossible d’écrire des questions pour ce paquet. Réessaie."
     }
+  },
+  "play": {
+    "answers": "Réponses",
+    "orderTap": "Touche-les dans l’ordre, du premier au dernier",
+    "yourOrder": "Ton ordre",
+    "matchTap": "Touche un élément à gauche, puis son partenaire",
+    "hintLetter": "Commence par {{letter}}, {{count}} lettres",
+    "praise": [
+      "Excellent !",
+      "Oui ! 🎯",
+      "Bien joué !",
+      "Parfait !",
+      "Bravo !",
+      "Bien raisonné !"
+    ],
+    "oops": [
+      "Pas tout à fait",
+      "Oups !",
+      "Presque…",
+      "Pas cette fois"
+    ],
+    "youPicked": "Tu as choisi « {{answer}} »",
+    "report": "Signaler un problème avec cette question",
+    "reported": "Merci ! Cette question est retirée de ton paquet.",
+    "chestTitle": "Choisis un coffre !",
+    "chestEarned": "3 bonnes réponses !",
+    "chestYouGot": "Tu as gagné…",
+    "chestN": "Coffre {{n}}",
+    "chestNext": "Coffre suivant ({{count}})",
+    "loot": {
+      "egg_one": "+{{count}} pour ton œuf",
+      "egg_other": "+{{count}} pour ton œuf"
+    },
+    "end": {
+      "perfect": "Manche parfaite !",
+      "done": "Manche terminée !",
+      "bossWon": "Boss vaincu ! 🏆",
+      "bossLost": "Le boss a gagné cette fois",
+      "bossEscaped": "Le boss s’est enfui !",
+      "newBest": "Nouveau record ! 🎉",
+      "timeUp": "Temps écoulé !",
+      "again": "Rejouer",
+      "rematch": "Revanche",
+      "fix_one": "Corriger {{count}} erreur",
+      "fix_other": "Corriger {{count}} erreurs",
+      "review": "À revoir"
+    },
+    "points": "{{n}} points",
+    "pts": "pts",
+    "bestScore": "Record : {{n}}",
+    "starsLabel_one": "{{count}} étoile sur 3",
+    "starsLabel_other": "{{count}} étoiles sur 3",
+    "openChests_one": "Ouvre ton coffre",
+    "openChests_other": "Ouvre tes {{count}} coffres",
+    "modes": {
+      "learn": "Apprendre",
+      "speed": "Course éclair",
+      "boss": "Combat de boss",
+      "cards": "Cartes"
+    },
+    "lightning": "Éclair ! ×2 XP en 10 s",
+    "again": "Encore",
+    "hint": "Indice",
+    "hintCost": "Indice : coûte {{n}} pièces",
+    "document": "Document",
+    "grading": "Lumo corrige…",
+    "ask": {
+      "tf": "Vrai ou faux ?",
+      "mcq": "Choisis la réponse",
+      "multi": "Plusieurs réponses",
+      "typed": "Écris la réponse",
+      "order": "Remets dans l’ordre",
+      "match": "Associe les paires",
+      "sort": "Classe-les",
+      "written": "Réponds en quelques phrases",
+      "calc": "Calcule"
+    },
+    "errors": {
+      "not_enough_coins": "Pas assez de pièces pour un indice.",
+      "no_hint": "Pas d’indice pour celle-ci."
+    },
+    "boss": {
+      "name": "Boss : {{name}}",
+      "hp": "Vie du boss",
+      "shields_one": "{{count}} bouclier restant",
+      "shields_other": "{{count}} boucliers restants",
+      "title": "Combat de boss",
+      "rules": "Réponds juste pour frapper {{name}} — les séries frappent plus fort. Une erreur brise un de tes 3 boucliers 🛡️, et 3 bonnes réponses de suite en réparent un. Si tu les perds tous, le boss gagne !",
+      "fight": "Combattre !",
+      "hit": "Touché ! −{{n}}",
+      "mended": "Bouclier réparé"
+    },
+    "go": "GO !",
+    "speedRules": "60 secondes. Réponds au plus de questions possible — les séries rapportent plus. Bats ton record !",
+    "timeLeft": "{{s}} secondes restantes",
+    "matchLeft": "Associe ceux-ci",
+    "matchRight": "…avec ceux-là",
+    "explainMore": "Explique-le-moi autrement",
+    "explainTitle": "Lumo explique",
+    "explaining": "Lumo réfléchit…",
+    "explainFailed": "Impossible d’expliquer pour l’instant. Touche pour réessayer.",
+    "progress": "Progression de la manche"
+  },
+  "write": {
+    "title": "Claude écrit ton examen",
+    "readyTitle": "Ton examen est prêt !",
+    "failedTitle": "Impossible d’écrire les questions",
+    "lines": [
+      "Il invente des situations toutes nouvelles…",
+      "Il transforme les vraies erreurs d’élèves en pièges…",
+      "Il prépare des documents comme à l’examen du ministère…",
+      "Il vérifie chaque réponse deux fois…",
+      "Il s’assure que rien n’est copié de tes notes…"
+    ],
+    "count_one": "{{count}} question prête",
+    "count_other": "{{count}} questions prêtes",
+    "playNow": "Jouer maintenant",
+    "almost": "Presque… (encore {{n}})",
+    "keepsWriting": "Claude continue d’en écrire pendant que tu joues.",
+    "why": "De vraies questions d’examen, ça prend environ une minute. Ça vaut la peine !",
+    "warmup": "Échauffe-toi avec les cartes",
+    "allow": "Autoriser Claude",
+    "retry": "Réessayer",
+    "basic": "Jouer avec des questions simples",
+    "errors": {
+      "not_granted": "Lumo a besoin de ton accord pour utiliser Claude. Touche « Autoriser Claude », puis accepte dans la fenêtre.",
+      "rate_limited": "Claude est occupé en ce moment. Réessaie dans une minute.",
+      "unavailable": "Claude n’est pas disponible ici.",
+      "nothing_found": "Claude n’a pas réussi cette fois. Réessaie.",
+      "session_expired": "Reconnecte-toi à Claude, puis réessaie.",
+      "sampling_disabled": "Claude est désactivé pour ce compte.",
+      "cancelled": "Arrêté.",
+      "upstream_error": "Un problème est survenu pendant l’écriture. Réessaie."
+    }
+  },
+  "hub": {
+    "ideas_one": "{{count}} notion",
+    "ideas_other": "{{count}} notions",
+    "questions_one": "{{count}} question d’examen",
+    "questions_other": "{{count}} questions d’examen",
+    "writing": "Claude écrit… {{count}}",
+    "noClaude": "Ouvre Lumo dans Claude pour obtenir de vraies questions d’examen écrites à partir de tes notes. D’ici là, tu as des questions simples.",
+    "play": "Jouer",
+    "playBody": "10 questions · apprends et gagne",
+    "playWrite": "Claude écrit d’abord ton examen",
+    "modes": "Modes de jeu",
+    "speedBody": "60 s · bats ton record",
+    "bossBody": "Questions difficiles · 3 boucliers",
+    "bossWins_one": "{{count}} victoire",
+    "bossWins_other": "{{count}} victoires",
+    "cardsBody": "Retourne · retiens · répète",
+    "more": "Nouvelles questions",
+    "moreBody": "Claude en écrit d’autres"
+  },
+  "cards": {
+    "done": "Paquet terminé !",
+    "doneBody": "Tu en savais {{known}} sur {{total}}. Celles que tu ne savais pas reviendront plus tôt.",
+    "didYouKnow": "Tu le savais ?",
+    "thinkFirst": "Réponds dans ta tête, puis retourne la carte",
+    "flip": "Retourner la carte",
+    "question": "Question",
+    "answer": "Réponse",
+    "tapToFlip": "Touche pour retourner",
+    "notYet": "Pas encore",
+    "knewIt": "Je savais"
   }
 }

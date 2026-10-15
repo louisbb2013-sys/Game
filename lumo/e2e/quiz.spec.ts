@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { answerCurrent } from './helpers';
+import { answerCurrent, checkCurrent, continueRound, ONE_TAP, ROUND_DONE } from './helpers';
 
 async function signIn(page: Page) {
   const name = 'q' + Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, '');
@@ -24,21 +24,27 @@ for (const format of FORMATS) {
     expect(question.format).toBe(format);
     await page.goto(`/quiz/${session.id}`);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    const check = page.getByRole('button', { name: 'Check' });
-    if (format !== 'ordering') await expect(check).toBeDisabled();
-    await answerCurrent(page, format);
-    await expect(check).toBeEnabled();
-    await check.click();
+    if (ONE_TAP.includes(format)) {
+      // Colourful tiles: one tap is the answer (no Check button).
+      await expect(page.getByRole('button', { name: 'Check' })).toHaveCount(0);
+      await answerCurrent(page, format);
+    } else {
+      const check = page.getByRole('button', { name: 'Check' });
+      await expect(check).toBeDisabled();
+      await answerCurrent(page, format);
+      await expect(check).toBeEnabled();
+      await checkCurrent(page, format);
+    }
     if (format === 'teach_back') {
       await page.getByLabel('Your reply to Lumo').fill('For example, perfume spreads across a room.');
       await page.getByRole('button', { name: 'Reply to Lumo' }).click();
     }
-    const feedback = page.getByRole('status').filter({ hasText: /right|Almost|Not quite|Correct/ });
+    const feedback = page.getByRole('status').filter({ has: page.getByRole('button', { name: /Continue|See results/ }) });
     await expect(feedback).toBeVisible();
     await expect(feedback.getByText('Why?')).toBeVisible();
     await page.screenshot({ path: `e2e/screens/q-${format}.png`, fullPage: false });
-    await feedback.getByRole('button', { name: /Continue|See results/ }).click();
-    await expect(page.getByRole('button', { name: 'Check' })).toBeVisible();
+    await continueRound(page);
+    await expect(page.locator('section[data-format]')).toBeVisible();
   });
 }
 
@@ -48,7 +54,7 @@ test('full session from the deck page through the summary', async ({ page }) => 
   await page.getByRole('button', { name: 'Try a sample deck' }).click();
   await expect(page.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/deck.png', fullPage: true });
-  await page.getByRole('button', { name: /Practice/ }).click();
+  await page.getByRole('button', { name: /^Play\b/ }).click();
   await expect(page).toHaveURL(/\/quiz\//);
 
   const formatsSeen = new Set<string>();
@@ -59,18 +65,14 @@ test('full session from the deck page through the summary', async ({ page }) => 
     await expect(page.locator(`section[data-format="${question.format}"]`)).toBeVisible();
     formatsSeen.add(question.format);
     await answerCurrent(page, question.format);
-    await page.getByRole('button', { name: 'Check' }).click();
+    await checkCurrent(page, question.format);
     if (question.format === 'teach_back') {
       await page.getByLabel('Your reply to Lumo').fill('Here is an example from real life.');
       await page.getByRole('button', { name: 'Reply to Lumo' }).click();
     }
-    const btn = page.getByRole('status').getByRole('button', { name: /Continue|See results/ });
-    await expect(btn).toBeVisible();
-    const last = (await btn.textContent())?.includes('See results');
-    await btn.click();
-    if (last) break;
+    if (await continueRound(page)) break;
   }
-  await expect(page.getByRole('heading', { name: /Session complete|Out of hearts/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: ROUND_DONE })).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/summary.png', fullPage: true });
   expect(formatsSeen.size).toBeGreaterThanOrEqual(4);
   await page.getByRole('link', { name: 'Back to deck' }).click();

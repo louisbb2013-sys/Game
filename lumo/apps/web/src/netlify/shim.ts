@@ -191,7 +191,7 @@ function makeUser(u: User, db: ReturnType<typeof makeDb>) {
 
 // ------------------------------------------------------------------ sample (Claude through the edge function)
 
-type SampleOpts = { images?: Blob[]; signal?: AbortSignal; modelTier?: 'quick' | 'default' | 'complex'; research?: boolean };
+type SampleOpts = { images?: Blob[]; signal?: AbortSignal; modelTier?: 'quick' | 'default' | 'complex'; research?: boolean; onText?: (u: { text: string; delta: string }) => void };
 
 async function blobToBase64(b: Blob): Promise<{ media_type: string; data: string }> {
   const buf = new Uint8Array(await b.arrayBuffer());
@@ -201,7 +201,7 @@ async function blobToBase64(b: Blob): Promise<{ media_type: string; data: string
 }
 
 /** Reads Claude's streamed answer (server-sent events) and returns its text. */
-async function readStream(res: Response): Promise<{ text: string; stopReason: string | null }> {
+async function readStream(res: Response, onText?: SampleOpts['onText']): Promise<{ text: string; stopReason: string | null }> {
   const reader = res.body!.getReader();
   const dec = new TextDecoder();
   let buf = '';
@@ -223,8 +223,16 @@ async function readStream(res: Response): Promise<{ text: string; stopReason: st
       } catch {
         continue;
       }
+      const before = text.length;
       if (ev.type === 'content_block_start' && ev.content_block?.type === 'text') text += ev.content_block.text ?? '';
       else if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') text += ev.delta.text;
+      if (text.length > before && onText) {
+        try {
+          onText({ text, delta: text.slice(before) });
+        } catch {
+          /* the page's handler failing never stops the answer */
+        }
+      }
       else if (ev.type === 'message_delta') stopReason = ev.delta?.stop_reason ?? stopReason;
       else if (ev.type === 'error') throw Object.assign(new Error(ev.error?.message ?? 'upstream_error'), { code: ev.error?.type === 'rate_limit_error' || ev.error?.type === 'overloaded_error' ? 'rate_limited' : 'upstream_error' });
     }
@@ -251,7 +259,14 @@ function makeSample(u: User) {
     if (res.status === 401) throw Object.assign(new Error('signed_out'), { code: 'not_granted' });
     if (res.status === 429) throw Object.assign(new Error('rate_limited'), { code: 'rate_limited' });
     if (!res.ok || !res.body) throw Object.assign(new Error('upstream'), { code: res.status === 503 ? 'unavailable' : 'upstream_error' });
-    const { text, stopReason } = await readStream(res);
+    let read: { text: string; stopReason: string | null };
+    try {
+      read = await readStream(res, o.onText);
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw Object.assign(new Error('cancelled'), { code: 'cancelled' });
+      throw e;
+    }
+    const { text, stopReason } = read;
     if (stopReason === 'refusal') throw Object.assign(new Error('refused'), { code: 'refused' });
     return { text, truncated: stopReason === 'max_tokens' };
   };

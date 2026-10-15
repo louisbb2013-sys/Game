@@ -4,6 +4,7 @@ import { PASS } from '../quiz/grade';
 /** A mock exam uses every timed-friendly format; teach-back needs a conversation, so it stays in practice. */
 export const EXAM_FORMATS: Format[] = [
   'multiple_choice',
+  'true_false',
   'multiple_select',
   'type_answer',
   'fill_blank',

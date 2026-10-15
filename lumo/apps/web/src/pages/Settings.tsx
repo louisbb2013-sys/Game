@@ -57,6 +57,7 @@ export function Settings() {
           </select>
         </Row>
         <Toggle label={t('settings.sound')} checked={s.sound ?? true} onChange={(v) => set({ sound: v })} />
+        <Toggle label={t('settings.haptics')} checked={s.haptics ?? true} onChange={(v) => set({ haptics: v })} />
       </Card>
 
       <Card title={t('settings.accessibility')}>

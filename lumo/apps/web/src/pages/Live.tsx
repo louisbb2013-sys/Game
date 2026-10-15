@@ -8,8 +8,12 @@ import { Avatar } from '../components/Avatar';
 import { Lumo } from '../components/Lumo';
 import { QrCode, shareOrCopy } from '../components/QrCode';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
+import { ChoiceTiles } from '../components/play/answers';
 import { api, LOCAL } from '../lib/api';
 import { hostLocalGame, useLocalLiveRoom, useOpenGames } from '../local/liveLocal';
+import { canAskClaude } from '../local/reader';
+import { writeQuestions } from '../local/writer';
+import { READY_TO_PLAY, WritingScreen } from '../components/play/Writing';
 import { useNames, useTogether } from '../local/together';
 import { useAuth } from '../lib/auth';
 import { useConfetti } from '../lib/confetti';
@@ -52,11 +56,22 @@ export function LiveHome() {
     if (c.length >= 4) navigate(`/live/${c}`);
   };
 
-  const host = async () => {
+  const [writing, setWriting] = useState(false);
+  const host = async (skipWriting = false) => {
     setBusy(true);
     setError(null);
     if (LOCAL) {
       try {
+        // No test questions yet: Claude writes them first (everyone plays the good ones).
+        if (!skipWriting && (await canAskClaude())) {
+          const d = await api<{ bankSize?: number }>(`/api/decks/${deckId}`);
+          if ((d.bankSize ?? 0) < READY_TO_PLAY) {
+            void writeQuestions(deckId);
+            setWriting(true);
+            setBusy(false);
+            return;
+          }
+        }
         navigate(`/live/${await hostLocalGame(deckId, count)}`);
       } catch (e) {
         setError((e as { code?: string }).code ?? 'network');
@@ -154,6 +169,21 @@ export function LiveHome() {
           </Link>
         )}
       </div>
+      {writing && (
+        <WritingScreen
+          deckId={deckId}
+          bank={0}
+          onClose={() => setWriting(false)}
+          onPlay={() => {
+            setWriting(false);
+            void host(true);
+          }}
+          onBasic={() => {
+            setWriting(false);
+            void host(true);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -339,6 +369,7 @@ function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (q
   const [error, setError] = useState<string | null>(null);
   const { left, fraction } = useCountdown(s);
   const meAnswered = sent || !!s.players.find((p) => p.id === me)?.answered;
+  const oneTap = q.format === 'multiple_choice' || q.format === 'true_false' || q.format === 'cause_effect';
 
   useEffect(() => {
     setValue(null);
@@ -346,10 +377,11 @@ function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (q
     setError(null);
   }, [q.id]);
 
-  const submit = async () => {
-    if (!value || meAnswered) return;
+  const submit = async (override?: Answer) => {
+    const v = override ?? value;
+    if (!v || meAnswered) return;
     setSent(true);
-    const r = await answer(q.id, value);
+    const r = await answer(q.id, v);
     if (!r.ok && r.error !== 'already_answered') {
       setSent(false);
       setError(r.error ?? 'network');
@@ -369,12 +401,34 @@ function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (q
       <div className="mb-4 h-2.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label={t('live.timeLeft')} aria-valuenow={secs}>
         <div className={`h-full rounded-full transition-[width] duration-200 ${fraction < 0.25 ? 'bg-bad' : 'bg-amber-glow'}`} style={{ width: `${fraction * 100}%` }} />
       </div>
+      {q.context && (
+        <figure className="doc mb-3 max-h-[30dvh] overflow-y-auto p-3.5">
+          <figcaption className="mb-1 text-xs font-black tracking-wide text-amber-700 uppercase">📄 {t('play.document')}</figcaption>
+          <p className="leading-relaxed whitespace-pre-line">{q.context}</p>
+        </figure>
+      )}
       <h1 className="pop-in mb-5 rounded-2xl bg-surface p-3.5 text-lg leading-snug font-extrabold whitespace-pre-line ring-1 ring-line">{q.prompt}</h1>
-      <fieldset disabled={meAnswered || left === 0} className="min-w-0">
-        <QuestionInput q={q} value={value} onChange={setValue} onSubmit={() => void submit()} reveal={null} />
-      </fieldset>
+      {oneTap ? (
+        // Like Kahoot: tap a colour and it's your answer.
+        <ChoiceTiles
+          q={q}
+          chosen={value?.kind === 'choice' ? value.optionId : null}
+          reveal={null}
+          removed={[]}
+          locked={meAnswered || left === 0}
+          onPick={(id) => {
+            const a: Answer = { kind: 'choice', optionId: id };
+            setValue(a);
+            void submit(a);
+          }}
+        />
+      ) : (
+        <fieldset disabled={meAnswered || left === 0} className="min-w-0">
+          <QuestionInput q={q} value={value} onChange={setValue} onSubmit={() => void submit()} reveal={null} />
+        </fieldset>
+      )}
       {error && <p className="mt-3 font-bold text-bad">{errText(t, error)}</p>}
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur">
+      <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur ${oneTap && !meAnswered ? 'hidden' : ''}`}>
         {meAnswered ? (
           <p className="py-3 text-center font-black" role="status">
             ✅ {t('live.locked', { n: s.answeredCount, total: s.players.filter((p) => p.connected).length })}

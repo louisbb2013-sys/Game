@@ -5,7 +5,7 @@ import { FORMATS, type Bloom, type Format, type Millis } from '../types';
 import type { Concept } from './concept';
 import { FORMAT_BLOOM, nearestBloom, supportsFormat } from './formats';
 
-export type SessionMode = 'practice' | 'review' | 'challenge' | 'wrong_only' | 'exam';
+export type SessionMode = 'practice' | 'review' | 'challenge' | 'wrong_only' | 'exam' | 'speed' | 'boss';
 
 export interface ConceptStateView {
   conceptId: string;

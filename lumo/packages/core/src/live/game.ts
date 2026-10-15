@@ -54,6 +54,8 @@ export interface LiveState {
 /** Time to answer depends on how much thinking/typing the format needs. */
 export function durationFor(format: Format): number {
   switch (format) {
+    case 'true_false':
+      return 15_000;
     case 'multiple_choice':
     case 'cause_effect':
     case 'true_false_justify':
@@ -77,6 +79,7 @@ export function durationFor(format: Format): number {
 /** Formats that work in a timed group game (teach-back needs a back-and-forth). */
 export const LIVE_FORMATS: Format[] = [
   'multiple_choice',
+  'true_false',
   'multiple_select',
   'type_answer',
   'fill_blank',

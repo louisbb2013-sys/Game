@@ -133,7 +133,7 @@ export interface SessionSummary {
   bestCombo: number;
   streak: { days: number; extended: boolean };
   heartsGained: number;
-  endedReason: 'done' | 'out_of_hearts';
+  endedReason: NonNullable<SessionState['endedReason']>;
   rewards: Rewards;
   concepts: { id: string; term: string; score: number; band: string }[];
 }

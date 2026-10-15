@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError } from '../lib/api';
-import { canAskClaude, deckFromTopic, photoLimits, readPhotos, ReaderError } from '../local/reader';
+import { canAskClaude, deckFromNotes, deckFromTopic, photoLimits, readPhotos, ReaderError } from '../local/reader';
+import { writeQuestions } from '../local/writer';
 
 /** Browser-only build: paste notes (or open a .txt file) and Lumo builds a deck on this device. */
 export function NewDeck() {
@@ -41,6 +42,7 @@ export function NewDeck() {
     try {
       const draft = await readPhotos(photos, language, title, ctl.current.signal);
       const { id } = await api<{ id: string }>('/api/local/decks', { method: 'POST', body: { ...draft, title: title || draft.title } });
+      void writeQuestions(id); // Claude writes the test questions right away
       navigate(`/decks/${id}`);
     } catch (err) {
       const code = err instanceof ReaderError ? err.code : 'upstream_error';
@@ -58,6 +60,7 @@ export function NewDeck() {
     try {
       const draft = await deckFromTopic(what.trim(), language, ctl.current.signal);
       const { id } = await api<{ id: string }>('/api/local/decks', { method: 'POST', body: { ...draft, title: title || draft.title } });
+      void writeQuestions(id);
       navigate(`/decks/${id}`);
     } catch (err) {
       const code = err instanceof ReaderError ? err.code : 'upstream_error';
@@ -73,9 +76,28 @@ export function NewDeck() {
     setBusy(true);
     setError(null);
     try {
+      // With Claude, the notes are read properly (ideas, examples, typical mistakes); without, the built-in reader.
+      if (ai) {
+        ctl.current = new AbortController();
+        const draft = await deckFromNotes(text, language, ctl.current.signal).catch((e) => {
+          if (e instanceof ReaderError && e.code === 'cancelled') throw e;
+          return null;
+        });
+        if (draft) {
+          const { id } = await api<{ id: string }>('/api/local/decks', { method: 'POST', body: { ...draft, title: title || draft.title } });
+          void writeQuestions(id);
+          navigate(`/decks/${id}`);
+          return;
+        }
+      }
       const { id } = await api<{ id: string }>('/api/local/decks/from-notes', { method: 'POST', body: { title, text, language } });
+      if (ai) void writeQuestions(id);
       navigate(`/decks/${id}`);
     } catch (err) {
+      if (err instanceof ReaderError && err.code === 'cancelled') {
+        setBusy(false);
+        return;
+      }
       setError(err instanceof ApiError && err.code === 'nothing_found' ? t('local.nothingFound') : t('signin.errors.network'));
       setBusy(false);
     }
@@ -208,7 +230,7 @@ export function NewDeck() {
         </p>
       )}
       <button disabled={busy || researching || text.trim().length < (ai ? 3 : 20)} className="w-full rounded-2xl bg-brand py-3.5 text-lg font-black text-brand-ink disabled:opacity-40">
-        {busy ? t('common.loading') : `✨ ${t('local.makeDeck')}`}
+        {busy ? (ai ? t('local.readingNotes') : t('common.loading')) : `✨ ${t('local.makeDeck')}`}
       </button>
       <Link to="/learn" className="block text-center text-sm font-bold text-muted">
         {t('common.back')}

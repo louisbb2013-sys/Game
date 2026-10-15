@@ -39,6 +39,8 @@ export interface Settings {
   dyslexiaFont?: boolean;
   largeText?: boolean;
   sound?: boolean;
+  /** Phone vibration on answers (where the phone supports it). */
+  haptics?: boolean;
   reduceMotion?: boolean;
   uploadConsent?: boolean;
   reminder?: { enabled: boolean; time: string; days: number[] };

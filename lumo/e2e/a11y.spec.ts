@@ -9,8 +9,10 @@ test('main screens have no serious accessibility problems', async ({ page }) => 
   await page.request.post('/api/auth/dev', { data: { name } });
   await page.request.patch('/api/me', { data: { locale: 'en', settings: { sound: false } } });
   const deckId = (await (await page.request.post('/api/decks/sample', { data: { language: 'en' } })).json()).id;
+  // The play screen too (a round of the sample deck).
+  const round = (await (await page.request.post(`/api/decks/${deckId}/sessions`, { data: { mode: 'practice', length: 10 } })).json()).session.id;
   const problems: string[] = [];
-  for (const path of [...PAGES, `/decks/${deckId}`]) {
+  for (const path of [...PAGES, `/decks/${deckId}`, `/quiz/${round}`]) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');
     for (const theme of ['light', 'dark'] as const) {

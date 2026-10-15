@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { answerCurrent, closeHatch } from './helpers';
+import { answerAndCheck, closeHatch, openChests } from './helpers';
 
 // Browser-only build (no server). Run with LOCAL_URL pointing at a page that embeds dist-local/lumo.html.
 test.skip(!process.env.LOCAL_URL, 'needs the browser-only build');
@@ -21,17 +21,20 @@ test('browser-only Lumo: deck, quiz, exam, sandbox, notes, progress kept after r
   await page.getByRole('link', { name: 'Learn' }).click();
   await page.getByRole('button', { name: 'Try a sample deck' }).click();
   await expect(page.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
-  await page.getByRole('button', { name: /Practice/ }).click();
+  // The sample deck comes with hand-written test questions: play straight away.
+  await expect(page.getByText(/\d+ test questions/)).toBeVisible();
+  await page.getByRole('button', { name: /^Play\b/ }).click();
   for (let i = 0; i < 3; i++) {
     const section = page.locator('section[data-format]');
     await expect(section).toBeVisible();
-    await answerCurrent(page, (await section.getAttribute('data-format'))!);
-    await page.getByRole('button', { name: 'Check' }).click();
+    await answerAndCheck(page, (await section.getAttribute('data-format'))!);
     const btn = page.getByRole('status').getByRole('button', { name: /Continue|See results/ });
     await expect(btn).toBeVisible();
     await closeHatch(page);
     if (i === 0) await page.screenshot({ path: 'e2e/screens/local-quiz.png' });
     await btn.click();
+    await openChests(page);
+    await closeHatch(page);
   }
   await page.getByRole('button', { name: 'Leave quiz' }).click();
   await expect(page.getByText(/Learning|Familiar|Mastered/).first()).toBeVisible();

@@ -36,6 +36,8 @@ import {
   BADGES,
   buildStudyPlan,
   chooseFormat,
+  comboMultiplier,
+  correctAnswerText,
   currentHearts,
   dayKey,
   emptyStats,
@@ -64,6 +66,7 @@ import {
   newBadges,
   newProgress,
   newSession,
+  twiceSpaced,
   newSrsState,
   newStreak,
   parseSandboxRequest,
@@ -75,6 +78,7 @@ import {
   recordStudyDay,
   review,
   SAMPLE_DECKS,
+  sampleBank,
   SANDBOX_KINDS,
   SANDBOX_XP,
   sandboxSupports,
@@ -130,7 +134,28 @@ interface StoredSession {
   id: string;
   deckId: string;
   mode: SessionMode;
-  state: SessionState & { language: Locale; formats?: Format[]; heartsLost: number; startedAt?: number; timeLimitMs?: number; skipped?: string[]; endedAt?: number };
+  state: SessionState & {
+    language: Locale;
+    formats?: Format[];
+    heartsLost: number;
+    startedAt?: number;
+    timeLimitMs?: number;
+    skipped?: string[];
+    endedAt?: number;
+    /** Speed run: points scored. */
+    points?: number;
+    /** Boss battle: the boss's health and the player's shields. */
+    boss?: { hp: number; max: number; shields: number };
+    /** Chests earned (one per 3 right answers) and chests already opened. */
+    picks?: number;
+    picked?: number;
+    /** Questions missed this round, to review at the end. */
+    missed?: { prompt: string; context?: string; answer: string; explanation: string; note?: string }[];
+    /** The current question is a lightning one (double XP within 10 seconds). */
+    lightning?: string;
+    /** Options a hint already removed from the current question. */
+    hinted?: string[];
+  };
   current: Question | null;
   status: 'active' | 'done';
   attempts: { conceptId: string; format: Format; bloom: Question['bloom']; score: number; at: number }[];
@@ -179,6 +204,8 @@ interface DB {
   game?: GameData;
   /** When each bank question (by variant key) was last asked, so they come back spaced out. */
   seen?: Record<string, number>;
+  /** Personal bests per deck. */
+  bests?: Record<string, { speed?: number; bossWins?: number }>;
 }
 
 interface LocalPet {
@@ -738,6 +765,7 @@ function masteryMap(id: string) {
   return {
     deck: { id: dk.id, title: dk.title, subject: dk.subject, language: dk.language, mine: true },
     bankSize: dk.bank?.length ?? 0,
+    best: load().bests?.[dk.id] ?? {},
     concepts: dk.concepts.map((c) => {
       const s = load().states[c.id];
       const p = s?.progress ?? newProgress();
@@ -756,6 +784,17 @@ function createDeck(input: { title: string; subject?: string; language: Locale; 
 // ------------------------------------------------------------------ quiz
 
 const LOCAL_FORMATS = FORMATS.filter((f) => f !== 'teach_back'); // teach-back needs an AI follow-up question
+/** One tap to answer: the only formats quick enough for a speed run. */
+const SPEED_FORMATS: Format[] = ['multiple_choice', 'true_false'];
+export const SPEED_MS = 60_000;
+const BOSS_LENGTH = 12;
+const BOSS_HP = 800; // about 7-8 right answers, fewer with a combo
+const BOSS_SHIELDS = 3;
+const HINT_COST = 5;
+const LIGHTNING_FORMATS: Format[] = ['multiple_choice', 'true_false'];
+const LIGHTNING_MS = 10_000;
+
+const modeFormats = (s: StoredSession): readonly Format[] => s.state.formats ?? (s.mode === 'speed' ? SPEED_FORMATS : LOCAL_FORMATS);
 
 function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]): Question | null {
   const c = concepts.find((x) => x.id === conceptId);
@@ -764,22 +803,30 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]):
   const sessionFormats = s.state.history.filter((h) => h.conceptId === conceptId).map((h) => h.format).reverse();
   const progress: ConceptProgress = { ...stored, recentFormats: [...new Set([...sessionFormats, ...stored.recentFormats])].slice(0, 4) };
   const rng = seededRng(hashString(`${conceptId}:${now()}:${s.state.answered}`));
-  // Real test questions from the deck's bank come first; the built-in generator fills any gap.
   const bank = deck(s.deckId).bank;
-  if (bank?.length && rng() < 0.9) {
+  if (bank?.length) {
+    // Claude's real test questions only: once a deck has them, the built-in templates never come back.
     const d = load();
-    const picked = pickFromBank(bank, conceptId, progress, { allowed: s.state.formats ?? LOCAL_FORMATS, usedThisSession: new Set(s.state.history.map((h) => h.variantKey)), lastSeen: d.seen ?? {}, now: now() }, rng);
-    if (picked) {
-      d.seen = { ...(d.seen ?? {}), [picked.variantKey]: now() };
-      const keys = Object.keys(d.seen);
-      if (keys.length > 3000) for (const k of keys.slice(0, keys.length - 3000)) delete d.seen[k];
-      return { ...structuredClone(picked), id: uid() };
-    }
+    // A boss asks for application and analysis, not recall.
+    const target: ConceptProgress = s.mode === 'boss' && (progress.bloom === 'remember' || progress.bloom === 'understand') ? { ...progress, bloom: 'apply' } : progress;
+    const used = new Set(s.state.history.map((h) => h.variantKey));
+    const opts = { allowed: modeFormats(s), usedThisSession: used, lastSeen: d.seen ?? {}, now: now() };
+    // A missed idea comes back even when its other questions were all asked: another one if there is
+    // one, else the same one again (asking again after a gap still helps it stick).
+    const lastHere = [...s.state.history].reverse().find((h) => h.conceptId === conceptId)?.variantKey;
+    const again = () => pickFromBank(bank, conceptId, target, { ...opts, usedThisSession: new Set(lastHere ? [lastHere] : []) }, rng) ?? pickFromBank(bank, conceptId, target, { ...opts, usedThisSession: new Set() }, rng);
+    // A missed idea, or a speed run that went round the whole deck, may meet a question again.
+    const picked = pickFromBank(bank, conceptId, target, opts, rng) ?? (isRetry(s.state, conceptId) || s.mode === 'speed' ? again() : null);
+    if (!picked) return null;
+    d.seen = { ...(d.seen ?? {}), [picked.variantKey]: now() };
+    const keys = Object.keys(d.seen);
+    if (keys.length > 3000) for (const k of keys.slice(0, keys.length - 3000)) delete d.seen[k];
+    return { ...structuredClone(picked), id: uid() };
   }
-  // With a bank, the built-in generator never falls back to blanks lifted from the notes.
-  const tried: Format[] = bank?.length ? ['fill_blank'] : [];
+  // No questions from Claude (it isn't available here): basic ones built from the notes.
+  const tried: Format[] = [];
   for (let i = 0; i < 4; i++) {
-    const choice = chooseFormat(c, concepts, progress, rng, { exclude: tried, allowed: s.state.formats ?? LOCAL_FORMATS });
+    const choice = chooseFormat(c, concepts, progress, rng, { exclude: tried, allowed: modeFormats(s) });
     if (!choice) return null;
     const q = generateLocal(c, choice.format, choice.bloom, { deck: concepts, language: s.state.language, rng });
     if (q) return q;
@@ -792,7 +839,12 @@ function serveNext(s: StoredSession): Question | null {
   const concepts = deck(s.deckId).concepts;
   while (s.state.queue.length) {
     const q = makeQuestion(s, s.state.queue[0]!, concepts);
-    if (q) return (s.current = q);
+    if (q) {
+      // Now and then a lightning question: answer within 10 seconds for double XP (never a penalty).
+      s.state.lightning = s.mode === 'practice' && s.state.answered >= 2 && LIGHTNING_FORMATS.includes(q.format) && Math.random() < 0.2 ? q.id : undefined;
+      s.state.hinted = [];
+      return (s.current = q);
+    }
     s.state.queue.shift();
     s.state.total = Math.max(s.state.answered, s.state.total - 1);
   }
@@ -813,17 +865,50 @@ function publicSession(s: StoredSession) {
     bestCombo: s.state.bestCombo,
     xp: s.state.xp,
     hearts: currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, now()).hearts,
+    coins: u.coins,
     done: s.status === 'done' || sessionDone(s.state),
     endsAt: s.state.startedAt && s.state.timeLimitMs ? s.state.startedAt + s.state.timeLimitMs : undefined,
+    timeLimitMs: s.state.timeLimitMs,
+    points: s.state.points,
+    boss: s.state.boss,
+    chests: Math.max(0, (s.state.picks ?? 0) - (s.state.picked ?? 0)),
+    lightning: s.current && s.state.lightning === s.current.id ? LIGHTNING_MS : undefined,
+    best: s.mode === 'speed' ? (load().bests?.[s.deckId]?.speed ?? 0) : undefined,
+    language: s.state.language,
+    /** The current question asks again about an idea missed earlier in this round. */
+    retry: s.current ? isRetry(s.state, s.current.conceptId) : false,
   };
+}
+
+/** The question just answered was wrong or confusing: take it out of the deck (and keep a note to fix it). */
+function reportLast(sessionId: string, reason: string) {
+  const s = getSession(sessionId);
+  const last = s.state.history.at(-1);
+  const dk = deck(s.deckId);
+  if (!last || !dk.bank?.some((q) => q.variantKey === last.variantKey)) return { ok: true, removed: 0 };
+  const q = dk.bank.find((x) => x.variantKey === last.variantKey)!;
+  dk.bank = dk.bank.filter((x) => x.variantKey !== last.variantKey);
+  dk.bankAt = now();
+  reportProblem('question', new Error(`reported${reason ? ` (${reason.slice(0, 80)})` : ''}: ${q.prompt.slice(0, 200)}`));
+  return { ok: true, removed: 1 };
 }
 
 function startSession(deckId: string, mode: SessionMode, length: number, formats?: Format[]) {
   const dk = deck(deckId);
   const u = load().user;
   if (mode === 'challenge' && currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, now()).hearts <= 0) throw new LocalError(403, 'no_hearts');
-  const ids = pickConcepts(dk.concepts, statesMap(dk.concepts.map((c) => c.id)), length, mode, now(), seededRng(hashString(`${u.id}:${now()}`)));
   const exam = mode === 'exam';
+  const allowed: readonly Format[] = formats?.length ? formats : exam ? EXAM_FORMATS : mode === 'speed' ? SPEED_FORMATS : LOCAL_FORMATS;
+  // With a bank, only ideas that already have questions (Claude may still be writing the rest).
+  const covered = dk.bank?.length ? new Set(dk.bank.filter((q) => allowed.includes(q.format)).map((q) => q.conceptId)) : null;
+  const pool = covered ? dk.concepts.filter((c) => covered.has(c.id)) : dk.concepts;
+  if (pool.length === 0) throw new LocalError(422, 'no_questions');
+  const count = mode === 'speed' ? 40 : mode === 'boss' ? BOSS_LENGTH : length;
+  const rng = seededRng(hashString(`${u.id}:${now()}`));
+  const states = statesMap(pool.map((c) => c.id));
+  // Learning rounds ask fewer ideas, each twice with others in between; tests and races spread wide.
+  const twice = (mode === 'practice' || mode === 'review' || mode === 'wrong_only') && !formats?.length;
+  const ids = twice ? twiceSpaced(pickConcepts(pool, states, Math.max(2, Math.min(pool.length, Math.ceil(count / 2))), mode, now(), rng)) : pickConcepts(pool, states, count, mode, now(), rng);
   const s: StoredSession = {
     id: uid(),
     deckId,
@@ -832,8 +917,13 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
       ...newSession(mode, ids),
       language: dk.language,
       heartsLost: 0,
-      formats: formats?.length ? formats : exam ? EXAM_FORMATS : undefined,
+      formats: formats?.length ? formats : exam ? EXAM_FORMATS : mode === 'speed' ? SPEED_FORMATS : undefined,
       ...(exam ? { startedAt: now(), timeLimitMs: examTimeLimitMs(ids.length) } : {}),
+      ...(mode === 'speed' ? { startedAt: now(), timeLimitMs: SPEED_MS, points: 0 } : {}),
+      ...(mode === 'boss' ? { boss: { hp: BOSS_HP, max: BOSS_HP, shields: BOSS_SHIELDS } } : {}),
+      picks: 0,
+      picked: 0,
+      missed: [],
     },
     current: null,
     status: 'active',
@@ -852,6 +942,20 @@ function getSession(id: string): StoredSession {
   return s;
 }
 
+/** Stars for a round: 3 when (almost) everything was right or every miss got fixed later. */
+function starsFor(s: StoredSession): number {
+  if (s.mode === 'boss') return s.state.endedReason === 'boss_defeated' ? Math.max(1, s.state.boss?.shields ?? 1) : 0;
+  const answered = s.state.answered;
+  if (answered === 0) return 0;
+  const accuracy = s.state.correct / answered;
+  const last = new Map<string, number>();
+  for (const h of s.state.history) last.set(h.conceptId, h.score);
+  const fixedAll = [...last.values()].every((score) => score >= 0.8);
+  if (accuracy >= 0.9 || (fixedAll && accuracy >= 0.75)) return 3;
+  if (accuracy >= 0.7 || fixedAll) return 2;
+  return accuracy >= 0.4 ? 1 : 0;
+}
+
 function finish(s: StoredSession) {
   const d = load();
   const u = d.user;
@@ -860,8 +964,7 @@ function finish(s: StoredSession) {
   const st = studied ? recordStudyDay(u.streak, dayKey(t, u.timezone)) : { state: u.streak, extended: false };
   u.streak = st.state;
   const accuracy = s.state.answered ? s.state.correct / s.state.answered : 0;
-  const coins = studied ? 5 + s.state.correct * 2 + (accuracy === 1 && s.state.answered >= 5 ? 10 : 0) : 0;
-  u.coins += coins;
+  let coins = studied ? 5 + s.state.correct * 2 + (accuracy === 1 && s.state.answered >= 5 ? 10 : 0) : 0;
   let heartsGained = 0;
   if ((s.mode === 'review' || s.mode === 'practice') && studied) {
     const before = currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t).hearts;
@@ -870,30 +973,54 @@ function finish(s: StoredSession) {
     u.heartsUpdatedAt = h.updatedAt;
     heartsGained = h.hearts - before;
   }
+  // Personal bests.
+  const bests = (d.bests ??= {});
+  const mine = (bests[s.deckId] ??= {});
+  const previousBest = mine.speed ?? 0;
+  const newBest = s.mode === 'speed' && (s.state.points ?? 0) > previousBest;
+  if (newBest) mine.speed = s.state.points;
+  const bossWon = s.mode === 'boss' && s.state.endedReason === 'boss_defeated';
+  if (bossWon) {
+    mine.bossWins = (mine.bossWins ?? 0) + 1;
+    coins += 25;
+  }
+  u.coins += coins;
   s.status = 'done';
   s.current = null;
+  const stars = starsFor(s);
   const rewards = award(0, [
     { type: 'session_done', perfect: accuracy === 1 && s.state.answered >= 5, answered: s.state.answered },
     ...(st.extended ? [{ type: 'streak' as const, days: st.state.days }] : []),
   ]);
-  // A finished round earns a chest (a better one for a perfect round).
-  if (s.state.answered >= 5) {
-    const kind: ChestKind = accuracy === 1 ? 'rare' : 'common';
-    giveChest(kind, 'round');
-    rewards.chest = kind;
+  // A chest for a finished round: better for a perfect round, a beaten boss or a new record.
+  let chest: ChestKind | null = null;
+  if (bossWon) chest = (s.state.boss?.shields ?? 0) >= BOSS_SHIELDS ? 'epic' : 'rare';
+  else if (newBest && previousBest > 0) chest = 'common';
+  else if (s.mode !== 'speed' && s.mode !== 'boss' && s.state.answered >= 5) chest = accuracy === 1 ? 'rare' : 'common';
+  if (chest) {
+    giveChest(chest, 'round');
+    rewards.chest = chest;
   }
   const ids = [...new Set(s.state.history.map((h) => h.conceptId))];
   const terms = new Map(deck(s.deckId).concepts.map((c) => [c.id, c.term]));
   return {
+    mode: s.mode,
     answered: s.state.answered,
     correct: s.state.correct,
     accuracy,
+    stars,
     xp: s.state.xp,
     coins,
     bestCombo: s.state.bestCombo,
     streak: { days: st.state.days, extended: st.extended },
     heartsGained,
     endedReason: s.state.endedReason ?? 'done',
+    points: s.state.points,
+    best: s.mode === 'speed' ? Math.max(previousBest, s.state.points ?? 0) : undefined,
+    newBest,
+    boss: s.state.boss,
+    chestsLeft: Math.max(0, (s.state.picks ?? 0) - (s.state.picked ?? 0)),
+    missed: (s.state.missed ?? []).slice(0, 12),
     rewards,
     concepts: ids.map((id) => {
       const p = d.states[id]?.progress ?? newProgress();
@@ -902,11 +1029,12 @@ function finish(s: StoredSession) {
   };
 }
 
-async function answer(sessionId: string, questionId: string, a: Answer) {
+async function answer(sessionId: string, questionId: string, a: Answer, timeMs?: number) {
   const t = now();
   const s = getSession(sessionId);
   if (s.status !== 'active') throw new LocalError(409, 'session_done');
-  if (s.state.startedAt && s.state.timeLimitMs && t > s.state.startedAt + s.state.timeLimitMs + 15_000) {
+  if (s.mode === 'speed' && s.state.startedAt && t > s.state.startedAt + SPEED_MS + 4000) return endRun(s, 'time_up');
+  if (s.mode === 'exam' && s.state.startedAt && s.state.timeLimitMs && t > s.state.startedAt + s.state.timeLimitMs + 15_000) {
     handIn(sessionId);
     throw new LocalError(409, 'time_up');
   }
@@ -929,10 +1057,15 @@ async function answer(sessionId: string, questionId: string, a: Answer) {
 
   const firstTry = !isRetry(s.state, q.conceptId);
   const comboAfter = g.correct ? s.state.combo + 1 : 0;
-  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() });
+  const lightning = s.state.lightning === q.id && g.correct && typeof timeMs === 'number' && timeMs <= LIGHTNING_MS + 500;
+  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() }) * (lightning ? 2 : 1);
   const outcome = applyAnswer(s.state, { conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, variantKey: q.variantKey }, xp);
   s.state = { ...s.state, ...outcome.state };
   s.attempts.push({ conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, at: t });
+  if (!g.correct) {
+    const missed = (s.state.missed ??= []);
+    if (!missed.some((m) => m.prompt === q.prompt) && missed.length < 20) missed.push({ prompt: q.format === 'true_false' ? q.prompt : q.prompt, ...(q.context ? { context: q.context } : {}), answer: g.correctAnswer, explanation: g.explanation, ...(g.chosenNote ? { note: g.chosenNote } : {}) });
+  }
 
   if (s.mode === 'challenge' && g.score < 0.5) {
     const h = loseHeart({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t);
@@ -941,19 +1074,164 @@ async function answer(sessionId: string, questionId: string, a: Answer) {
     s.state.heartsLost += 1;
     if (h.hearts <= 0) s.state.endedReason = 'out_of_hearts';
   }
+  // Speed run: points for each right answer, more on a streak.
+  let points = 0;
+  if (s.mode === 'speed' && g.correct) {
+    points = Math.round(100 * comboMultiplier(outcome.combo));
+    s.state.points = (s.state.points ?? 0) + points;
+  }
+  // Boss battle: a right answer hits the boss (harder on a streak); a miss cracks a shield; 3 in a row mends one.
+  let damage = 0;
+  let shield: 'lost' | 'mended' | undefined;
+  const boss = s.state.boss;
+  if (s.mode === 'boss' && boss) {
+    if (g.correct) {
+      damage = Math.round(100 * comboMultiplier(outcome.combo) * (q.bloom === 'analyze' ? 1.2 : q.bloom === 'apply' ? 1.1 : 1));
+      boss.hp = Math.max(0, boss.hp - damage);
+      if (outcome.combo > 0 && outcome.combo % 3 === 0 && boss.shields < BOSS_SHIELDS) {
+        boss.shields += 1;
+        shield = 'mended';
+      }
+      if (boss.hp === 0) s.state.endedReason = 'boss_defeated';
+    } else {
+      boss.shields = Math.max(0, boss.shields - 1);
+      shield = 'lost';
+      if (boss.shields === 0) s.state.endedReason = 'out_of_hearts';
+    }
+  }
+  // Every 3 right answers earn a chest to pick (not in a mock exam or a speed run).
+  let chest = false;
+  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && s.state.correct > 0 && s.state.correct % 3 === 0) {
+    s.state.picks = (s.state.picks ?? 0) + 1;
+    chest = true;
+  }
   let rewards = award(xp, [{ type: 'answer', correct: g.correct, combo: comboAfter }, ...(masteredNow ? [{ type: 'mastered' as const }] : [])]);
   s.current = null;
   const next = sessionDone(s.state) ? null : serveNext(s);
+  if (!next && s.mode === 'boss' && boss && boss.hp > 0 && !s.state.endedReason) s.state.endedReason = 'boss_escaped';
   const summary = next ? null : finish(s);
-  if (summary) rewards = { ...rewards, badges: [...rewards.badges, ...summary.rewards.badges], levelUp: summary.rewards.levelUp ?? rewards.levelUp, chest: summary.rewards.chest, questsCompleted: [...rewards.questsCompleted, ...summary.rewards.questsCompleted] };
+  if (summary) rewards = mergeRewards(rewards, summary.rewards);
   const { gradedBy: _g, ...result } = g;
   return {
     rewards,
-    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow },
+    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, points, damage, shield, chest, lightning },
     session: publicSession(s),
     next: next ? publicQuestion(next) : null,
     summary,
   };
+}
+
+const mergeRewards = (a: Rewards, b: Rewards): Rewards => ({
+  ...a,
+  badges: [...a.badges, ...b.badges],
+  levelUp: b.levelUp ?? a.levelUp,
+  chest: b.chest ?? a.chest,
+  hatched: a.hatched ?? b.hatched,
+  questsCompleted: [...a.questsCompleted, ...b.questsCompleted],
+});
+
+/** End a speed run (time's up) or leave a round early; returns the round's summary. */
+function endRun(s: StoredSession, reason: 'time_up' | 'done') {
+  if (s.status !== 'active') throw new LocalError(409, 'session_done');
+  s.state.endedReason = s.state.endedReason ?? reason;
+  s.state.queue = [];
+  const summary = finish(s);
+  return { rewards: summary.rewards, result: null, session: publicSession(s), next: null, summary };
+}
+
+/** Speed run: the clock starts after the 3-2-1, not when the round was made. */
+function goNow(sessionId: string) {
+  const s = getSession(sessionId);
+  if (s.mode === 'speed' && s.state.answered === 0 && s.status === 'active') s.state.startedAt = now();
+  return { session: publicSession(s) };
+}
+
+/** A hint costs a few coins: one wrong option disappears, or the first letter of the answer shows. */
+function hint(sessionId: string) {
+  const s = getSession(sessionId);
+  const q = s.current;
+  if (!q || s.status !== 'active') throw new LocalError(409, 'stale_question');
+  const u = load().user;
+  if (u.coins < HINT_COST) throw new LocalError(402, 'not_enough_coins');
+  let out: { removeOptionId?: string; firstLetter?: string; letters?: number };
+  if (q.format === 'multiple_choice' || q.format === 'cause_effect') {
+    const removed = (s.state.hinted ??= []);
+    const wrong = q.options.filter((o) => o.id !== q.correctId && !removed.includes(o.id));
+    if (wrong.length <= 1) throw new LocalError(409, 'no_hint');
+    const pick = wrong[Math.floor(Math.random() * wrong.length)]!;
+    removed.push(pick.id);
+    out = { removeOptionId: pick.id };
+  } else if (q.format === 'type_answer') {
+    const a = q.accepted[0] ?? '';
+    out = { firstLetter: a.slice(0, 1), letters: a.length };
+  } else throw new LocalError(409, 'no_hint');
+  u.coins -= HINT_COST;
+  return { ...out, coins: u.coins };
+}
+
+type Loot = { kind: 'coins' | 'xp' | 'egg'; amount: number } | { kind: 'item'; item: ItemId; amount: 1 };
+
+/** Pick one of three chests (Blooket-style): it always holds something good. The other two are shown too. */
+function pickChest(sessionId: string, choice: number) {
+  const s = getSession(sessionId);
+  if ((s.state.picks ?? 0) <= (s.state.picked ?? 0)) throw new LocalError(409, 'no_chest');
+  s.state.picked = (s.state.picked ?? 0) + 1;
+  const rng = lootRng();
+  const roll = (): Loot => {
+    const r = rng();
+    if (r < 0.42) return { kind: 'coins', amount: [5, 10, 15, 25][Math.floor(rng() * 4)]! };
+    if (r < 0.72) return { kind: 'xp', amount: [10, 20, 30][Math.floor(rng() * 3)]! };
+    if (r < 0.92) return { kind: 'egg', amount: [1, 2, 3][Math.floor(rng() * 3)]! };
+    return { kind: 'item', item: (['streak_freeze', 'xp_boost', 'pet_food', 'heart_refill'] as const)[Math.floor(rng() * 4)]!, amount: 1 };
+  };
+  const options = [roll(), roll(), roll()];
+  const got = options[Math.max(0, Math.min(2, Math.floor(choice) || 0))]!;
+  const u = load().user;
+  let rewards = emptyRewards();
+  if (got.kind === 'coins') u.coins += got.amount;
+  else if (got.kind === 'xp') rewards = award(got.amount, []);
+  else if (got.kind === 'egg') {
+    const hatched = warmEgg(got.amount);
+    if (hatched) rewards.hatched = hatched;
+    rewards.egg = { ...game().egg };
+  } else if (got.kind === 'item') addItem(got.item, 1);
+  return { options, chosen: Math.max(0, Math.min(2, Math.floor(choice) || 0)), got, rewards, chests: Math.max(0, (s.state.picks ?? 0) - (s.state.picked ?? 0)), coins: u.coins };
+}
+
+// ------------------------------------------------------------------ flashcards
+
+/** Cards to flip: Claude's questions when the deck has them (recall the answer, no options), else the notes. */
+function cards(deckId: string) {
+  const dk = deck(deckId);
+  const states = statesMap(dk.concepts.map((c) => c.id));
+  const ids = pickConcepts(dk.concepts, states, Math.min(20, dk.concepts.length), 'practice', now(), seededRng(hashString(`${deckId}:${now()}`)));
+  const order = [...new Set(ids)];
+  const rank: Format[] = ['type_answer', 'multiple_choice', 'true_false', 'explain', 'apply'];
+  return {
+    deck: { id: dk.id, title: dk.title, language: dk.language },
+    cards: order.flatMap((id) => {
+      const c = dk.concepts.find((x) => x.id === id);
+      if (!c) return [];
+      const qs = (dk.bank ?? []).filter((q) => q.conceptId === id && rank.includes(q.format)).sort((a, b) => rank.indexOf(a.format) - rank.indexOf(b.format));
+      const q = qs[Math.floor(Math.random() * Math.min(2, qs.length))];
+      if (q) {
+        const back = q.format === 'true_false' ? `${correctAnswerText(q)}` : correctAnswerText(q);
+        return [{ conceptId: id, term: c.term, front: q.prompt, context: q.context, back, why: q.explanation }];
+      }
+      return [{ conceptId: id, term: c.term, front: c.term, back: c.summary, why: c.keyPoints.slice(0, 3).join(' · ') }];
+    }),
+  };
+}
+
+function rateCard(deckId: string, conceptId: string, knew: boolean) {
+  const dk = deck(deckId);
+  if (!dk.concepts.some((c) => c.id === conceptId)) throw new LocalError(404, 'concept_not_found');
+  const d = load();
+  const t = now();
+  const prev = d.states[conceptId];
+  d.states[conceptId] = { conceptId, progress: prev?.progress ?? newProgress(), srs: review(prev?.srs ?? newSrsState(t), knew ? 'good' : 'again', t) };
+  const rewards = award(knew ? 2 : 1, [{ type: 'answer', correct: knew, combo: 0 }]);
+  return { ok: true, rewards };
 }
 
 function handIn(sessionId: string) {
@@ -1102,7 +1380,19 @@ const routes: [string, RegExp, Handler][] = [
       }),
     }),
   ],
-  ['POST', /^\/api\/decks\/sample$/, (_m, b) => createDeck(SAMPLE_DECKS[(b.language as Locale) ?? load().user.locale] as never)],
+  [
+    'POST',
+    /^\/api\/decks\/sample$/,
+    (_m, b) => {
+      // The sample deck comes with hand-written test questions, so the first game is a good one.
+      const language: Locale = b.language === 'fr' || b.language === 'en' ? b.language : load().user.locale;
+      const made = createDeck(SAMPLE_DECKS[language] as never);
+      const dk = deck(made.id);
+      dk.bank = sampleBank(language, dk.concepts);
+      dk.bankAt = now();
+      return made;
+    },
+  ],
   [
     'POST',
     /^\/api\/local\/decks\/from-notes$/,
@@ -1137,6 +1427,53 @@ const routes: [string, RegExp, Handler][] = [
       dk.bank = list;
       dk.bankAt = now();
       return { count: list.length };
+    },
+  ],
+  [
+    'PATCH',
+    /^\/api\/local\/decks\/([\w-]+)\/bank$/,
+    (m, b) => {
+      // Claude's questions arrive a few at a time while it writes; a checker or a learner may remove some.
+      const dk = deck(m[1]!);
+      const ids = new Set(dk.concepts.map((c) => c.id));
+      const before = dk.bank?.length ?? 0;
+      const remove = new Set(Array.isArray(b.remove) ? (b.remove as unknown[]).map(String) : []);
+      let list = (dk.bank ?? []).filter((q) => !remove.has(q.variantKey));
+      const removed = before - list.length;
+      const have = new Set(list.map((q) => q.variantKey));
+      for (const q of Array.isArray(b.add) ? (b.add as Question[]) : []) {
+        if (!q || typeof q !== 'object' || !ids.has(q.conceptId) || typeof q.prompt !== 'string' || typeof q.variantKey !== 'string' || have.has(q.variantKey)) continue;
+        have.add(q.variantKey);
+        list.push(q);
+      }
+      // Keep the deck under the account copy's size limit (oldest questions go first).
+      while (list.length > 1 && JSON.stringify(list).length > 170_000) list = list.slice(1);
+      dk.bank = list;
+      dk.bankAt = now();
+      return { count: list.length, removed };
+    },
+  ],
+  [
+    'POST',
+    /^\/api\/local\/decks\/([\w-]+)\/report$/,
+    (m, b) => {
+      // A learner flagged a question as wrong or confusing: it leaves the deck right away.
+      const dk = deck(m[1]!);
+      const key = String(b.variantKey ?? '');
+      const q = dk.bank?.find((x) => x.variantKey === key);
+      if (!q) return { ok: true, removed: 0 };
+      dk.bank = dk.bank!.filter((x) => x.variantKey !== key);
+      dk.bankAt = now();
+      reportProblem('question', new Error(`reported: ${String(b.reason ?? '')} | ${q.prompt.slice(0, 200)}`));
+      return { ok: true, removed: 1 };
+    },
+  ],
+  [
+    'POST',
+    /^\/api\/local\/problem$/,
+    (_m, b) => {
+      reportProblem(String(b.where ?? 'page').slice(0, 60), new Error(String(b.message ?? '').slice(0, 500)));
+      return { ok: true };
     },
   ],
   [
@@ -1205,7 +1542,14 @@ const routes: [string, RegExp, Handler][] = [
       return { session: publicSession(s), question: s.current ? publicQuestion(s.current) : null };
     },
   ],
-  ['POST', /^\/api\/sessions\/([\w-]+)\/answer$/, (m, b) => answer(m[1]!, String(b.questionId), b.answer as Answer)],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/answer$/, (m, b) => answer(m[1]!, String(b.questionId), b.answer as Answer, Number(b.timeMs))],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/end$/, (m) => endRun(getSession(m[1]!), 'time_up')],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/go$/, (m) => goNow(m[1]!)],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/hint$/, (m) => hint(m[1]!)],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/pick$/, (m, b) => pickChest(m[1]!, Number(b.choice))],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/report$/, (m, b) => reportLast(m[1]!, String(b.reason ?? ''))],
+  ['GET', /^\/api\/decks\/([\w-]+)\/cards$/, (m) => cards(m[1]!)],
+  ['POST', /^\/api\/decks\/([\w-]+)\/cards$/, (m, b) => rateCard(m[1]!, String(b.conceptId), b.knew === true)],
   ['POST', /^\/api\/sessions\/([\w-]+)\/hand-in$/, (m) => handIn(m[1]!)],
   ['GET', /^\/api\/sessions\/([\w-]+)\/report$/, (m) => report(m[1]!)],
 

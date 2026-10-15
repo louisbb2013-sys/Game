@@ -124,6 +124,35 @@ Reply with only one JSON object, no other text:
    "steps"?: string[] (only for processes, in order), "causeEffects"?: [{"cause": string, "effect": string}]}]}
 Aim for 12-20 concepts. If the request is not a school topic, reply {"title": "", "concepts": []}.`;
 
+const NOTES_PROMPT = (notes: string, language: Locale) => `You are Lumo, a study helper for school students. Below are a student's notes (typed or pasted).
+Pull out the important ideas a student must understand for a test, in clear words. Fix obvious typos; skip page numbers, dates of the class and admin info.
+Write everything in ${language === 'fr' ? 'French' : 'English'}.
+Notes:
+"""${notes.slice(0, 24_000)}"""
+Reply with only one JSON object, no other text:
+{"title": string (short), "subject": string, "summary": string (one sentence),
+ "concepts": [{"topic": string, "kind": one of ${CONCEPT_KINDS.filter((k) => k !== 'formula').join(' | ')},
+   "term": string (the key word or idea, short), "summary": string (one clear sentence that explains it, without repeating the term),
+   "keyPoints": string[] (2-4 short facts a good answer mentions), "examples": string[] (0-2 examples),
+   "misconceptions": string[] (0-2 mistakes students often make about it), "synonyms": string[],
+   "steps"?: string[] (only for processes, in order), "causeEffects"?: [{"cause": string, "effect": string}]}]}
+Aim for 6-25 concepts. If the text holds no study material, reply {"title": "", "concepts": []}.`;
+
+/** Typed or pasted notes → a deck draft, read by Claude (better ideas than the built-in reader). */
+export async function deckFromNotes(notes: string, language: Locale, signal?: AbortSignal) {
+  const s = await getSample();
+  if (!s) throw new ReaderError('unavailable');
+  let raw: { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
+  try {
+    raw = await s.json(NOTES_PROMPT(notes, language), { signal, modelTier: 'default' });
+  } catch (e) {
+    throw new ReaderError(String((e as { code?: string })?.code ?? 'upstream_error'));
+  }
+  const concepts = clean(raw?.concepts);
+  if (concepts.length === 0) throw new ReaderError('nothing_found');
+  return { title: str(raw.title, 120), subject: str(raw.subject, 80), summary: str(raw.summary, 1000), language, concepts };
+}
+
 /** Can this view ask Claude at all (to read photos or build a deck from a topic)? */
 export async function canAskClaude(): Promise<boolean> {
   return (await getSample()) !== null;

@@ -11,6 +11,8 @@ export interface GradeResult {
   matchedPoints?: string[];
   missingPoints?: string[];
   feedback?: string; // personalised note (AI) — "why it was wrong"
+  /** The misconception behind the wrong option the learner picked (multiple choice). */
+  chosenNote?: string;
   followUp?: string; // teach-back: the curious student's next question
   gradedBy: 'local' | 'ai' | 'heuristic';
 }
@@ -82,9 +84,11 @@ export function grade(q: Question, a: Answer, open?: OpenGrade, meaning: Record<
 
   switch (q.format) {
     case 'multiple_choice':
+    case 'true_false':
     case 'cause_effect': {
       const ok = a.kind === 'choice' && a.optionId === q.correctId;
-      return finish(q, ok ? 1 : 0, by);
+      const note = !ok && a.kind === 'choice' ? q.optionNotes?.[a.optionId] : undefined;
+      return { ...finish(q, ok ? 1 : 0, by), ...(note ? { chosenNote: note } : {}) };
     }
     case 'multiple_select': {
       if (a.kind !== 'multi') break;

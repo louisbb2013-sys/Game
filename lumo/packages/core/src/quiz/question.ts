@@ -15,13 +15,17 @@ interface Base<F extends Format> {
   prompt: string;
   /** Shown after answering: kind, short, explains *why*. */
   explanation: string;
+  /** A scenario, excerpt, quote or small table the question works on (shown above it, like a test document). */
+  context?: string;
   /** Fingerprint of this exact wording/options, used to avoid repeats. */
   variantKey: string;
 }
 
-export interface ChoiceQ extends Base<'multiple_choice' | 'cause_effect'> {
+export interface ChoiceQ extends Base<'multiple_choice' | 'cause_effect' | 'true_false'> {
   options: Opt[];
   correctId: string;
+  /** Why each wrong option is wrong (option id -> the misconception behind it), shown when it's picked. */
+  optionNotes?: Record<string, string>;
 }
 export interface MultiSelectQ extends Base<'multiple_select'> {
   options: Opt[];
@@ -105,6 +109,7 @@ export type Answer =
 
 export const ANSWER_KIND: Record<Format, Answer['kind']> = {
   multiple_choice: 'choice',
+  true_false: 'choice',
   cause_effect: 'choice',
   multiple_select: 'multi',
   type_answer: 'text',
@@ -136,6 +141,7 @@ export type PublicQuestion = {
   bloom: Bloom;
   language: Locale;
   prompt: string;
+  context?: string;
   options?: Opt[];
   multi?: boolean;
   text?: string;
@@ -154,9 +160,10 @@ export type PublicQuestion = {
 };
 
 export function publicQuestion(q: Question): PublicQuestion {
-  const base: PublicQuestion = { id: q.id, conceptId: q.conceptId, format: q.format, bloom: q.bloom, language: q.language, prompt: q.prompt };
+  const base: PublicQuestion = { id: q.id, conceptId: q.conceptId, format: q.format, bloom: q.bloom, language: q.language, prompt: q.prompt, ...(q.context ? { context: q.context } : {}) };
   switch (q.format) {
     case 'multiple_choice':
+    case 'true_false':
     case 'cause_effect':
       return { ...base, options: q.options };
     case 'multiple_select':
@@ -194,6 +201,7 @@ export function correctAnswerText(q: Question): string {
   const byId = (opts: Opt[], id: string) => opts.find((o) => o.id === id)?.text ?? '';
   switch (q.format) {
     case 'multiple_choice':
+    case 'true_false':
     case 'cause_effect':
       return byId(q.options, q.correctId);
     case 'multiple_select':

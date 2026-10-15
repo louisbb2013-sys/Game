@@ -6,6 +6,7 @@ import {
   hashString,
   joinLive,
   LIVE_FORMATS,
+  OPEN_FORMATS,
   LiveError,
   newProgress,
   endLive,
@@ -232,15 +233,16 @@ let host: HostGame | null = null;
 
 function makeQuestions(concepts: Concept[], language: Locale, count: number, bank: Question[] = []): Question[] {
   const rng = seededRng(hashString(`${Date.now()}:${Math.random()}`));
-  // The deck's real test questions first (the formats that work in a timed game), then the generator.
-  const fromBank = shuffle(
-    bank.filter((q) => LIVE_FORMATS.includes(q.format)),
-    rng,
-  )
-    .slice(0, count)
-    .map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` }));
-  if (fromBank.length >= count) return fromBank;
-  return [...fromBank, ...makeGenerated(concepts, language, count - fromBank.length, rng)];
+  // The deck's real test questions (the formats that work in a timed game). A long game goes round
+  // them again in a new order rather than falling back to basic questions built from the notes.
+  // Written answers take too long in a timed group game.
+  const usable = bank.filter((q) => LIVE_FORMATS.includes(q.format) && !OPEN_FORMATS.includes(q.format));
+  if (usable.length >= 3) {
+    const out: Question[] = [];
+    while (out.length < count) out.push(...shuffle(usable, rng).slice(0, count - out.length).map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` })));
+    return out;
+  }
+  return makeGenerated(concepts, language, count, rng);
 }
 
 function makeGenerated(concepts: Concept[], language: Locale, count: number, rng: ReturnType<typeof seededRng>): Question[] {
