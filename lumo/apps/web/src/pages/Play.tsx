@@ -158,6 +158,7 @@ export function Play() {
     startedAt.current = Date.now();
     setRemoved([]);
     setTypedHint(null);
+    window.scrollTo(0, 0); // each question starts at the top, even after a long explanation
     if (q && data?.session.lightning) {
       setLightLeft(data.session.lightning);
       setBanner('lightning');

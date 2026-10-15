@@ -42,6 +42,16 @@ export function copiesNotes(text: string, c: Pick<Concept, 'summary' | 'keyPoint
 
 const GIVEAWAY = /\b(all|none|both) of (the|these) (above|answers|options)\b|\btoutes? (les|ces) (réponses|réponse)s? (ci-dessus|précédentes)?\b|\baucune (de ces|des) réponses?\b|\btoutes ces réponses\b/i;
 
+/** "According to the text…" with no text: the student can't answer it. */
+const NEEDS_DOCUMENT =
+  /\b(according to|based on|in|from|using) (the|this) (text|passage|document|excerpt|extract|table|graph|chart|data)\b|\b(the|this) (text|passage|document|excerpt|table|graph|chart) (above|below)\b|\b(d['’]après|selon|dans|à l['’]aide d['’]?) ?(le |la |ce |cette |l['’])(texte|document|extrait|tableau|graphique|passage)\b/i;
+
+/** Two options that say the same thing (or one option twice). */
+function repeats(options: string[]): boolean {
+  const seen = new Set(options.map((o) => words(o).join(' ')));
+  return seen.size < options.length;
+}
+
 /** The answer is sitting in the question (e.g. "What is photosynthesis, the process plants use…" → "Photosynthesis"). */
 function leaks(stem: string, answer: string): boolean {
   // Numbers repeat on purpose ("60 kg on Earth: what is the mass on the Moon?" → "60 kg").
@@ -83,6 +93,7 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
   const context = str(d.context, 900);
   if (prompt.length < 8 || !why) return null;
   if (copiesNotes(prompt, concept) || (context && copiesNotes(context, concept))) return null;
+  if (!context && NEEDS_DOCUMENT.test(prompt)) return null;
   const bloom = bloomOf(d.level, type);
   const meta = (format: Format) => ({ conceptId: concept.id, format, bloom, language: ctx.language, seed: ctx.seed });
   const withContext = (q: Question | null): Question | null => {
@@ -98,7 +109,7 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
     case 'mcq': {
       const options = strs(d.options, 5, 220);
       const answer = Number(d.answer);
-      if (options.length < 3 || !Number.isInteger(answer) || !options[answer]) return null;
+      if (options.length < 3 || !Number.isInteger(answer) || !options[answer] || repeats(options)) return null;
       if (options.some((o) => GIVEAWAY.test(o)) || leaks(prompt, options[answer]!)) return null;
       // The right answer can't stand out as the long, careful one.
       const longestWrong = Math.max(...options.filter((_, i) => i !== answer).map((o) => o.length));

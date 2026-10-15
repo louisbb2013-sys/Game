@@ -58,6 +58,13 @@ describe('questions written by Claude', () => {
     expect(questionFromDraft({ c: 9, type: 'mcq', q: 'Which?', options: ['a', 'b', 'c', 'd'], answer: 0, why: 'x' }, ctx)).toBeNull();
     expect(questionFromDraft({ c: 1, type: 'essay', q: 'Write about mass.', why: 'x' }, ctx)).toBeNull();
     expect(questionFromDraft({ c: 1, type: 'mcq', q: 'Which one is right?', options: ['a1', 'b1', 'c1', 'd1'], answer: 7, why: 'x' }, ctx)).toBeNull();
+    // "According to the text…" with no text to read.
+    expect(questionFromDraft({ c: 2, type: 'mcq', q: 'According to the text, why does the scale show less?', options: ['Less gravity', 'Less matter', 'Less air'], answer: 0, why: 'x' }, ctx)).toBeNull();
+    expect(questionFromDraft({ c: 2, type: 'tf', q: 'D’après le document, la balance affiche moins sur la Lune.', answer: true, why: 'x' }, { ...ctx, language: 'fr' })).toBeNull();
+    // …but with the document given, it's a good question.
+    expect(questionFromDraft({ c: 2, type: 'mcq', context: 'Léa weighs her cat on Earth (40 N) and on the Moon (6.5 N).', q: 'According to the data, why does the scale show less?', options: ['The Moon pulls less', 'The cat has less matter', 'The scale is broken'], answer: 0, why: 'x' }, ctx)).toBeTruthy();
+    // The same option twice.
+    expect(questionFromDraft({ c: 1, type: 'mcq', q: 'Which unit is used for mass?', options: ['Kilograms', 'kilograms.', 'Newtons', 'Litres'], answer: 0, why: 'x' }, ctx)).toBeNull();
   });
 
   it('builds ordering, matching, sorting, written and calculation questions', () => {

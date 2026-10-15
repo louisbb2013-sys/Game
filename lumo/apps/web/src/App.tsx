@@ -86,6 +86,7 @@ function AppRoutes() {
   return (
     <>
       <ResumeLink />
+      <ScrollToTop />
       <Suspense fallback={<PageLoading />}>
         <Routes>
           <Route element={<Layout />}>
@@ -123,6 +124,15 @@ function AppRoutes() {
       </Suspense>
     </>
   );
+}
+
+/** A new page starts at the top (the in-page router doesn't reset the scroll by itself). */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
 }
 
 const NEXT_KEY = 'lumo_next';
