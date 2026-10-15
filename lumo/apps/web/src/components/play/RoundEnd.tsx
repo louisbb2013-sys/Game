@@ -98,8 +98,13 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
             </Chip>
           )}
         </div>
-        {rewards && (rewards.chest || rewards.badges.length > 0 || rewards.questsCompleted.length > 0) && (
+        {rewards && (rewards.levelUp || rewards.chest || rewards.badges.length > 0 || rewards.questsCompleted.length > 0) && (
           <div className="mt-3 flex w-full flex-wrap justify-center gap-2 text-sm font-black">
+            {rewards.levelUp && (
+              <span className="pop-in flex items-center gap-1.5 rounded-full bg-gradient-to-r from-fuchsia-700 to-indigo-700 px-3 py-1 text-white">
+                🚀 {t('rewards.levelUp', { level: rewards.levelUp.level })} +{rewards.levelUp.coins} 🪙
+              </span>
+            )}
             {rewards.chest && (
               <Link to="/shop?tab=mine" className="pop-in flex items-center gap-1.5 rounded-full bg-amber-300 px-3 py-1 text-night">
                 {rewards.chest === 'common' ? '🎁' : '💼'} {t('rewards.chest', { chest: t(`chests.${rewards.chest}`) })}

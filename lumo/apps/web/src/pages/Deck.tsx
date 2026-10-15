@@ -1,7 +1,7 @@
 import type { Rarity } from '@lumo/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { Lumo } from '../components/Lumo';
 import { Creature3D } from '../components/Pet3D';
 import { READY_TO_PLAY, useWriting, WritingScreen } from '../components/play/Writing';
@@ -48,7 +48,8 @@ export function Deck() {
   const [starting, setStarting] = useState<Mode | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [ai, setAi] = useState(false);
+  // null until we know whether Claude can be asked here (the website); false on the server app.
+  const [ai, setAi] = useState<boolean | null>(LOCAL ? null : false);
   const [writingOpen, setWritingOpen] = useState<Mode | null>(null);
   const [pet, setPet] = useState<{ species: string; rarity: Rarity } | null>(null);
   const writing = useWriting(id);
@@ -76,7 +77,7 @@ export function Deck() {
   }, [data, id, writing]);
 
   const bank = Math.max(data?.bankSize ?? 0, writing?.bank ?? 0);
-  const needsWriting = LOCAL && ai && bank < READY_TO_PLAY;
+  const needsWriting = LOCAL && !!ai && bank < READY_TO_PLAY;
 
   const start = async (mode: Mode) => {
     if (starting) return;
@@ -97,6 +98,18 @@ export function Deck() {
       setStarting(null);
     }
   };
+
+  // Home's "jump back in" opens the deck straight into a round.
+  const location = useLocation();
+  const autoplay = useRef((location.state as { autoplay?: Mode } | null)?.autoplay ?? null);
+  useEffect(() => {
+    if (!data || ai === null || !autoplay.current) return;
+    const m = autoplay.current;
+    autoplay.current = null;
+    navigate(location.pathname, { replace: true, state: null }); // coming back here doesn't start another round
+    void start(m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, ai]);
 
   const [offlineState, setOfflineState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(() => (id && offlineDeck(id) ? 'saved' : 'idle'));
   const saveOffline = async () => {

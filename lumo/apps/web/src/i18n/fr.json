@@ -65,7 +65,8 @@
     "claim": "Réclamer",
     "adoptPet": "Adopte un compagnon d’étude",
     "adoptPetBody": "Les compagnons t’encouragent et donnent un petit bonus d’XP.",
-    "levelProgress": "Progression vers le niveau suivant"
+    "levelProgress": "Progression vers le niveau suivant",
+    "jumpIn": "On continue!"
   },
   "stats": {
     "streak": "Jours de suite",
@@ -158,7 +159,7 @@
   "learn": {
     "title": "Mes paquets",
     "empty": "Aucun paquet pour l’instant",
-    "emptyBody": "Envoie à Lumo des photos de tes notes et il te créera un paquet et un quiz — ou essaie un paquet d’exemple.",
+    "emptyBody": "Écris un sujet, colle tes notes ou prends-les en photo : Lumo en fait un jeu avec de vraies questions d’examen. Ou essaie un paquet d’exemple.",
     "trySample": "Essayer un paquet d’exemple",
     "concepts_one": "{{count}} notion",
     "concepts_other": "{{count}} notions",
@@ -1025,7 +1026,7 @@
     "nothingFound": "Lumo n’a pas trouvé d’idées dans ces notes. Essaie une définition par ligne, comme « L’osmose est … ».",
     "exampleEn": "# The Water Cycle\n\nEvaporation is when water turns into vapour because of the sun's heat.\nCondensation is the process where water vapour cools and turns into droplets, forming clouds.\nPrecipitation: water falling from clouds as rain, snow or hail.\nFor example, morning dew on grass is condensation.\nIf the temperature drops, more water vapour condenses.\n\nStages of the water cycle:\n1. Water evaporates from oceans\n2. Vapour rises and cools\n3. Clouds form by condensation\n4. Rain falls back to the ground\n\nTranspiration - water released by plants through their leaves\nRunoff - water that flows over the ground into rivers",
     "exampleFr": "# Le cycle de l’eau\n\nL’évaporation est le passage de l’eau à l’état de vapeur grâce à la chaleur du soleil.\nLa condensation désigne le refroidissement de la vapeur d’eau qui forme des gouttelettes et des nuages.\nPrécipitations : eau qui tombe des nuages sous forme de pluie, neige ou grêle.\nPar exemple, la rosée du matin sur l’herbe est de la condensation.\n\nÉtapes du cycle de l’eau :\n1. L’eau des océans s’évapore\n2. La vapeur monte et se refroidit\n3. Les nuages se forment par condensation\n4. La pluie retombe au sol\n\nTranspiration - eau rejetée par les feuilles des plantes\nRuissellement - eau qui coule sur le sol jusqu’aux rivières",
-    "createBody": "Envoie des photos de tes notes ou colle-les, et Lumo en fait un paquet et des quiz.",
+    "createBody": "Écris un sujet, colle tes notes ou envoie-les en photo : Lumo en fait un jeu avec de vraies questions d’examen.",
     "photosTitle": "À partir de photos de tes notes",
     "photosBody": "Prends ou choisis des photos de tes notes ou de ton manuel. Claude les lit et Lumo crée le paquet.",
     "choosePhotos": "Choisir des photos",

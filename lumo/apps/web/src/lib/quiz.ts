@@ -111,3 +111,19 @@ export interface MasteryItem {
   formatsPassed: number;
   due: boolean;
 }
+
+/** The deck you played last on this device (Home's "jump back in"). */
+export function lastDeckId(): string | null {
+  try {
+    return localStorage.getItem('lumo:lastDeck');
+  } catch {
+    return null;
+  }
+}
+export function rememberDeck(id: string) {
+  try {
+    localStorage.setItem('lumo:lastDeck', id);
+  } catch {
+    /* private mode: Home shows your first deck instead */
+  }
+}

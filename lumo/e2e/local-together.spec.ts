@@ -438,3 +438,30 @@ test('website: saying no to Claude explains how to allow it, and basic questions
   await writing.getByRole('button', { name: /basic questions/ }).click();
   await expect(a.locator('section[data-format]')).toBeVisible();
 });
+
+test('website: Home jumps straight back into your last deck', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(`${process.env.MULTI_URL}?uid=u_jump`);
+  await a.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('u_jump:') || k === 'lumo:lastDeck') delete localStorage[k];
+  });
+  await open(a, 'u_jump');
+  // No deck yet: nothing to jump back into.
+  await expect(a.getByRole('region', { name: /^Level \d+$/ })).toBeVisible();
+  await expect(a.getByText('Jump back in')).toHaveCount(0);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+  await a.getByRole('link', { name: 'Home', exact: true }).click();
+  const jump = a.locator('section', { has: a.getByText('Jump back in') });
+  await expect(jump.getByRole('heading', { name: 'Cells — the basics' })).toBeVisible();
+  // One tap: a round starts.
+  await jump.getByRole('button', { name: /Play/ }).click();
+  await expect(a.locator('section[data-format]')).toBeVisible();
+  await a.getByRole('button', { name: 'Leave quiz' }).click();
+  // And the boss battle, straight from Home.
+  await a.getByRole('link', { name: 'Home', exact: true }).click();
+  await jump.getByRole('button', { name: 'Boss battle' }).click();
+  await expect(a.getByRole('dialog', { name: 'Boss battle' })).toBeVisible();
+});

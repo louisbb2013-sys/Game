@@ -65,7 +65,8 @@
     "claim": "Claim",
     "adoptPet": "Adopt a study pet",
     "adoptPetBody": "Pets cheer you on and give a small XP bonus.",
-    "levelProgress": "Progress to the next level"
+    "levelProgress": "Progress to the next level",
+    "jumpIn": "Jump back in"
   },
   "stats": {
     "streak": "Day streak",
@@ -158,7 +159,7 @@
   "learn": {
     "title": "My decks",
     "empty": "No decks yet",
-    "emptyBody": "Send Lumo photos of your notes and it will build a deck and quiz for you — or try a sample deck.",
+    "emptyBody": "Type a topic, paste your notes or snap a photo of them: Lumo turns it into a game with real test questions. Or try a sample deck.",
     "trySample": "Try a sample deck",
     "concepts_one": "{{count}} concept",
     "concepts_other": "{{count}} concepts",
@@ -1025,7 +1026,7 @@
     "nothingFound": "Lumo couldn't find ideas in these notes. Try one definition per line, like “Osmosis is …”.",
     "exampleEn": "# The Water Cycle\n\nEvaporation is when water turns into vapour because of the sun's heat.\nCondensation is the process where water vapour cools and turns into droplets, forming clouds.\nPrecipitation: water falling from clouds as rain, snow or hail.\nFor example, morning dew on grass is condensation.\nIf the temperature drops, more water vapour condenses.\n\nStages of the water cycle:\n1. Water evaporates from oceans\n2. Vapour rises and cools\n3. Clouds form by condensation\n4. Rain falls back to the ground\n\nTranspiration - water released by plants through their leaves\nRunoff - water that flows over the ground into rivers",
     "exampleFr": "# Le cycle de l’eau\n\nL’évaporation est le passage de l’eau à l’état de vapeur grâce à la chaleur du soleil.\nLa condensation désigne le refroidissement de la vapeur d’eau qui forme des gouttelettes et des nuages.\nPrécipitations : eau qui tombe des nuages sous forme de pluie, neige ou grêle.\nPar exemple, la rosée du matin sur l’herbe est de la condensation.\n\nÉtapes du cycle de l’eau :\n1. L’eau des océans s’évapore\n2. La vapeur monte et se refroidit\n3. Les nuages se forment par condensation\n4. La pluie retombe au sol\n\nTranspiration - eau rejetée par les feuilles des plantes\nRuissellement - eau qui coule sur le sol jusqu’aux rivières",
-    "createBody": "Send photos of your notes or paste them, and Lumo turns them into a deck and quizzes.",
+    "createBody": "Type a topic, paste your notes or send photos of them: Lumo turns it into a game with real test questions.",
     "photosTitle": "From photos of your notes",
     "photosBody": "Take or choose photos of your notes or textbook. Claude reads them and Lumo builds the deck.",
     "choosePhotos": "Choose photos",

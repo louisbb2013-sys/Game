@@ -2,7 +2,7 @@ import { canRepair, dayKey, type StreakState } from '@lumo/core';
 import { useCallback, useEffect, useState } from 'react';
 import { TodayPlans } from '../components/TodayPlans';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { CameraIcon, CoinIcon, FlameIcon, HeartIcon } from '../components/icons';
 import { Lumo, type LumoMood } from '../components/Lumo';
 import { api, ApiError, LOCAL } from '../lib/api';
@@ -10,6 +10,7 @@ import { EggRing, type EggState } from '../components/Egg';
 import { Creature3D } from '../components/Pet3D';
 import { useAuth } from '../lib/auth';
 import { play } from '../lib/sound';
+import { lastDeckId, type DeckListItem } from '../lib/quiz';
 import { PetAvatar, type PetView } from './Pets';
 
 interface Quest {
@@ -43,6 +44,47 @@ function EggCard({ egg }: { egg: EggState }) {
       </div>
       <span className="text-2xl text-muted">›</span>
     </Link>
+  );
+}
+
+/** One tap from Home back into the game: your last deck, with Play, a speed run or the boss. */
+function JumpIn() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [deck, setDeck] = useState<DeckListItem | null>(null);
+  useEffect(() => {
+    api<{ decks: DeckListItem[] }>('/api/decks').then(
+      (r) => {
+        const last = lastDeckId();
+        setDeck(r.decks.find((d) => d.id === last) ?? r.decks[0] ?? null);
+      },
+      () => {},
+    );
+  }, []);
+  if (!deck) return null;
+  const go = (mode: 'practice' | 'speed' | 'boss') => navigate(`/decks/${deck.id}`, { state: { autoplay: mode } });
+  return (
+    <section aria-labelledby="jump-title" className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-violet-800 to-fuchsia-800 p-4 text-white shadow-lg">
+      <p className="text-xs font-black tracking-widest text-amber-200 uppercase">{t('home.jumpIn')}</p>
+      <h2 id="jump-title" className="mt-0.5 truncate text-2xl font-black">
+        {deck.title}
+      </h2>
+      <p className="text-sm font-bold text-white/85">
+        {t('learn.mastered', { done: deck.masteredCount, total: deck.conceptCount })}
+        {deck.dueCount > 0 && ` · ${t('learn.due', { count: deck.dueCount })}`}
+      </p>
+      <div className="mt-3 flex gap-2">
+        <button type="button" onClick={() => go('practice')} className="breathe flex-1 rounded-2xl bg-gradient-to-r from-amber-300 to-yellow-400 py-3.5 text-lg font-black text-night shadow-[0_5px_0_0_rgb(0_0_0/0.3)] active:translate-y-1 active:shadow-none">
+          ▶ {t('hub.play')}
+        </button>
+        <button type="button" onClick={() => go('speed')} aria-label={t('play.modes.speed')} title={t('play.modes.speed')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15 text-2xl ring-1 ring-white/25 active:scale-95">
+          ⚡
+        </button>
+        <button type="button" onClick={() => go('boss')} aria-label={t('play.boss.title')} title={t('play.boss.title')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15 text-2xl ring-1 ring-white/25 active:scale-95">
+          🐉
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -107,6 +149,8 @@ export function Home() {
           <p className="mt-1 text-sm text-indigo-100">{streakMsg}</p>
         </div>
       </section>
+
+      <JumpIn />
 
       <section aria-label={t('home.level', { level: user.level.level })} className="rounded-3xl bg-surface p-4 ring-1 ring-line">
         <div className="flex items-baseline justify-between">

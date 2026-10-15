@@ -13,7 +13,7 @@ import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { api, ApiError, LOCAL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { burst, flash, floatText, haptic, reduced, setHaptics, shake } from '../lib/fx';
-import type { AnswerResponse, AnswerResult, Mode, PublicSession, SessionSummary } from '../lib/quiz';
+import { rememberDeck, type AnswerResponse, type AnswerResult, type Mode, type PublicSession, type SessionSummary } from '../lib/quiz';
 import { useRewards, type Rewards } from '../lib/rewards';
 import { play, setSoundEnabled } from '../lib/sound';
 import type { Handle } from '../three/stage';
@@ -79,10 +79,39 @@ export function Play() {
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
   useEffect(() => setHaptics(user?.settings.haptics !== false), [user?.settings.haptics]);
 
+  // Nothing pops up over the game mid-round: level-ups, badges and quests wait for the results screen
+  // (or show on the deck page if you leave early). The egg fills, and hatches, right away.
+  const held = useRef<Rewards | null>(null);
   const takeRewards = useCallback(
     (r: Rewards | undefined) => {
-      if (r?.egg) setEgg(r.egg);
+      if (!r) return;
+      if (r.egg) setEgg(r.egg);
+      if (r.hatched) showRewards({ xp: 0, levelUp: null, badges: [], questsCompleted: [], hatched: r.hatched });
+      held.current = mergeRewards(held.current, { ...r, hatched: undefined });
+    },
+    [showRewards],
+  );
+  /** The round's end: everything held back goes on the results screen. */
+  const endWith = useCallback(
+    (r: Rewards) => {
+      if (r.egg) setEgg(r.egg);
+      if (r.hatched) showRewards({ xp: 0, levelUp: null, badges: [], questsCompleted: [], hatched: r.hatched });
+      setEndRewards(mergeRewards(held.current, { ...r, hatched: undefined }));
+      held.current = null;
+    },
+    [showRewards],
+  );
+  // After the round (chests opened on the results screen), rewards celebrate as usual.
+  const celebrate = useCallback(
+    (r: Rewards) => {
+      if (r.egg) setEgg(r.egg);
       showRewards(r);
+    },
+    [showRewards],
+  );
+  useEffect(
+    () => () => {
+      if (held.current) showRewards(held.current);
     },
     [showRewards],
   );
@@ -110,6 +139,11 @@ export function Play() {
     if (!LOCAL) return;
     void api<{ pet: { species: string; rarity: Rarity } | null }>('/api/game/overview').then((o) => o.pet && setBuddy({ species: o.pet.species, rarity: o.pet.rarity }), () => {});
   }, []);
+
+  // Home's "jump back in" offers the deck you played last.
+  useEffect(() => {
+    if (data?.session.deckId) rememberDeck(data.session.deckId);
+  }, [data?.session.deckId]);
 
   const mode: Mode = data?.session.mode ?? 'practice';
   const q = data?.question ?? null;
@@ -146,10 +180,7 @@ export function Play() {
     ending.current = true;
     try {
       const res = await api<AnswerResponse & { rewards?: Rewards }>(`/api/sessions/${data.session.id}/end`, { method: 'POST' });
-      if (res.rewards) {
-        setEndRewards(res.rewards);
-        takeRewards({ ...res.rewards, badges: [], chest: undefined, questsCompleted: [] });
-      }
+      if (res.rewards) endWith(res.rewards);
       if (res.summary) {
         setSummary(res.summary);
         setPhase('summary');
@@ -158,7 +189,7 @@ export function Play() {
     } catch {
       ending.current = false;
     }
-  }, [data, takeRewards, refresh]);
+  }, [data, endWith, refresh]);
 
   // Speed run clock.
   useEffect(() => {
@@ -264,11 +295,8 @@ export function Play() {
           body: { questionId: data.question.id, answer: a, timeMs: Date.now() - startedAt.current },
         });
         if (ending.current) return; // the speed run's clock ran out while this answer was on its way
-        // The round's last answer: badges, chests and quests show on the results screen, not as pop-ups over it.
-        if (res.summary && res.rewards) {
-          setEndRewards(res.rewards);
-          takeRewards({ ...res.rewards, badges: [], chest: undefined, questsCompleted: [] });
-        } else takeRewards(res.rewards);
+        if (res.summary && res.rewards) endWith(res.rewards);
+        else takeRewards(res.rewards);
         if (res.followUp) {
           setFollowUp(res.followUp);
           setPhase('followup');
@@ -315,7 +343,7 @@ export function Play() {
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, mode, takeRewards, navigate, effects, refresh, followUp],
+    [answer, data, phase, mode, takeRewards, endWith, navigate, effects, refresh, followUp],
   );
 
   // Speed run: no explanation panel, straight to the next question. Boss: a right answer moves on by itself.
@@ -405,7 +433,7 @@ export function Play() {
           <ChestPick
             key={chestKey}
             sessionId={data.session.id}
-            onRewards={takeRewards}
+            onRewards={celebrate}
             onDone={(left) => {
               setSummary((sm) => (sm ? { ...sm, chestsLeft: left } : sm));
               if (left > 0) setChestKey((k) => k + 1);
@@ -624,6 +652,20 @@ export function Play() {
       )}
     </Shell>
   );
+}
+
+/** Rewards held back during a round, added up. */
+function mergeRewards(a: Rewards | null, b: Rewards): Rewards {
+  if (!a) return b;
+  return {
+    xp: a.xp + b.xp,
+    levelUp: a.levelUp && b.levelUp ? { level: b.levelUp.level, coins: a.levelUp.coins + b.levelUp.coins, chest: b.levelUp.chest ?? a.levelUp.chest } : (b.levelUp ?? a.levelUp),
+    badges: [...new Set([...a.badges, ...b.badges])],
+    questsCompleted: [...new Set([...a.questsCompleted, ...b.questsCompleted])],
+    hatched: b.hatched ?? a.hatched,
+    chest: b.chest ?? a.chest,
+    egg: b.egg ?? a.egg,
+  };
 }
 
 function Shell({ mode, children }: { mode: Mode; children: React.ReactNode }) {
