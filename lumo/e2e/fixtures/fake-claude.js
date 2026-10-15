@@ -1,6 +1,9 @@
 // Test stand-in for the Claude page viewer: user, db and room shared between tabs of one browser.
 (function () {
   const uid = new URLSearchParams(location.search).get('uid') || 'u_a';
+  // ?viewonly=1: a friend on another Claude account opening a shared link (holds `view`: every write is refused).
+  const viewOnly = new URLSearchParams(location.search).get('viewonly') === '1';
+  const refuse = () => Promise.reject({ code: 'invalid_argument', message: 'write not allowed at this level' });
   // Each tab is its own Lumo learner: namespace the app's own storage by uid.
   const gi = Storage.prototype.getItem, si = Storage.prototype.setItem, ri = Storage.prototype.removeItem;
   const k = (key) => (key.startsWith('fake:') ? key : uid + ':' + key);
@@ -23,9 +26,9 @@
   const doc = (path) => ({
     id: path.split('/').pop(), path,
     get: async () => snapDoc(path),
-    set: async (data) => write(path, data),
-    update: async (data) => write(path, { ...load()[path], ...data }),
-    delete: async () => write(path, null),
+    set: async (data) => (viewOnly ? refuse() : write(path, data)),
+    update: async (data) => (viewOnly ? refuse() : write(path, { ...load()[path], ...data })),
+    delete: async () => (viewOnly ? refuse() : write(path, null)),
     onSnapshot: (next) => { let last; const run = () => { const s = JSON.stringify(load()[path] ?? null); if (s !== last) { last = s; next(snapDoc(path)); } }; listeners.add(run); setTimeout(run); return () => listeners.delete(run); },
     collection: (p) => collection(path + '/' + p),
   });
@@ -46,7 +49,7 @@
   const db = { doc, collection };
 
   const user = {
-    id: async () => uid, name: async () => ({ u_a: 'Alice Martin', u_b: 'Bruno', u_c: 'Carla' })[uid] || '', can: async () => true, canEdit: async () => true, isOwner: async () => uid === 'u_a',
+    id: async () => uid, name: async () => ({ u_a: 'Alice Martin', u_b: 'Bruno', u_c: 'Carla' })[uid] || '', can: async () => (viewOnly ? null : true), canEdit: async () => !viewOnly, isOwner: async () => uid === 'u_a',
     profiles: async (ids) => Object.fromEntries([].concat(ids).map((id) => [id, { id, name: id === 'u_a' ? 'Alice' : id === 'u_b' ? 'Bruno' : 'Carla', avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', color: '#888', isMe: id === uid }])),
   };
 

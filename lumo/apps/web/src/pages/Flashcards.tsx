@@ -107,7 +107,7 @@ export function Flashcards() {
           <Lumo size={110} mood="cheer" glow={1} />
           <h1 className="text-3xl font-black">{t('cards.done')}</h1>
           <p className="font-bold text-white/85">{t('cards.doneBody', { known, total: seen })}</p>
-          <Link to={`/decks/${deckId}`} className="mt-4 w-full max-w-sm rounded-2xl bg-white py-4 text-lg font-black text-night shadow-[0_5px_0_0_rgb(0_0_0/0.3)]">
+          <Link to={`/decks/${deckId}`} className="btn-gold mt-4 w-full max-w-sm rounded-2xl py-4 text-lg font-black">
             {t('quiz.backToDeck')}
           </Link>
         </div>

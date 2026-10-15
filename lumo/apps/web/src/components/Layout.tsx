@@ -2,12 +2,13 @@ import { LOCAL } from '../lib/api';
 import { Suspense } from 'react';
 import { PageLoading } from './PageLoading';
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../lib/auth';
 import { useOnline } from '../lib/offline';
 import { BoltIcon, BookIcon, CoinIcon, FlameIcon, HeartIcon, HomeIcon, SparkIcon, TrophyIcon, UserIcon } from './icons';
 
 export function Layout() {
+  const { pathname } = useLocation();
   const { t } = useTranslation();
   const { user, offline } = useAuth();
   const online = useOnline();
@@ -28,8 +29,8 @@ export function Layout() {
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
       <div className="aurora" aria-hidden />
       <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-line bg-bg/90 px-4 py-2 backdrop-blur">
-        <span className="text-xl font-black tracking-tight text-ink">
-          lumo<span className="text-amber-glow">.</span>
+        <span className="font-display text-2xl font-black tracking-tight text-ink italic">
+          lumo<span className="text-[#c9973a]">.</span>
         </span>
         <div className="flex items-center gap-1.5">
           <Stat label={t('stats.streak')} value={user.streak.days} icon={<FlameIcon size={20} />} dim={user.streak.status !== 'safe'} />
@@ -45,7 +46,10 @@ export function Layout() {
       )}
       <main className="flex-1 px-4 pt-4 pb-28">
         <Suspense fallback={<PageLoading />}>
-          <Outlet />
+          {/* Each page glides in (keyed by its address, so it plays on every page change). */}
+          <div key={pathname} className="page-in">
+            <Outlet />
+          </div>
         </Suspense>
       </main>
 

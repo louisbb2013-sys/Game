@@ -27,7 +27,7 @@ async function answerOne(i, tag) {
   else if (fmt === 'calculation') { await p.getByLabel('Your answer').fill('300'); await check(); }
   else if (fmt === 'ordering') { for (let k = 0; k < 7; k++) { const b = p.locator('[data-answer-area] .flex-wrap > .tile').first(); if (await b.count()) await b.tap(); } await check(); }
   else if (fmt === 'matching') { const L = p.locator('[data-answer-area] .grid > div').first().locator('button'); const R = p.locator('[data-answer-area] .grid > div').nth(1).locator('button'); const n = await L.count(); for (let k = 0; k < n; k++) { await L.nth(k).tap(); await R.nth(k).tap(); } await check(); }
-  else if (fmt === 'categorize') { const pool = p.getByRole('button', { name: 'Items to place' }); const zones = p.locator('[data-drop]:not([data-drop="__pool"])'); let k = 0; while ((await pool.getByRole('button').count()) > 0 && k < 12) { await pool.getByRole('button').first().tap(); await zones.nth(k % 2).tap({ position: { x: 8, y: 8 } }); k++; } await check(); }
+  else if (fmt === 'categorize') { const pool = p.locator('[data-drop="__pool"]'); const zones = p.locator('[data-drop]:not([data-drop="__pool"])'); let k = 0; while ((await pool.getByRole('button').count()) > 0 && k < 12) { await pool.getByRole('button').first().tap(); await zones.nth(k % 2).tap({ position: { x: 8, y: 8 } }); k++; } await check(); }
   else { await p.locator('textarea:visible').first().fill('Both have a nucleus and a membrane, but only plant cells have a cell wall and chloroplasts.'); await check(); }
   await p.waitForTimeout(800);
   await shot(`${tag}-${String(i).padStart(2, '0')}-${fmt}`);

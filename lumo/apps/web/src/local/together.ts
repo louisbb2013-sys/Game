@@ -32,6 +32,33 @@ export interface Together {
   canWrite: boolean;
 }
 
+// Claude only lets some viewers save shared data: people in the owner's own Claude team, or friends
+// invited by email as Editor. Anyone else opening a shared link can look but not save: their writes
+// are refused. Once that happens, the page says so instead of failing quietly.
+let readOnly = false;
+const readOnlyListeners = new Set<(v: boolean) => void>();
+function markReadOnly() {
+  if (readOnly) return;
+  readOnly = true;
+  for (const f of readOnlyListeners) f(true);
+}
+/** A refused write (`invalid_argument` on a well-formed write = below the level the page needs). */
+function refused(e: unknown) {
+  if ((e as { code?: string } | null)?.code === 'invalid_argument') markReadOnly();
+}
+/** True once Claude has refused to save this viewer's shared data. */
+export function useReadOnly() {
+  const [v, setV] = useState(readOnly);
+  useEffect(() => {
+    readOnlyListeners.add(setV);
+    setV(readOnly);
+    return () => {
+      readOnlyListeners.delete(setV);
+    };
+  }, []);
+  return v;
+}
+
 let ready: Promise<Together | null> | null = null;
 /** Resolves once: null when this view can't share data (no viewer, signed out, not shared). */
 export function together(): Promise<Together | null> {
@@ -41,6 +68,7 @@ export function together(): Promise<Together | null> {
     const me = await user.id();
     if (!me) return null;
     const can = await user.can('data.write');
+    if (can === false) markReadOnly();
     return { db, room, user, me, canWrite: can !== false };
   })().catch(() => null);
   return ready;
@@ -109,8 +137,8 @@ export async function publishProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>)
       pendingProfile = null;
       await t.db.doc(`profiles/${t.me}`).set({ ...next, updatedAt: Date.now() });
     }
-  } catch {
-    /* read-only viewer or quota: stats stay local */
+  } catch (e) {
+    refused(e); // read-only viewer (or quota): stats stay local
   } finally {
     writing = false;
   }
@@ -204,7 +232,13 @@ export function useFriends() {
 export async function setFriends(ids: string[]) {
   const t = await together();
   if (!t) return;
-  await t.db.doc(`data/users/${t.me}/me`).set({ friends: [...new Set(ids)].slice(0, 200) });
+  await t.db
+    .doc(`data/users/${t.me}/me`)
+    .set({ friends: [...new Set(ids)].slice(0, 200) })
+    .catch((e: unknown) => {
+      refused(e);
+      throw e;
+    });
 }
 
 // ------------------------------------------------------------------ public decks
@@ -224,7 +258,13 @@ export async function setPublicDecks(decks: PublicDeck[]) {
   // One document per learner, kept under the store's size limit.
   let list = decks.slice(0, 20);
   while (list.length > 1 && JSON.stringify(list).length > 230_000) list = list.slice(0, -1);
-  await t.db.doc(`decks/${t.me}`).set({ decks: list, updatedAt: Date.now() });
+  await t.db
+    .doc(`decks/${t.me}`)
+    .set({ decks: list, updatedAt: Date.now() })
+    .catch((e: unknown) => {
+      refused(e);
+      throw e;
+    });
   return list.length;
 }
 

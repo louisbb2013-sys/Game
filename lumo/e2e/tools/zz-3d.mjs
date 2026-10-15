@@ -1,0 +1,24 @@
+import { chromium, devices } from '@playwright/test';
+const OUT = process.argv[2];
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const ctx = await browser.newContext({ ...devices['iPhone 13'], reducedMotion: 'no-preference' });
+const p = await ctx.newPage();
+const errs = [];
+p.on('pageerror', (e) => errs.push('ERR ' + e.message));
+p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errs.push(m.type() + ' ' + m.text().slice(0, 200)); });
+const U = `http://localhost:8765/multi.html?uid=u_3d${Date.now() % 1000}&sample=ok&3d=1`;
+await p.goto(U);
+await p.getByRole('link', { name: 'Learn', exact: true }).click({ force: true });
+await p.getByRole('button', { name: 'Try a sample deck' }).click({ force: true });
+await p.getByRole('heading', { name: 'Mastery map' }).waitFor();
+await p.getByRole('button', { name: /Boss battle/ }).first().click({ force: true });
+await p.waitForTimeout(2500);
+await p.screenshot({ path: `${OUT}/boss-intro.png` });
+await p.getByRole('button', { name: /Fight/ }).click({ force: true });
+await p.waitForTimeout(2500);
+await p.screenshot({ path: `${OUT}/boss-bar.png` });
+// The pets page shows the collection.
+await p.getByRole('button', { name: 'Leave quiz' }).click({ force: true });
+await p.waitForTimeout(500);
+console.log(errs.join('\n') || 'no errors');
+await browser.close();

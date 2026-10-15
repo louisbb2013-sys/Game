@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { FlameIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { useAuth } from '../lib/auth';
-import { findProfiles, setFriends, useFriends, useNames, useOnlineNow, useProfiles, useTogether, type PublicProfile } from '../local/together';
+import { findProfiles, setFriends, useFriends, useNames, useOnlineNow, useProfiles, useReadOnly, useTogether, type PublicProfile } from '../local/together';
 
 /**
  * Browser-only build: add friends by typing their username (Enter), or tap Add next to someone who is
@@ -22,6 +22,7 @@ export function LocalFriends() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const avatars = useNames((profiles ?? []).map((p) => p.id));
+  const readOnly = useReadOnly();
 
   if (together === undefined) return <p className="pt-10 text-center font-bold text-muted">{t('common.loading')}</p>;
   if (together === null)
@@ -120,6 +121,16 @@ export function LocalFriends() {
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-black">{t('friends.title')}</h1>
+
+      {readOnly && (
+        <div role="note" className="flex items-start gap-3 rounded-3xl bg-amber-glow/15 p-4 ring-1 ring-amber-glow/60">
+          <Lumo size={48} mood="thinking" />
+          <div className="space-y-1.5 text-sm">
+            <p className="font-black">{t('together.readOnlyTitle')}</p>
+            <p>{t('together.readOnlyBody')}</p>
+          </div>
+        </div>
+      )}
 
       <section className="space-y-3 rounded-3xl bg-surface p-4 ring-1 ring-line">
         <div className="flex items-center justify-between gap-2 rounded-2xl bg-surface-2 p-3">

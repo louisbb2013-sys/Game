@@ -24,6 +24,8 @@ export class Creature {
   cibleYaw: number;
   ciblePitch: number;
   cibleGlow: number;
+  /** True while no finger or mouse is on it: it then looks around and hops on its own. */
+  regardLibre: boolean;
   eclats: THREE_NS.Points | null;
   sauter(force?: number): void;
   maj(t: number, dt: number): void;

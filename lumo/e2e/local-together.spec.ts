@@ -465,3 +465,17 @@ test('website: Home jumps straight back into your last deck', async ({ browser }
   await jump.getByRole('button', { name: 'Boss battle' }).click();
   await expect(a.getByRole('dialog', { name: 'Boss battle' })).toBeVisible();
 });
+
+test('website: a friend who can only view the page in Claude is told why friends don’t save', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(`${process.env.MULTI_URL}?uid=u_view&viewonly=1`);
+  await expect(a.getByRole('link', { name: 'Learn', exact: true })).toBeVisible();
+  await a.getByRole('link', { name: 'Me', exact: true }).click();
+  await a.getByRole('link', { name: /Friends/ }).first().click();
+  await expect(a.getByText('Claude only lets you look at this page')).toBeVisible({ timeout: 10_000 });
+  // Adding someone explains it too, instead of failing quietly.
+  await a.getByLabel("Type a friend's username, press Enter").fill('nobody_here');
+  await a.getByLabel("Type a friend's username, press Enter").press('Enter');
+  await expect(a.getByRole('status')).toContainText('use the Lumo website together', { timeout: 10_000 });
+});

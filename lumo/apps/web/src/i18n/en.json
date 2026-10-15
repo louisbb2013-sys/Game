@@ -148,7 +148,8 @@
     "tooManyLinks": "You can have up to 5 links. Turn one off first.",
     "export": "Download my data",
     "exportHint": "A file with everything Lumo stores about you.",
-    "haptics": "Vibration on answers"
+    "haptics": "Vibration on answers",
+    "music": "Background music in games"
   },
   "common": {
     "loading": "Loading…",
@@ -260,7 +261,8 @@
       "no_questions": "Couldn’t make questions for this deck.",
       "invalid_answer": "That answer couldn’t be read. Try again.",
       "network": "Can’t reach Lumo. Check your connection."
-    }
+    },
+    "placeHere": "Put it here"
   },
   "formats": {
     "multiple_choice": "Multiple choice",
@@ -805,7 +807,7 @@
       "server_error": "Something went wrong. Try again.",
       "network": "Can't reach Lumo. Check your connection.",
       "slow_down": "Slow down a little and try again in a few seconds.",
-      "read_only": "You need Contributor access to this page to host a game."
+      "read_only": "Claude doesn’t let you save on this page, so you can’t host here. Join a friend’s game, or use the Lumo website."
     }
   },
   "friends": {
@@ -1065,8 +1067,8 @@
     "readingNotes": "Claude is reading your notes…"
   },
   "together": {
-    "helpTitle": "Play together inside Claude",
-    "helpBody": "Friends, shared decks and Live games work when this page is opened in Claude and shared with your friends. Use the page's Share menu and give them “Contributor” access.",
+    "helpTitle": "Play together",
+    "helpBody": "Friends, shared decks and Live games need everyone to be able to save. In Claude, that works for people in your own Claude team, or friends you invite by email as Editor (with the public link turned off). The easiest way for everyone is the Lumo website.",
     "joinHint": "Friends join from their Live tab: tap the game in “Games now” or type this code.",
     "openGames": "Games now",
     "hostedBy_one": "Hosted by {{name}} · {{count}} player",
@@ -1082,26 +1084,28 @@
     "shareDeckBody": "Everyone you shared this Lumo page with can copy it and play it Live.",
     "nowPublic": "Your friends can see this deck now.",
     "nowPrivate": "This deck is private again.",
-    "cantShare": "Couldn't share. You need Contributor access to this page.",
-    "friendsIntro": "Friends are the people you shared this Lumo page with. Add them to compare streaks and XP, and challenge them to a Live game.",
+    "cantShare": "Couldn't share: Claude doesn't let you save on this page. Ask the owner to invite you by email as Editor, or use the Lumo website.",
+    "friendsIntro": "Add friends to compare streaks and XP, and challenge them to a Live game.",
     "thisWeek": "This week",
     "noFriendsYet": "Add friends below to see who studies the most this week.",
     "challenge": "Challenge friends to a Live game",
     "peopleHere": "People on this Lumo",
     "searchName": "Search by name",
-    "nobodyElse": "Nobody else yet. Share this page with friends (Share menu, Contributor access).",
-    "howToInvite": "To invite someone new: open the page's Share menu and add them with Contributor access. They appear here after they open Lumo once.",
+    "nobodyElse": "Nobody else yet. Friends appear here after they open Lumo once.",
+    "howToInvite": "Friends on their own Claude account can only save here if you invite them by email as Editor (Share menu, with the public link turned off). Otherwise, use the Lumo website together.",
     "yourUsername": "Your username (friends type this to add you)",
     "typeUsername": "Type a friend's username, press Enter",
     "added": "{{name}} is now your friend!",
-    "cantAdd": "Couldn't add this friend. You need Contributor access to this page.",
-    "notFound": "Nobody is called “{{name}}” here yet. Check the spelling, or ask them to open Lumo once.",
+    "cantAdd": "Couldn't add this friend: Claude doesn't let you save on this page.",
+    "notFound": "Nobody is called “{{name}}” here yet. Check the spelling, or ask them to open Lumo once. Friends who can only view this page in Claude can’t be added here: use the Lumo website together.",
     "alreadyFriends": "{{name}} is already your friend.",
     "online": "Online",
     "onlineNow_one": "Online now ({{count}})",
     "onlineNow_other": "Online now ({{count}})",
     "nobodyOnline": "Nobody else has Lumo open right now.",
-    "friend": "Friend"
+    "friend": "Friend",
+    "readOnlyTitle": "Claude only lets you look at this page",
+    "readOnlyBody": "You opened a link shared from someone else’s Claude account, so Claude won’t save your friends or your profile here. Ask the owner to invite you by email as Editor (Share menu, with the public link turned off), or use the Lumo website: friends work there for everyone."
   },
   "egg": {
     "title": "{{rarity}} egg",

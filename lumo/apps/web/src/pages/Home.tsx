@@ -64,23 +64,23 @@ function JumpIn() {
   if (!deck) return null;
   const go = (mode: 'practice' | 'speed' | 'boss') => navigate(`/decks/${deck.id}`, { state: { autoplay: mode } });
   return (
-    <section aria-labelledby="jump-title" className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-violet-800 to-fuchsia-800 p-4 text-white shadow-lg">
-      <p className="text-xs font-black tracking-widest text-amber-200 uppercase">{t('home.jumpIn')}</p>
-      <h2 id="jump-title" className="mt-0.5 truncate text-2xl font-black">
+    <section aria-labelledby="jump-title" className="lacquer lux-frame relative overflow-hidden rounded-3xl p-5 shadow-lg">
+      <p className="font-display text-sm font-semibold text-[#f2d58a] italic">{t('home.jumpIn')}</p>
+      <h2 id="jump-title" className="mt-0.5 truncate text-[1.7rem] leading-tight font-black">
         {deck.title}
       </h2>
-      <p className="text-sm font-bold text-white/85">
+      <p className="text-sm font-bold text-[#f7f1e3]/80">
         {t('learn.mastered', { done: deck.masteredCount, total: deck.conceptCount })}
         {deck.dueCount > 0 && ` · ${t('learn.due', { count: deck.dueCount })}`}
       </p>
       <div className="mt-3 flex gap-2">
-        <button type="button" onClick={() => go('practice')} className="breathe flex-1 rounded-2xl bg-gradient-to-r from-amber-300 to-yellow-400 py-3.5 text-lg font-black text-night shadow-[0_5px_0_0_rgb(0_0_0/0.3)] active:translate-y-1 active:shadow-none">
+        <button type="button" onClick={() => go('practice')} className="btn-gold breathe flex-1 rounded-2xl py-3.5 text-lg font-black">
           ▶ {t('hub.play')}
         </button>
-        <button type="button" onClick={() => go('speed')} aria-label={t('play.modes.speed')} title={t('play.modes.speed')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15 text-2xl ring-1 ring-white/25 active:scale-95">
+        <button type="button" onClick={() => go('speed')} aria-label={t('play.modes.speed')} title={t('play.modes.speed')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-[#e8c468]/45 active:scale-95">
           ⚡
         </button>
-        <button type="button" onClick={() => go('boss')} aria-label={t('play.boss.title')} title={t('play.boss.title')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15 text-2xl ring-1 ring-white/25 active:scale-95">
+        <button type="button" onClick={() => go('boss')} aria-label={t('play.boss.title')} title={t('play.boss.title')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-[#e8c468]/45 active:scale-95">
           🐉
         </button>
       </div>
@@ -134,7 +134,7 @@ export function Home() {
 
   return (
     <div className="space-y-5">
-      <section className="flex items-center gap-4 rounded-3xl bg-night p-4 text-white shadow-lg">
+      <section className="lacquer lux-frame flex items-center gap-4 rounded-3xl p-4 shadow-lg">
         {ov?.pet ? (
           <Link to="/pets" aria-label={t('pets.title')} className="-my-4 -ml-3 block size-[118px] shrink-0">
             <Creature3D species={ov.pet.species} rarity={ov.pet.rarity} className="size-full">
@@ -278,7 +278,7 @@ function Tile({ icon, value, label }: { icon: React.ReactNode; value: number; la
   return (
     <div className="flex flex-col items-center rounded-2xl bg-surface p-3 text-center ring-1 ring-line">
       {icon}
-      <span className="mt-1 text-2xl font-black">{value}</span>
+      <span className="font-display mt-1 text-2xl font-black">{value}</span>
       <span className="text-[0.7rem] leading-tight font-bold text-muted">{label}</span>
     </div>
   );

@@ -148,7 +148,8 @@
     "tooManyLinks": "Tu peux avoir 5 liens au maximum. Coupes-en un d’abord.",
     "export": "Télécharger mes données",
     "exportHint": "Un fichier avec tout ce que Lumo garde sur toi.",
-    "haptics": "Vibration aux réponses"
+    "haptics": "Vibration aux réponses",
+    "music": "Musique de fond dans les jeux"
   },
   "common": {
     "loading": "Chargement…",
@@ -260,7 +261,8 @@
       "no_questions": "Impossible de créer des questions pour ce paquet.",
       "invalid_answer": "Cette réponse n’a pas pu être lue. Réessaie.",
       "network": "Impossible de joindre Lumo. Vérifie ta connexion."
-    }
+    },
+    "placeHere": "Mettre ici"
   },
   "formats": {
     "multiple_choice": "Choix multiple",
@@ -805,7 +807,7 @@
       "server_error": "Un problème est survenu. Réessaie.",
       "network": "Impossible de joindre Lumo. Vérifie ta connexion.",
       "slow_down": "Doucement ! Réessaie dans quelques secondes.",
-      "read_only": "Il te faut l’accès Contributeur à cette page pour organiser une partie."
+      "read_only": "Claude ne te laisse pas enregistrer sur cette page, donc tu ne peux pas organiser de partie ici. Rejoins la partie d’un ami, ou utilise le site Web de Lumo."
     }
   },
   "friends": {
@@ -1065,8 +1067,8 @@
     "readingNotes": "Claude lit tes notes…"
   },
   "together": {
-    "helpTitle": "Jouer ensemble dans Claude",
-    "helpBody": "Les amis, les paquets partagés et les parties Live marchent quand cette page est ouverte dans Claude et partagée avec tes amis. Utilise le menu Partager de la page et donne-leur l’accès « Contributeur ».",
+    "helpTitle": "Jouer ensemble",
+    "helpBody": "Les amis, les paquets partagés et les parties Live demandent que tout le monde puisse enregistrer. Dans Claude, ça marche pour les gens de ton équipe Claude, ou les amis invités par courriel comme Éditeur (avec le lien public désactivé). Le plus simple pour tout le monde : le site Web de Lumo.",
     "joinHint": "Tes amis rejoignent depuis leur onglet Live : touche la partie dans « Parties en cours » ou tape ce code.",
     "openGames": "Parties en cours",
     "hostedBy_one": "Organisée par {{name}} · {{count}} joueur",
@@ -1082,26 +1084,28 @@
     "shareDeckBody": "Tous ceux avec qui tu as partagé cette page Lumo peuvent le copier et y jouer en Live.",
     "nowPublic": "Tes amis voient ce paquet maintenant.",
     "nowPrivate": "Ce paquet est de nouveau privé.",
-    "cantShare": "Impossible de partager. Il te faut l’accès Contributeur à cette page.",
-    "friendsIntro": "Tes amis sont les personnes avec qui tu as partagé cette page Lumo. Ajoute-les pour comparer séries et XP, et défie-les en Live.",
+    "cantShare": "Impossible de partager : Claude ne te laisse pas enregistrer sur cette page. Demande au propriétaire de t’inviter par courriel comme Éditeur, ou utilise le site Web de Lumo.",
+    "friendsIntro": "Ajoute des amis pour comparer vos séries et votre XP, et défie-les dans une partie Live.",
     "thisWeek": "Cette semaine",
     "noFriendsYet": "Ajoute des amis ci-dessous pour voir qui révise le plus cette semaine.",
     "challenge": "Défier mes amis en Live",
     "peopleHere": "Personnes sur ce Lumo",
     "searchName": "Chercher un nom",
-    "nobodyElse": "Personne d’autre pour l’instant. Partage cette page avec tes amis (menu Partager, accès Contributeur).",
-    "howToInvite": "Pour inviter quelqu’un : ouvre le menu Partager de la page et ajoute-le avec l’accès Contributeur. Il apparaît ici après avoir ouvert Lumo une fois.",
+    "nobodyElse": "Personne d’autre pour l’instant. Tes amis apparaissent ici après avoir ouvert Lumo une fois.",
+    "howToInvite": "Les amis qui ont leur propre compte Claude ne peuvent enregistrer ici que si tu les invites par courriel comme Éditeur (menu Partager, lien public désactivé). Sinon, utilisez ensemble le site Web de Lumo.",
     "yourUsername": "Ton pseudo (tes amis le tapent pour t’ajouter)",
     "typeUsername": "Tape le pseudo d’un ami, puis Entrée",
     "added": "{{name}} est maintenant ton ami !",
-    "cantAdd": "Impossible d’ajouter cet ami. Il te faut l’accès Contributeur à cette page.",
-    "notFound": "Personne ne s’appelle « {{name}} » ici. Vérifie l’orthographe, ou demande-lui d’ouvrir Lumo une fois.",
+    "cantAdd": "Impossible d’ajouter cet ami : Claude ne te laisse pas enregistrer sur cette page.",
+    "notFound": "Personne ne s’appelle « {{name}} » ici pour l’instant. Vérifie l’orthographe, ou demande-lui d’ouvrir Lumo une fois. Les amis qui peuvent seulement voir cette page dans Claude ne peuvent pas être ajoutés ici : utilisez ensemble le site Web de Lumo.",
     "alreadyFriends": "{{name}} est déjà ton ami.",
     "online": "En ligne",
     "onlineNow_one": "En ligne maintenant ({{count}})",
     "onlineNow_other": "En ligne maintenant ({{count}})",
     "nobodyOnline": "Personne d’autre n’a Lumo ouvert en ce moment.",
-    "friend": "Ami"
+    "friend": "Ami",
+    "readOnlyTitle": "Claude te laisse seulement regarder cette page",
+    "readOnlyBody": "Tu as ouvert un lien partagé depuis le compte Claude de quelqu’un d’autre : Claude n’enregistre donc pas tes amis ni ton profil ici. Demande au propriétaire de t’inviter par courriel comme Éditeur (menu Partager, lien public désactivé), ou utilise le site Web de Lumo : les amis y fonctionnent pour tout le monde."
   },
   "egg": {
     "title": "Œuf {{rarity}}",

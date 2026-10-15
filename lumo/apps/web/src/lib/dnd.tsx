@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Tiny drag-and-drop for touch + mouse (HTML5 DnD doesn't work on phones).
@@ -142,25 +143,25 @@ export function DragChip({ id, label, className = '', children }: { id: string; 
 
 export function DropZone({ id, className = '', children, label }: { id: string; className?: string; children: ReactNode; label: string }) {
   const { selected, drop } = useDnd();
+  const { t } = useTranslation();
+  // A labelled group (not itself a button: it holds the chips, which are buttons). Tapping its empty
+  // space drops the selected chip; keyboard and screen-reader users get a "Put it here" button.
   return (
     <div
       data-drop={id}
-      role="button"
-      tabIndex={0}
+      role="group"
       aria-label={label}
       onClick={(e) => {
-        if (selected && e.target === e.currentTarget) drop(selected, id);
-        else if (selected && !(e.target as HTMLElement).closest('button')) drop(selected, id);
-      }}
-      onKeyDown={(e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && selected) {
-          e.preventDefault();
-          drop(selected, id);
-        }
+        if (selected && !(e.target as HTMLElement).closest('button')) drop(selected, id);
       }}
       className={`transition ${selected ? 'ring-2 ring-dashed ring-brand/60' : ''} ${className}`}
     >
       {children}
+      {selected && (
+        <button type="button" onClick={() => drop(selected, id)} className="m-1 rounded-lg border-2 border-dashed border-brand/60 px-2 py-1 text-xs font-black text-ink">
+          {t('quiz.placeHere')}
+        </button>
+      )}
     </div>
   );
 }

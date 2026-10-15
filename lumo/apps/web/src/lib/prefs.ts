@@ -18,13 +18,13 @@ export function applySettings(s: Settings) {
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {}
   const root = document.documentElement;
-  const theme = s.theme ?? 'system';
+  const theme = s.theme ?? 'dark'; // Midnight is Lumo's look; light and system are a choice in Settings
   media ??= window.matchMedia('(prefers-color-scheme: dark)');
   const resolved = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme;
   root.dataset.theme = resolved;
   root.dataset.dyslexic = String(Boolean(s.dyslexiaFont));
   root.dataset.largeText = String(Boolean(s.largeText));
   if (s.reduceMotion !== undefined) root.dataset.reduceMotion = String(s.reduceMotion);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#0F0D2B' : '#1E1B4B');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#0F0C29' : '#F4F2FA');
   media.onchange = () => applySettings(s);
 }

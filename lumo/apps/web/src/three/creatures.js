@@ -700,6 +700,82 @@ export class Creature {
     this.groupe.add(this.ombre);
     this.eclats = null;
     this.anatomie(forme, P, L);
+    this.visage(forme, o.humeur || "joyeux", L);
+    // clignements, coups d'œil et petits sauts quand personne ne joue avec elle
+    this.cligne = 1.5 + Math.random() * 3;
+    this.clin = 0;
+    this.regardLibre = true;
+    this.prochainRegard = 1 + Math.random() * 2;
+    this.prochainSaut = 6 + Math.random() * 6;
+  }
+
+  /* Lumo : un visage (yeux brillants qui clignent, joues, bouche ou bec ; sourcils froncés pour le boss). */
+  visage(forme, humeur, L) {
+    const h = this.tete, glow = this.glow;
+    const colere = humeur === "colere";
+    const R = 0.312;
+    // un pivot au centre de la tête, tourné vers l'endroit du visage où poser la pièce
+    const surTete = (yaw, pitch, z = R) => {
+      const pv = new THREE.Group();
+      pv.rotation.set(pitch, yaw, 0, "YXZ");
+      h.add(pv);
+      const g = new THREE.Group();
+      g.position.set(0, 0, z);
+      pv.add(g);
+      return g;
+    };
+    const noir = solide(colere ? "#2A0707" : "#120D24", L, { glow, wrap: 0.25 });
+    const reflet = solide("#FFFFFF", L, { emissive: 1.4 });
+    const lueur = solide("#FF4A2E", L, { emissive: 1.6 });
+    this.yeuxMesh = [];
+    this.reflets = [];
+    [-1, 1].forEach((sx) => {
+      const g = surTete(0.36 * sx, -0.12);
+      const oeil = new THREE.Mesh(SPHERE, noir);
+      oeil.scale.set(0.062, colere ? 0.056 : 0.078, 0.042);
+      g.add(oeil);
+      this.yeuxMesh.push(oeil);
+      // reflets : un gros en haut, un petit en bas (une lueur rouge pour le boss)
+      const r1 = new THREE.Mesh(SPHERE, colere ? lueur : reflet);
+      r1.scale.setScalar(colere ? 0.024 : 0.02);
+      r1.position.set(colere ? 0 : 0.016, colere ? 0 : 0.028, 0.037);
+      g.add(r1);
+      this.reflets.push(r1);
+      if (!colere) {
+        const r2 = new THREE.Mesh(SPHERE, reflet);
+        r2.scale.setScalar(0.009);
+        r2.position.set(-0.017, -0.026, 0.036);
+        g.add(r2);
+        this.reflets.push(r2);
+      }
+      if (colere) {
+        // sourcils froncés
+        const s = surTete(0.31 * sx, -0.36, R + 0.012);
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.02, 0.03), solide("#1A0606", L, { wrap: 0.3 }));
+        b.rotation.z = 0.5 * sx; // inner ends down: a frown
+        s.add(b);
+      } else {
+        // joues roses
+        const j = surTete(0.62 * sx, 0.1, R - 0.008);
+        const joue = new THREE.Mesh(SPHERE, solide("#FF7FA8", L, { emissive: 0.35, opacite: 0.8, depthWrite: false }));
+        joue.scale.set(0.046, 0.026, 0.012);
+        j.add(joue);
+      }
+    });
+    if (forme === "noki") {
+      // un petit bec pour la chouette
+      const g = surTete(0, 0.12, R + 0.01);
+      const bec = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.07, 14), solide(colere ? "#B23A1A" : "#FFB347", L, { glow, wrap: 0.6 }));
+      bec.rotation.x = Math.PI / 2;
+      g.add(bec);
+    } else {
+      const g = surTete(0, 0.2, R - 0.004);
+      const bouche = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.0085, 8, 20, Math.PI), solide("#3A1430", L, { wrap: 0.3 }));
+      // un sourire (l'arc en bas) ; une moue fâchée pour le boss (l'arc en haut)
+      bouche.rotation.z = colere ? 0 : Math.PI;
+      bouche.position.y = colere ? -0.012 : 0.012;
+      g.add(bouche);
+    }
   }
 
   // morceau solide (oreille, patte…) ajouté à un parent
@@ -939,6 +1015,37 @@ export class Creature {
     this.penche += (this.ciblePenche - this.penche) * Math.min(1, dt * 4);
     this.tete.rotation.set(this.pitch * 0.6 - this.s * 0.3, this.yaw * 0.5, this.penche);
     this.glow.value += (this.cibleGlow - this.glow.value) * Math.min(1, dt * 2.5);
+
+    // clignement des yeux
+    if (dt > 0) {
+      this.cligne -= dt;
+      if (this.cligne < 0) {
+        this.clin = 0.16;
+        this.cligne = 2.2 + Math.random() * 3.8;
+      }
+      if (this.clin > 0) this.clin = Math.max(0, this.clin - dt);
+    }
+    const ferme = this.clin > 0 ? Math.max(0.08, Math.abs(this.clin - 0.08) / 0.08) : 1;
+    for (const e of this.yeuxMesh || []) {
+      e.userData.y ??= e.scale.y;
+      e.scale.y = e.userData.y * ferme;
+    }
+    for (const r of this.reflets || []) r.visible = ferme > 0.5;
+    // sans doigt ni souris dessus : elle regarde autour d'elle et sautille de temps en temps
+    if (this.regardLibre && dt > 0) {
+      this.prochainRegard -= dt;
+      if (this.prochainRegard < 0) {
+        const centre = Math.random() < 0.35;
+        this.cibleYaw = centre ? 0 : (Math.random() * 2 - 1) * 0.45;
+        this.ciblePitch = centre ? 0 : (Math.random() * 2 - 1) * 0.12;
+        this.prochainRegard = 1.8 + Math.random() * 3;
+      }
+      this.prochainSaut -= dt;
+      if (this.prochainSaut < 0) {
+        this.sauter(0.38);
+        this.prochainSaut = 7 + Math.random() * 8;
+      }
+    }
 
     // oreilles qui frémissent de temps en temps
     for (const or of this.oreilles) {

@@ -78,7 +78,7 @@ export async function answerCurrent(page: Page, format: string) {
 /** Drag-and-drop boards (categories, and matching outside the game screen): first chip by a real drag, the rest tap-then-tap. */
 async function placeChips(page: Page) {
   // First item by real drag (pointer), the rest by tap-then-tap.
-  const pool = page.getByRole('button', { name: 'Items to place' });
+  const pool = page.locator('[data-drop="__pool"]');
   const zones = page.locator('[data-drop]:not([data-drop="__pool"])');
   const before = await pool.getByRole('button').count();
   await expect(pool.getByRole('button').first()).toBeVisible();

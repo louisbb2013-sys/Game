@@ -40,7 +40,7 @@ export function FeedbackSheet({ result, chosenText, onContinue, onReport, onExpl
     <div
       role="status"
       onPointerDown={() => setHeld(true)}
-      className={`rise fixed inset-x-0 bottom-0 z-40 mx-auto max-h-[72dvh] max-w-xl overflow-y-auto rounded-t-3xl p-4 pb-[max(env(safe-area-inset-bottom),1rem)] text-night shadow-[0_-12px_40px_rgb(0_0_0/0.45)] ${good ? 'bg-[#dcfce7]' : partial ? 'bg-[#fef3c7]' : 'bg-[#ffe4e6]'}`}
+      className={`sheet-up fixed inset-x-0 bottom-0 z-40 mx-auto max-h-[72dvh] max-w-xl overflow-y-auto rounded-t-3xl p-4 pb-[max(env(safe-area-inset-bottom),1rem)] text-night shadow-[0_-12px_40px_rgb(0_0_0/0.45)] ${good ? 'bg-[#dcfce7]' : partial ? 'bg-[#fef3c7]' : 'bg-[#ffe4e6]'}`}
     >
       <div className="flex items-center gap-3">
         <span className={`grid size-12 shrink-0 place-items-center rounded-full text-2xl font-black text-white ${good ? 'bg-green-600' : partial ? 'bg-amber-500' : 'bg-rose-600'}`} aria-hidden>

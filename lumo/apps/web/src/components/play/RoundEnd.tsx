@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { CoinIcon, FlameIcon, HeartIcon } from '../icons';
 import { Lumo } from '../Lumo';
 import { useConfetti } from '../../lib/confetti';
-import { burst } from '../../lib/fx';
+import { burst, reduced } from '../../lib/fx';
 import { play } from '../../lib/sound';
 import type { Mode, SessionSummary } from '../../lib/quiz';
 import type { Rewards } from '../../lib/rewards';
@@ -59,7 +59,7 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
         </div>
         <h1 className="mt-2 text-3xl font-black">{title}</h1>
         {mode === 'speed' && (
-          <p className="mt-1 text-5xl font-black text-amber-300 tabular-nums" aria-label={t('play.points', { n: summary.points ?? 0 })}>
+          <p className="font-display text-gold mt-1 text-6xl font-black tabular-nums" aria-label={t('play.points', { n: summary.points ?? 0 })}>
             {points}
             <span className="ml-2 text-lg text-white/70">{t('play.pts')}</span>
           </p>
@@ -77,9 +77,9 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
         )}
 
         <div className="mt-5 grid w-full grid-cols-3 gap-3">
-          <Stat label={t('quiz.accuracy')} value={`${Math.round(summary.accuracy * 100)}%`} />
-          <Stat label="XP" value={`+${xp}`} />
-          <Stat label={t('quiz.bestCombo')} value={`×${summary.bestCombo}`} />
+          <Stat label={t('quiz.accuracy')} value={`${Math.round(summary.accuracy * 100)}%`} delay={500} />
+          <Stat label="XP" value={`+${xp}`} count={false} />
+          <Stat label={t('quiz.bestCombo')} value={`×${summary.bestCombo}`} delay={900} />
         </div>
         <div className="mt-3 flex w-full flex-wrap justify-center gap-2 text-sm font-black">
           {summary.coins > 0 && (
@@ -125,11 +125,11 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
 
         <div className="mt-6 grid w-full gap-3">
           {(summary.chestsLeft ?? 0) > 0 && (
-            <button type="button" onClick={onChests} className="breathe rounded-2xl bg-gradient-to-r from-amber-300 to-yellow-400 py-4 text-lg font-black text-night">
+            <button type="button" onClick={onChests} className="rounded-2xl bg-[#f7f1e3] py-4 text-lg font-black text-night ring-2 ring-[#e8c468]">
               🎁 {t('play.openChests', { count: summary.chestsLeft })}
             </button>
           )}
-          <button type="button" onClick={onAgain} className="rounded-2xl bg-white py-4 text-lg font-black text-night shadow-[0_5px_0_0_rgb(0_0_0/0.3)] active:translate-y-1 active:shadow-none">
+          <button type="button" onClick={onAgain} className="btn-gold rounded-2xl py-4 text-lg font-black">
             {mode === 'boss' && !won ? `⚔️ ${t('play.end.rematch')}` : `▶ ${t('play.end.again')}`}
           </button>
           <div className="grid grid-cols-2 gap-3">
@@ -214,10 +214,34 @@ function useCountUp(target: number, ms: number) {
   return n;
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** The number in a stat counts up from zero when the results appear. */
+function useCountUpText(value: string, delayMs: number, on: boolean) {
+  const m = /^([^0-9-]*)(-?\d+)(.*)$/.exec(value);
+  const target = m ? Number(m[2]) : 0;
+  const [n, setN] = useState(() => (m && on && !reduced() ? 0 : target));
+  useEffect(() => {
+    if (!m || !on || reduced()) return setN(target);
+    let raf = 0;
+    const start = performance.now() + delayMs;
+    const tick = (now: number) => {
+      const p = Math.min(1, Math.max(0, (now - start) / 900));
+      setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return m ? `${m[1]}${n}${m[3]}` : value;
+}
+
+function Stat({ label, value, delay = 0, count = true }: { label: string; value: string; delay?: number; count?: boolean }) {
+  const shown = useCountUpText(value, delay, count);
   return (
-    <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
-      <p className="text-2xl font-black tabular-nums">{value}</p>
+    <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-[#e8c468]/35">
+      <p className="font-display text-2xl font-black tabular-nums" aria-label={value}>
+        {shown}
+      </p>
       <p className="text-xs font-bold text-white/75">{label}</p>
     </div>
   );

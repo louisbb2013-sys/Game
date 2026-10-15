@@ -48,7 +48,7 @@ async function answerCorrectly(page: Page, q: any) {
       const chips = q.format === 'matching' ? q.right : q.items;
       const zones = q.format === 'matching' ? q.left : q.categories;
       for (const [chipId, zoneId] of pairs) {
-        await page.getByRole('button', { name: 'Items to place' }).getByRole('button', { name: byText(chipId, chips), exact: true }).click();
+        await page.locator('[data-drop="__pool"]').getByRole('button', { name: byText(chipId, chips), exact: true }).click();
         await page.getByRole('button', { name: byText(zoneId, zones), exact: true }).click({ position: { x: 6, y: 6 } });
       }
       break;

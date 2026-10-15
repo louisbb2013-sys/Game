@@ -58,8 +58,8 @@ function Tile({ i, state, onTap, children, pressed, disabled, label }: { i: numb
       data-state={state}
       data-pressed={pressed ? 'true' : undefined}
       aria-label={label}
-      className={`tile rise-in ${COLORS[i % 4]}`}
-      style={{ ['--d' as string]: `${i * 0.07}s` }}
+      className={`tile tile-deal ${COLORS[i % 4]}`}
+      style={{ ['--d' as string]: `${0.08 + i * 0.07}s` }}
     >
       <span className="tile-shape">
         <Shape i={i} />

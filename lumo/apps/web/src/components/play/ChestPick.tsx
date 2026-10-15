@@ -54,7 +54,7 @@ export function ChestPick({ sessionId, onDone, onRewards }: { sessionId: string;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-night/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={t('play.chestTitle')}>
-      <div className="pop-in w-full max-w-sm rounded-3xl bg-gradient-to-b from-indigo-500 to-violet-700 p-5 text-center text-white shadow-2xl ring-4 ring-amber-300/60">
+      <div className="pop-in lacquer lux-frame w-full max-w-sm rounded-3xl p-5 text-center shadow-2xl">
         <p className="text-sm font-black tracking-widest text-amber-200 uppercase">{t('play.chestEarned')}</p>
         <h2 className="text-2xl font-black">{res ? t('play.chestYouGot') : t('play.chestTitle')}</h2>
         <div className="mt-5 grid grid-cols-3 gap-3">
@@ -68,7 +68,7 @@ export function ChestPick({ sessionId, onDone, onRewards }: { sessionId: string;
                 disabled={busy !== null || !!res}
                 onClick={(e) => void open(i, e.currentTarget)}
                 aria-label={t('play.chestN', { n: i + 1 })}
-                className={`flex aspect-[3/4] flex-col items-center justify-center rounded-2xl p-2 transition ${res ? (mine ? 'bg-amber-300 text-night ring-4 ring-white' : 'bg-white/10 opacity-60') : 'bg-white/15 hover:bg-white/25'}`}
+                className={`flex aspect-[3/4] flex-col items-center justify-center rounded-2xl p-2 transition ${res ? (mine ? 'btn-gold ring-2 ring-white' : 'bg-white/10 opacity-60') : 'bg-white/10 ring-1 ring-[#e8c468]/40 hover:bg-white/20'}`}
               >
                 {loot ? (
                   <span className={mine ? 'chest-open' : ''}>
@@ -94,7 +94,7 @@ export function ChestPick({ sessionId, onDone, onRewards }: { sessionId: string;
               if (res) onRewards(res.rewards);
               onDone(res?.chests ?? 0);
             }}
-            className="mt-5 w-full rounded-2xl bg-white py-3.5 text-lg font-black text-night shadow-[0_5px_0_0_rgb(0_0_0/0.25)]"
+            className="btn-gold mt-5 w-full rounded-2xl py-3.5 text-lg font-black"
           >
             {res && res.chests > 0 ? t('play.chestNext', { count: res.chests }) : t('quiz.continue')}
           </button>

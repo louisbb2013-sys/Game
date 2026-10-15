@@ -66,11 +66,11 @@ export function WritingScreen({ deckId, bank, onPlay, onClose, onBasic }: { deck
             <p className="mt-2 font-bold text-white/85">{t(`write.errors.${w?.error}`, { defaultValue: t('write.errors.upstream_error') })}</p>
             <div className="mt-6 grid w-full gap-3">
               {w?.error === 'not_granted' ? (
-                <button type="button" onClick={() => void managePermissions().then(() => writeQuestions(deckId))} className="rounded-2xl bg-white py-4 text-lg font-black text-night">
+                <button type="button" onClick={() => void managePermissions().then(() => writeQuestions(deckId))} className="btn-gold rounded-2xl py-4 text-lg font-black">
                   🔓 {t('write.allow')}
                 </button>
               ) : (
-                <button type="button" onClick={() => void writeQuestions(deckId)} className="rounded-2xl bg-white py-4 text-lg font-black text-night">
+                <button type="button" onClick={() => void writeQuestions(deckId)} className="btn-gold rounded-2xl py-4 text-lg font-black">
                   🔄 {t('write.retry')}
                 </button>
               )}
@@ -96,7 +96,7 @@ export function WritingScreen({ deckId, bank, onPlay, onClose, onBasic }: { deck
               type="button"
               disabled={!ready}
               onClick={onPlay}
-              className={`mt-6 w-full rounded-2xl py-4 text-xl font-black ${ready ? 'breathe bg-gradient-to-r from-amber-300 to-yellow-400 text-night' : 'bg-white/15 text-white/60'}`}
+              className={`mt-6 w-full rounded-2xl py-4 text-xl font-black ${ready ? 'btn-gold breathe' : 'bg-white/15 text-white/60'}`}
             >
               {ready ? `▶ ${t('write.playNow')}` : t('write.almost', { n: READY_TO_PLAY - count })}
             </button>

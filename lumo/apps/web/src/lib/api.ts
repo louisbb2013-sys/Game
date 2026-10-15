@@ -41,6 +41,8 @@ export interface Settings {
   sound?: boolean;
   /** Phone vibration on answers (where the phone supports it). */
   haptics?: boolean;
+  /** Soft background music during rounds. */
+  music?: boolean;
   reduceMotion?: boolean;
   uploadConsent?: boolean;
   reminder?: { enabled: boolean; time: string; days: number[] };

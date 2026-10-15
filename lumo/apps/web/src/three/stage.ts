@@ -10,7 +10,7 @@ import { lookFor } from './looks';
  * nothing moves, and it stops when the tab is hidden.
  */
 
-export type Spec = { kind: 'creature'; species: string; rarity: Rarity } | { kind: 'egg'; rarity: Rarity; progress: number };
+export type Spec = { kind: 'creature'; species: string; rarity: Rarity; mood?: 'happy' | 'angry' } | { kind: 'egg'; rarity: Rarity; progress: number };
 
 export interface Handle {
   jump(force?: number): void;
@@ -159,7 +159,8 @@ function lights(egg: boolean) {
   L.uLanternPos!.value.set(1.1, 1.3, 1.6);
   L.uLanternColor!.value.set('#FFF1DC');
   L.uLantern!.value = egg ? 1.4 : 1.8;
-  L.uRim!.value.set('#FFC2A6').multiplyScalar(0.55);
+  // A champagne-gold rim light outlines the fur against the midnight background.
+  L.uRim!.value.set('#FFD98A').multiplyScalar(0.8);
   return L;
 }
 
@@ -206,11 +207,15 @@ function build(el: HTMLElement, spec: Spec): Handle {
   if (spec.kind === 'creature') {
     const look = lookFor(spec.species, spec.rarity);
     colors = look.sparkle;
+    // The boss glares (frown, red glint) under a red rim light.
+    if (spec.mood === 'angry') L.uRim!.value.set('#FF5A3D').multiplyScalar(0.95);
     const c = new Creature(spec.species, L, {
       forme: look.forme,
       palette: look.palette,
-      couches: st.touch ? 20 : 30,
-      poils: st.touch ? 12000 : 16000,
+      humeur: spec.mood === 'angry' ? 'colere' : 'joyeux',
+      // Fewer, thicker strands read as plush on a small screen (thin ones turn to grain).
+      couches: st.touch ? 26 : 32,
+      poils: st.touch ? 7000 : 9000,
       segW: st.touch ? 44 : 64,
       segH: st.touch ? 30 : 40,
       glow: look.glow,
@@ -243,11 +248,13 @@ function build(el: HTMLElement, spec: Spec): Handle {
     const host = el;
     host.addEventListener('pointermove', (e) => {
       const r = el.getBoundingClientRect();
+      c.regardLibre = false;
       c.cibleYaw = THREE.MathUtils.clamp((e.clientX - (r.left + r.width / 2)) / Math.max(r.width / 2, 1), -1.6, 1.6) * 0.55;
       c.ciblePitch = THREE.MathUtils.clamp((e.clientY - (r.top + r.height / 2)) / Math.max(r.height / 2, 1), -1.2, 1.2) * 0.22;
       st.wake();
     });
     host.addEventListener('pointerleave', () => {
+      c.regardLibre = true;
       c.cibleYaw = c.ciblePitch = 0;
       st.wake();
     });

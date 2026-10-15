@@ -28,8 +28,8 @@ function use3D(spec: Parameters<typeof import('../three/stage').mount>[1] | null
   return { el, handle };
 }
 
-export const Creature3D = forwardRef<Handle | null, Props & { species: string; rarity: Rarity }>(function Creature3D({ species, rarity, className = '', children, label }, ref) {
-  const { el, handle } = use3D({ kind: 'creature', species, rarity }, [species, rarity]);
+export const Creature3D = forwardRef<Handle | null, Props & { species: string; rarity: Rarity; mood?: 'happy' | 'angry' }>(function Creature3D({ species, rarity, mood, className = '', children, label }, ref) {
+  const { el, handle } = use3D({ kind: 'creature', species, rarity, mood }, [species, rarity, mood]);
   useImperativeHandle(ref, () => proxy(handle), [handle]);
   return (
     <div ref={el} className={`c3d ${className}`} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>

@@ -154,7 +154,7 @@ export function Deck() {
       </Link>
 
       {/* Hero */}
-      <header className="holo rise-in rounded-3xl p-5 text-white shadow-xl" style={{ background: deckColors(data.deck.title) }} {...tilt}>
+      <header className="holo lux-frame rise-in rounded-3xl p-5 text-white shadow-xl" style={{ background: deckColors(data.deck.title) }} {...tilt}>
         <div className="flex items-center gap-4">
           <MasteryRing pct={pct}>
             {pet ? (
@@ -190,14 +190,14 @@ export function Deck() {
         type="button"
         onClick={() => void start('practice')}
         disabled={!!starting}
-        className="breathe flex w-full items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 py-5 text-2xl font-black text-white shadow-[0_6px_0_0_rgb(0_0_0/0.25)] active:translate-y-1 disabled:opacity-60"
+        className="btn-gold breathe flex w-full items-center justify-center gap-3 rounded-3xl py-5 text-2xl font-black disabled:opacity-60"
       >
         <span className="text-3xl" aria-hidden>
           {starting === 'practice' ? '⏳' : '▶'}
         </span>
         <span className="text-left leading-tight">
-          {t('hub.play')}
-          <span className="block text-sm font-bold opacity-90">{needsWriting ? t('hub.playWrite') : t('hub.playBody')}</span>
+          <span className="font-display">{t('hub.play')}</span>
+          <span className="block text-sm font-bold opacity-80">{needsWriting ? t('hub.playWrite') : t('hub.playBody')}</span>
         </span>
       </button>
       {(error || hint) && error !== 'deck_not_found' && (
@@ -209,14 +209,14 @@ export function Deck() {
       {/* Game modes */}
       {LOCAL ? (
         <section className="grid grid-cols-2 gap-3" aria-label={t('hub.modes')}>
-          <ModeTile tone="from-orange-500 to-amber-400" icon="⚡" title={t('play.modes.speed')} body={data.best?.speed ? t('play.bestScore', { n: data.best.speed }) : t('hub.speedBody')} onClick={() => void start('speed')} busy={starting === 'speed'} />
-          <ModeTile tone="from-rose-600 to-purple-700" icon="🐉" title={t('play.modes.boss')} body={data.best?.bossWins ? t('hub.bossWins', { count: data.best.bossWins }) : t('hub.bossBody')} onClick={() => void start('boss')} busy={starting === 'boss'} />
-          <ModeTile tone="from-sky-500 to-indigo-600" icon="🃏" title={t('play.modes.cards')} body={t('hub.cardsBody')} onClick={() => navigate(`/cards/${id}`)} />
+          <ModeTile tone="from-amber-600 to-orange-900" icon="⚡" title={t('play.modes.speed')} body={data.best?.speed ? t('play.bestScore', { n: data.best.speed }) : t('hub.speedBody')} onClick={() => void start('speed')} busy={starting === 'speed'} />
+          <ModeTile tone="from-rose-800 to-fuchsia-950" icon="🐉" title={t('play.modes.boss')} body={data.best?.bossWins ? t('hub.bossWins', { count: data.best.bossWins }) : t('hub.bossBody')} onClick={() => void start('boss')} busy={starting === 'boss'} />
+          <ModeTile tone="from-blue-700 to-indigo-950" icon="🃏" title={t('play.modes.cards')} body={t('hub.cardsBody')} onClick={() => navigate(`/cards/${id}`)} />
           {wrong > 0 ? (
-            <ModeTile tone="from-emerald-500 to-teal-600" icon="🎯" title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} />
+            <ModeTile tone="from-emerald-700 to-teal-950" icon="🎯" title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} />
           ) : (
             <ModeTile
-              tone="from-emerald-500 to-teal-600"
+              tone="from-emerald-700 to-teal-950"
               icon="🔁"
               title={t('deck.review')}
               body={due ? t('deck.reviewDue', { count: due }) : studied ? t('deck.reviewBody') : t('deck.needPractice')}
@@ -227,8 +227,8 @@ export function Deck() {
         </section>
       ) : (
         <section className="grid grid-cols-2 gap-3">
-          <ModeTile tone="from-emerald-500 to-teal-600" icon="🔁" title={t('deck.review')} body={due ? t('deck.reviewDue', { count: due }) : t('deck.reviewBody')} onClick={() => void start('review')} busy={starting === 'review'} />
-          <ModeTile tone="from-rose-600 to-purple-700" icon="🎯" title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} />
+          <ModeTile tone="from-emerald-700 to-teal-950" icon="🔁" title={t('deck.review')} body={due ? t('deck.reviewDue', { count: due }) : t('deck.reviewBody')} onClick={() => void start('review')} busy={starting === 'review'} />
+          <ModeTile tone="from-rose-800 to-fuchsia-950" icon="🎯" title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} />
         </section>
       )}
 
@@ -358,22 +358,22 @@ function MasteryRing({ pct, children }: { pct: number; children: React.ReactNode
     <div className="relative grid size-24 shrink-0 place-items-center" role="img" aria-label={`${pct}%`}>
       <svg viewBox="0 0 88 88" className="absolute inset-0 -rotate-90" aria-hidden>
         <circle cx="44" cy="44" r={r} fill="rgb(0 0 0 / 0.2)" stroke="rgb(255 255 255 / 0.25)" strokeWidth="7" />
-        <circle cx="44" cy="44" r={r} fill="none" stroke="#fde047" strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
+        <circle cx="44" cy="44" r={r} fill="none" stroke="#e8c468" strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
       </svg>
       {children}
-      <span className="absolute -bottom-1 rounded-full bg-night px-2 text-xs font-black text-amber-300">{pct}%</span>
+      <span className="absolute -bottom-1 rounded-full bg-night px-2 text-xs font-black text-[#f2d58a] ring-1 ring-[#e8c468]/60">{pct}%</span>
     </div>
   );
 }
 
 function ModeTile({ tone, icon, title, body, onClick, busy }: { tone: string; icon: string; title: string; body: string; onClick: () => void; busy?: boolean }) {
   return (
-    <button type="button" onClick={onClick} disabled={busy} className={`holo rise-in flex min-h-28 flex-col justify-between rounded-3xl bg-gradient-to-br ${tone} p-3.5 text-left text-white shadow-lg active:scale-[0.98] disabled:opacity-60`} {...tilt}>
+    <button type="button" onClick={onClick} disabled={busy} className={`holo lux-frame rise-in flex min-h-28 flex-col justify-between rounded-3xl bg-gradient-to-br ${tone} p-3.5 text-left text-white shadow-lg active:scale-[0.98] disabled:opacity-60`} {...tilt}>
       <span className="text-3xl" aria-hidden>
         {busy ? '⏳' : icon}
       </span>
       <span>
-        <span className="block text-lg leading-tight font-black">{title}</span>
+        <span className="font-display block text-lg leading-tight font-black">{title}</span>
         <span className="block text-xs font-bold opacity-90">{body}</span>
       </span>
     </button>

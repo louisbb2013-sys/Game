@@ -46,7 +46,7 @@ export function Settings() {
         </Row>
         <Row label={t('settings.theme')}>
           <select
-            value={s.theme ?? 'system'}
+            value={s.theme ?? 'dark'}
             onChange={(e) => set({ theme: e.target.value as S['theme'] })}
             aria-label={t('settings.theme')}
             className="rounded-xl border-2 border-line bg-bg px-2 py-1 font-bold"
@@ -57,6 +57,7 @@ export function Settings() {
           </select>
         </Row>
         <Toggle label={t('settings.sound')} checked={s.sound ?? true} onChange={(v) => set({ sound: v })} />
+        <Toggle label={t('settings.music')} checked={s.music ?? true} onChange={(v) => set({ music: v })} />
         <Toggle label={t('settings.haptics')} checked={s.haptics ?? true} onChange={(v) => set({ haptics: v })} />
       </Card>
 

@@ -32,8 +32,8 @@ export default defineConfig({
             name: 'Lumo — study smarter',
             short_name: 'Lumo',
             description: 'Turn your notes into quizzes that make you truly understand.',
-            theme_color: '#1E1B4B',
-            background_color: '#FFF8EC',
+            theme_color: '#0F0C29',
+            background_color: '#0F0C29',
             display: 'standalone',
             start_url: '/',
             icons: [

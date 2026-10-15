@@ -15,7 +15,7 @@ import { useAuth } from '../lib/auth';
 import { burst, flash, floatText, haptic, reduced, setHaptics, shake } from '../lib/fx';
 import { rememberDeck, type AnswerResponse, type AnswerResult, type Mode, type PublicSession, type SessionSummary } from '../lib/quiz';
 import { useRewards, type Rewards } from '../lib/rewards';
-import { play, setSoundEnabled } from '../lib/sound';
+import { play, setMusicEnabled, setSoundEnabled, startMusic, stopMusic } from '../lib/sound';
 import type { Handle } from '../three/stage';
 import { canAskClaude } from '../local/reader';
 import { explainAgain } from '../local/writer';
@@ -78,6 +78,7 @@ export function Play() {
 
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
   useEffect(() => setHaptics(user?.settings.haptics !== false), [user?.settings.haptics]);
+  useEffect(() => setMusicEnabled(user?.settings.music !== false), [user?.settings.music]);
 
   // Nothing pops up over the game mid-round: level-ups, badges and quests wait for the results screen
   // (or show on the deck page if you leave early). The egg fills, and hatches, right away.
@@ -147,6 +148,14 @@ export function Play() {
 
   const mode: Mode = data?.session.mode ?? 'practice';
   const q = data?.question ?? null;
+
+  // Soft lounge music while a round is on (darker for the boss, quicker for the speed run); none in the mock exam.
+  const playing = !!data && phase !== 'intro' && phase !== 'summary' && mode !== 'exam';
+  useEffect(() => {
+    if (playing) startMusic(mode === 'boss' ? 'boss' : mode === 'speed' ? 'speed' : 'calm');
+    else stopMusic();
+  }, [playing, mode]);
+  useEffect(() => () => stopMusic(), []);
 
   // Speed runs and boss battles open with an intro; a fresh question resets the per-question state.
   useEffect(() => {
@@ -485,7 +494,7 @@ export function Play() {
       {mode === 'boss' && s.boss && (
         <div className="mt-3 flex items-center gap-3 rounded-3xl bg-black/25 p-2 pr-4 ring-1 ring-white/10">
           <div ref={bossRef} className={`size-24 shrink-0 ${bossDown ? 'boss-dead' : 'boss-idle'}`}>
-            <Creature3D species={bossSpecies} rarity="legendary" className="size-full" label={t('play.boss.name', { name: t(`pets.species.${bossSpecies}`) })}>
+            <Creature3D species={bossSpecies} rarity="legendary" mood="angry" className="size-full" label={t('play.boss.name', { name: t(`pets.species.${bossSpecies}`) })}>
               <span className="text-6xl">👾</span>
             </Creature3D>
           </div>
@@ -596,7 +605,7 @@ export function Play() {
           <button
             onClick={() => (phase === 'followup' ? void submit({ kind: 'text', text: followText }) : void submit())}
             disabled={phase === 'grading' || (phase === 'followup' ? !followText.trim() : !isReady(q, answer))}
-            className="w-full rounded-2xl bg-white py-4 text-lg font-black text-night shadow-[0_6px_0_0_rgb(0_0_0/0.35)] transition active:translate-y-1 active:shadow-none disabled:bg-white/30 disabled:text-white/70 disabled:shadow-none"
+            className="btn-gold w-full rounded-2xl py-4 text-lg font-black disabled:opacity-50"
           >
             {phase === 'grading' ? (q.format === 'explain' || q.format === 'apply' || q.format === 'compare' || q.format === 'teach_back' ? t('play.grading') : t('quiz.checking')) : phase === 'followup' ? t('quiz.reply') : mode === 'exam' ? t('exam.next') : t('quiz.check')}
           </button>
@@ -807,7 +816,7 @@ function Intro({ mode, onGo, bossName, bossSpecies }: { mode: Mode; onGo: () => 
         <div className="pop-in max-w-sm">
           {mode === 'boss' ? (
             <div className="boss-idle mx-auto size-36">
-              <Creature3D species={bossSpecies} rarity="legendary" className="size-full" label={bossName}>
+              <Creature3D species={bossSpecies} rarity="legendary" mood="angry" className="size-full" label={bossName}>
                 <span className="text-7xl">👾</span>
               </Creature3D>
             </div>
@@ -820,7 +829,7 @@ function Intro({ mode, onGo, bossName, bossSpecies }: { mode: Mode; onGo: () => 
             type="button"
             autoFocus
             onClick={() => (mode === 'speed' ? setCount(3) : (play('go'), onGo()))}
-            className="breathe mt-6 w-full rounded-2xl bg-gradient-to-r from-amber-300 to-yellow-400 px-8 py-4 text-xl font-black text-night"
+            className="btn-gold breathe mt-6 w-full rounded-2xl px-8 py-4 text-xl font-black"
           >
             {mode === 'boss' ? `⚔️ ${t('play.boss.fight')}` : `▶ ${t('play.go')}`}
           </button>

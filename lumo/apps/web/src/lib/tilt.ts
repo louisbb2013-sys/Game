@@ -23,5 +23,6 @@ export const tilt = {
 export function deckColors(title: string) {
   let h = 0;
   for (const c of title) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return `linear-gradient(135deg, hsl(${h} 78% 46%), hsl(${(h + 48) % 360} 82% 36%))`;
+  // Jewel tones: deep and rich, with a soft gold light from the top corner.
+  return `radial-gradient(120% 90% at 90% -10%, rgb(232 196 104 / 0.28), transparent 55%), linear-gradient(140deg, hsl(${h} 62% 34%), hsl(${(h + 40) % 360} 70% 18%))`;
 }
