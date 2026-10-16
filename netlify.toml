@@ -1,9 +1,13 @@
-# Lumo standalone site on Netlify (see lumo/NETLIFY.md for the one-time setup).
+# Lumo standalone site on Netlify (see lumo/NETLIFY.md).
 [build]
   base = "lumo"
   command = "npm run build:netlify -w @lumo/web"
   publish = "apps/web/dist-netlify"
   edge_functions = "netlify/edge-functions"
+  functions = "netlify/functions"
+  # Each production deploy costs credits on Netlify's free plan, so only commits whose message
+  # contains "[deploy]" are published (exit 0 = skip this build).
+  ignore = "git log -1 --pretty=%B | grep -qF '[deploy]' && exit 1 || exit 0"
 
 [build.environment]
   NODE_VERSION = "22"

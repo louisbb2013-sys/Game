@@ -49,12 +49,14 @@ test('browser-only Lumo: deck, quiz, exam, sandbox, notes, progress kept after r
   // Deck from pasted notes.
   await page.getByRole('link', { name: 'Learn' }).click();
   await page.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await page.getByRole('tab', { name: 'Paste notes' }).click();
   await page.getByRole('button', { name: 'Use an example' }).click();
   await page.getByRole('button', { name: /Make my deck/ }).click();
   await expect(page.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();
 
   // Sandbox activity.
-  await page.getByRole('link', { name: 'Sandbox' }).click();
+  await page.getByRole('link', { name: 'Home', exact: true }).click();
+  await page.getByRole('link', { name: /Study Sandbox/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/local-sandbox.png', fullPage: true });
 

@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { FlameIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { useAuth } from '../lib/auth';
-import { findProfiles, setFriends, useFriends, useNames, useOnlineNow, useProfiles, useReadOnly, useTogether, type PublicProfile } from '../local/together';
+import { findProfiles, FRIENDS_ONLY, setFriends, useFriends, useNames, useOnlineNow, useProfiles, useReadOnly, useTogether, type PublicProfile } from '../local/together';
 
 /**
  * Browser-only build: add friends by typing their username (Enter), or tap Add next to someone who is
@@ -46,8 +46,9 @@ export function LocalFriends() {
   const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
   const nameOf = (id: string) => byId.get(id)?.username || avatars[id]?.name || t('together.someone');
   const board = (profiles ?? []).filter((p) => p.id === me || myFriends.has(p.id)).sort((a, b) => weekly(b) - weekly(a));
-  const onlineNow = online.filter((id) => byId.has(id));
-  const everyoneElse = (profiles ?? []).filter((p) => p.id !== me && !myFriends.has(p.id) && !online.includes(p.id));
+  // On the website only friends show up (see FRIENDS_ONLY); inside a Claude page, everyone it's shared with.
+  const onlineNow = online.filter((id) => byId.has(id) && (!FRIENDS_ONLY || myFriends.has(id)));
+  const everyoneElse = FRIENDS_ONLY ? [] : (profiles ?? []).filter((p) => p.id !== me && !myFriends.has(p.id) && !online.includes(p.id));
 
   const add = async (id: string) => {
     setBusy(true);
@@ -120,7 +121,7 @@ export function LocalFriends() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-black">{t('friends.title')}</h1>
+      <h1 className="text-3xl font-black">{t('friends.title')}</h1>
 
       {readOnly && (
         <div role="note" className="flex items-start gap-3 rounded-3xl bg-amber-glow/15 p-4 ring-1 ring-amber-glow/60">
@@ -177,7 +178,7 @@ export function LocalFriends() {
           <span className="size-2.5 rounded-full bg-good" aria-hidden /> {t('together.onlineNow', { count: onlineNow.length })}
         </h2>
         {onlineNow.length === 0 ? (
-          <p className="rounded-2xl bg-surface p-3 text-sm text-muted ring-1 ring-line">{t('together.nobodyOnline')}</p>
+          <p className="rounded-2xl bg-surface p-3 text-sm text-muted ring-1 ring-line">{t(FRIENDS_ONLY ? 'together.noFriendsOnline' : 'together.nobodyOnline')}</p>
         ) : (
           <ul className="space-y-1.5">
             {onlineNow.map((id) => (
@@ -218,7 +219,7 @@ export function LocalFriends() {
             ))}
           </ol>
         )}
-        <Link to="/live" className="block rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3.5 text-center font-black text-white">
+        <Link to="/live" className="block rounded-2xl royal p-3.5 text-center font-black text-white">
           ⚡ {t('together.challenge')}
         </Link>
       </section>
@@ -233,7 +234,7 @@ export function LocalFriends() {
           </ul>
         </section>
       )}
-      <p className="text-xs text-muted">{t('together.howToInvite')}</p>
+      <p className="text-xs text-muted">{t(FRIENDS_ONLY ? 'together.howToInviteSite' : 'together.howToInvite')}</p>
     </div>
   );
 }

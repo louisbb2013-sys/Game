@@ -1,70 +1,92 @@
-import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { makeHandler } from '../edge-functions/claude';
+import { memoryKV } from '../lib/kv';
+import { signSession } from '../lib/session';
 
-const PROJECT = 'lumo-test';
+function sse(usage = { input: 1000, output: 2000 }) {
+  return [
+    `event: message_start\ndata: {"type":"message_start","message":{"id":"m","type":"message","role":"assistant","content":[],"model":"claude-opus-5-5","stop_reason":null,"usage":{"input_tokens":${usage.input},"output_tokens":1}}}\n\n`,
+    'event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}\n\n',
+    'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\\"ok\\": true}"}}\n\n',
+    `event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":${usage.output}}}\n\n`,
+    'event: message_stop\ndata: {"type":"message_stop"}\n\n',
+  ].join('');
+}
 
-async function setup() {
-  const { publicKey, privateKey } = await generateKeyPair('RS256');
-  const jwk = { ...(await exportJWK(publicKey)), kid: 'k1', alg: 'RS256' };
-  const keys = createLocalJWKSet({ keys: [jwk] });
-  const token = (sub: string, opts: { aud?: string; iss?: string } = {}) =>
-    new SignJWT({})
-      .setProtectedHeader({ alg: 'RS256', kid: 'k1' })
-      .setSubject(sub)
-      .setIssuer(opts.iss ?? `https://securetoken.google.com/${PROJECT}`)
-      .setAudience(opts.aud ?? PROJECT)
-      .setIssuedAt()
-      .setExpirationTime('1h')
-      .sign(privateKey);
-  const sent: Record<string, unknown>[] = [];
-  const fetchMock = (async (_url: unknown, init?: RequestInit) => {
-    sent.push(JSON.parse(String(init?.body)));
-    const sse = [
-      'event: message_start\ndata: {"type":"message_start","message":{"id":"m","type":"message","role":"assistant","content":[],"model":"claude-opus-5-5","stop_reason":null,"usage":{"input_tokens":1,"output_tokens":1}}}\n\n',
-      'event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}\n\n',
-      'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\\"ok\\": true}"}}\n\n',
-      'event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}\n\n',
-      'event: message_stop\ndata: {"type":"message_stop"}\n\n',
-    ].join('');
-    return new Response(sse, { status: 200, headers: { 'content-type': 'text/event-stream', 'request-id': 'r1' } });
+async function setup(vars: Record<string, string> = { ANTHROPIC_API_KEY: 'sk-test' }) {
+  const kv = memoryKV();
+  const sent: { url: string; body: Record<string, unknown>; beta: string | null }[] = [];
+  const fetchMock = (async (url: unknown, init?: RequestInit) => {
+    sent.push({ url: String(url), body: JSON.parse(String(init?.body)), beta: new Headers(init?.headers).get('anthropic-beta') });
+    return new Response(sse(), { status: 200, headers: { 'content-type': 'text/event-stream', 'request-id': 'r1' } });
   }) as typeof fetch;
-  const env = (k: string) => ({ ANTHROPIC_API_KEY: 'sk-test', FIREBASE_PROJECT_ID: PROJECT })[k];
-  const handler = makeHandler({ env, keys, fetch: fetchMock });
+  const env = (k: string) => vars[k];
+  const handler = makeHandler({ env, kv, fetch: fetchMock });
+  const token = (u: string) => signSession(kv, env, { u, n: 'x', k: 'pw' });
   const post = (auth: string, body: unknown) => handler(new Request('https://lumo.example/api/claude', { method: 'POST', headers: { authorization: `Bearer ${auth}`, 'content-type': 'application/json' }, body: JSON.stringify(body) }));
-  return { token, post, sent };
+  return { token, post, sent, kv };
 }
 
 describe('/api/claude edge function', () => {
   it('streams Claude back to a signed-in learner, with research and photos when asked', async () => {
     const { token, post, sent } = await setup();
-    const res = await post(await token('u1'), { input: 'Make a deck about volcanoes', tier: 'default', research: true, images: [{ media_type: 'image/png', data: 'aGVsbG8=' }, { media_type: 'text/html', data: 'x' }] });
+    const res = await post(await token('u1'), { input: 'Make a deck about volcanoes', tier: 'default', research: true, images: [{ media_type: 'image/png', data: 'aGVsbG8=' }, { media_type: 'text/html', data: 'x' }, { media_type: 'application/pdf', data: 'JVBERi0=' }] });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/event-stream');
     expect(await res.text()).toContain('text_delta');
-    const req = sent[0]!;
+    const req = sent[0]!.body;
+    expect(sent[0]!.url).toContain('api.anthropic.com');
     expect(req.model).toBe('claude-opus-5-5');
     expect(req.stream).toBe(true);
     expect(req.fallbacks).toBe('default');
+    expect(sent[0]!.beta).toContain('server-side-fallback-2026-07-01');
     expect(req.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 4 }]);
     const content = (req.messages as { content: { type: string }[] }[])[0]!.content;
-    expect(content.map((c) => c.type)).toEqual(['image', 'text']); // the HTML "image" was dropped
+    expect(content.map((c) => c.type)).toEqual(['image', 'document', 'text']); // the HTML "image" was dropped, the PDF kept
     expect((req.output_config as { effort: string }).effort).toBe('medium');
   });
 
   it('quick checks use low effort and no web search', async () => {
     const { token, post, sent } = await setup();
     await post(await token('u2'), { input: 'Is "round" the same as "circular"?', tier: 'quick' });
-    expect((sent[0]!.output_config as { effort: string }).effort).toBe('low');
-    expect(sent[0]!.tools).toBeUndefined();
+    expect((sent[0]!.body.output_config as { effort: string }).effort).toBe('low');
+    expect(sent[0]!.body.tools).toBeUndefined();
   });
 
-  it('refuses anyone not signed in to this project', async () => {
-    const { token, post, sent } = await setup();
+  it('refuses anyone not signed in to this site', async () => {
+    const { post, sent } = await setup();
+    const other = await setup();
     expect((await post('nope', { input: 'hi' })).status).toBe(401);
-    expect((await post(await token('u3', { aud: 'other-project' }), { input: 'hi' })).status).toBe(401);
-    expect((await post(await token('u3', { iss: 'https://evil.example' }), { input: 'hi' })).status).toBe(401);
+    expect((await post(await other.token('u3'), { input: 'hi' })).status).toBe(401); // signed by another site
     expect(sent).toHaveLength(0);
+  });
+
+  it('says so when Claude is not set up', async () => {
+    const { token, post } = await setup({});
+    const res = await post(await token('u4'), { input: 'hi' });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'not_configured' });
+  });
+
+  it('through Netlify AI Gateway: no beta headers, and stops for the month at the budget', async () => {
+    const { token, post, sent, kv } = await setup({ ANTHROPIC_API_KEY: 'gw-key', ANTHROPIC_BASE_URL: 'https://lumo.example/.netlify/ai/anthropic', LUMO_AI_MONTHLY_USD: '0.1' });
+    const t = await token('u5');
+    const first = await post(t, { input: 'one', research: true });
+    expect(first.status).toBe(200);
+    await first.text(); // finishing the answer records what it cost
+    expect(sent[0]!.url).toContain('/.netlify/ai/anthropic');
+    expect(sent[0]!.beta).toBeNull();
+    expect(sent[0]!.body.fallbacks).toBeUndefined();
+    expect(sent[0]!.body.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }]);
+    const month = new Date().toISOString().slice(0, 7);
+    const usd = JSON.parse((await kv.get(`ai/${month}`))!.value).usd as number;
+    expect(usd).toBeCloseTo((1000 * 4 + 2000 * 20) / 1e6, 6); // $0.044
+    await (await post(t, { input: 'two' })).text();
+    await (await post(t, { input: 'three' })).text(); // now over $0.10
+    const over = await post(t, { input: 'four' });
+    expect(over.status).toBe(402);
+    expect(await over.json()).toEqual({ error: 'budget' });
+    expect(sent).toHaveLength(3);
   });
 
   it('limits how fast one account can call it', async () => {

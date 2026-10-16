@@ -81,3 +81,46 @@ export const SparkIcon = (p: P) => (
     <circle cx="12" cy="12" r="2.5" />
   </svg>
 );
+export const PlusIcon = (p: P) => (
+  <svg {...base(p)} {...stroke} strokeWidth={2.6}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+export const UsersIcon = (p: P) => (
+  <svg {...base(p)} {...stroke}>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8" />
+  </svg>
+);
+export const PawIcon = (p: P) => (
+  <svg {...base(p)} {...stroke}>
+    <circle cx="6" cy="10" r="1.8" />
+    <circle cx="10" cy="5.5" r="1.8" />
+    <circle cx="14" cy="5.5" r="1.8" />
+    <circle cx="18" cy="10" r="1.8" />
+    <path d="M12 11c-3 0-6 4.5-6 7a2.5 2.5 0 0 0 3.5 2.3c1.6-.7 3.4-.7 5 0A2.5 2.5 0 0 0 18 18c0-2.5-3-7-6-7Z" />
+  </svg>
+);
+export const ShopIcon = (p: P) => (
+  <svg {...base(p)} {...stroke}>
+    <path d="M4 9h16l-1.2 11H5.2Z" />
+    <path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2" />
+  </svg>
+);
+export const UploadIcon = (p: P) => (
+  <svg {...base(p)} {...stroke}>
+    <path d="M12 16V4M7 9l5-5 5 5" />
+    <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+  </svg>
+);
+export const TextIcon = (p: P) => (
+  <svg {...base(p)} {...stroke}>
+    <path d="M5 6h14M5 11h14M5 16h9" />
+  </svg>
+);
+export const SearchIcon = (p: P) => (
+  <svg {...base(p)} {...stroke}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.2-4.2" />
+  </svg>
+);

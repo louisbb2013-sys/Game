@@ -148,13 +148,14 @@ export function Deck() {
   const isWriting = writing?.status === 'writing';
 
   return (
-    <div className="space-y-4">
+    <div className="lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-8">
+      <div className="min-w-0 space-y-4">
       <Link to="/learn" className="inline-block rounded-full bg-surface px-3 py-1 text-sm font-extrabold ring-1 ring-line">
         ← {t('common.back')}
       </Link>
 
       {/* Hero */}
-      <header className="holo lux-frame rise-in rounded-3xl p-5 text-white shadow-xl" style={{ background: deckColors(data.deck.title) }} {...tilt}>
+      <header className="holo lux-frame rise-in rounded-3xl p-5 text-white shadow-xl sm:p-6" style={{ background: deckColors(data.deck.title) }} {...tilt}>
         <div className="flex items-center gap-4">
           <MasteryRing pct={pct}>
             {pet ? (
@@ -166,7 +167,7 @@ export function Deck() {
             )}
           </MasteryRing>
           <div className="min-w-0">
-            <h1 className="text-2xl leading-tight font-black break-words drop-shadow">{data.deck.title}</h1>
+            <h1 className="text-2xl leading-tight font-black break-words drop-shadow sm:text-3xl">{data.deck.title}</h1>
             <p className="text-sm font-bold opacity-90">{data.deck.subject}</p>
           </div>
         </div>
@@ -237,7 +238,7 @@ export function Deck() {
           <span className="block font-black">📝 {t('deck.exam')}</span>
           <span className="block text-xs text-muted">{t('deck.examBody', { count: Math.min(20, Math.max(8, data.concepts.length)) })}</span>
         </button>
-        <Link to={`/live?deck=${data.deck.id}`} className="rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-3 text-white">
+        <Link to={`/live?deck=${data.deck.id}`} className="rounded-2xl royal p-3 text-white">
           <span className="block font-black">👥 {t('deck.live')}</span>
           <span className="block text-xs opacity-85">{t('deck.liveBody')}</span>
         </Link>
@@ -259,11 +260,13 @@ export function Deck() {
       </section>
       {writing?.status === 'error' && writing.error !== 'cancelled' && bank > 0 && <p className="rounded-xl bg-surface-2 px-3 py-2 text-xs font-bold text-muted">{t(`write.errors.${writing.error}`, { defaultValue: t('write.errors.upstream_error') })}</p>}
 
+      </div>
+      <div className="mt-4 min-w-0 space-y-4 lg:sticky lg:top-8 lg:mt-12">
       {LOCAL && <ShareDeckToggle deckId={data.deck.id} />}
 
       <StudyPlan deckId={data.deck.id} />
 
-      <section aria-labelledby="map-title" className="rounded-3xl bg-surface p-4 ring-1 ring-line">
+      <section aria-labelledby="map-title" className="panel p-4 sm:p-5">
         <h2 id="map-title" className="font-black">
           {t('deck.masteryMap')}
         </h2>
@@ -320,6 +323,7 @@ export function Deck() {
         </div>
       )}
 
+      </div>
       {writingOpen && (
         <WritingScreen
           deckId={id!}

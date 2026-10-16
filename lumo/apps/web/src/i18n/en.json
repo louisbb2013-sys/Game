@@ -8,7 +8,11 @@
     "live": "Live",
     "league": "League",
     "profile": "Me",
-    "sandbox": "Sandbox"
+    "sandbox": "Sandbox",
+    "create": "Create",
+    "friends": "Friends",
+    "pets": "Pets",
+    "shop": "Shop"
   },
   "signin": {
     "title": "Welcome to Lumo",
@@ -66,7 +70,22 @@
     "adoptPet": "Adopt a study pet",
     "adoptPetBody": "Pets cheer you on and give a small XP bonus.",
     "levelProgress": "Progress to the next level",
-    "jumpIn": "Jump back in"
+    "jumpIn": "Jump back in",
+    "createAsk": "What do you want to study?",
+    "createHint": "Type a topic, or bring your notes, a PDF or photos of your textbook. Lumo writes the questions.",
+    "createPlaceholder": "e.g. The French Revolution, photosynthesis, Spanish verbs…",
+    "generate": "Generate",
+    "fromFile": "Upload a PDF or photos",
+    "fromNotes": "Paste notes",
+    "yourDecks": "Your decks",
+    "seeAll": "See all",
+    "explore": "More ways to study",
+    "liveTitle": "Play with friends",
+    "liveBody": "Start a Live game and race your class on the same questions.",
+    "friendsTitle": "Friends",
+    "friendsBody": "Add friends by their Lumo name and see who's studying.",
+    "guestTitle": "You're trying Lumo without an account.",
+    "guestBody": "Your progress stays on this device. Make a free account to use AI, play with friends and keep everything on any device."
   },
   "stats": {
     "streak": "Day streak",
@@ -166,7 +185,9 @@
     "concepts_other": "{{count}} concepts",
     "due_one": "{{count}} to review",
     "due_other": "{{count}} to review",
-    "mastered": "{{done}} of {{total}} mastered"
+    "mastered": "{{done}} of {{total}} mastered",
+    "eyebrow": "Your library",
+    "search": "Search your decks"
   },
   "deck": {
     "notFound": "This deck doesn’t exist (or isn’t yours).",
@@ -1105,7 +1126,10 @@
     "nobodyOnline": "Nobody else has Lumo open right now.",
     "friend": "Friend",
     "readOnlyTitle": "Claude only lets you look at this page",
-    "readOnlyBody": "You opened a link shared from someone else’s Claude account, so Claude won’t save your friends or your profile here. Ask the owner to invite you by email as Editor (Share menu, with the public link turned off), or use the Lumo website: friends work there for everyone."
+    "readOnlyBody": "You opened a link shared from someone else’s Claude account, so Claude won’t save your friends or your profile here. Ask the owner to invite you by email as Editor (Share menu, with the public link turned off), or use the Lumo website: friends work there for everyone.",
+    "noFriendsOnline": "None of your friends are on Lumo right now.",
+    "howToInviteSite": "Only the friends you add can see you, your decks and your games. Give classmates your Lumo name so they can add you.",
+    "shareDeckBodySite": "Your friends can copy it and play it Live with you."
   },
   "egg": {
     "title": "{{rarity}} egg",
@@ -1122,17 +1146,55 @@
     "keepGoing": "Keep going"
   },
   "gate": {
-    "tagline": "Turn any topic or your notes into quizzes — and actually understand.",
-    "point1": "Photos, notes or just a topic: Lumo makes the quiz",
-    "point2": "Hatch eggs, collect pets, open chests",
-    "point3": "Play Live with your friends",
+    "tagline": "Turn your notes, a photo of your textbook or just a topic into quizzes — then play them until you actually get it.",
+    "point1": "Notes, photos, PDFs or just a topic: Lumo writes the questions",
+    "point2": "Hatch eggs, collect pets, open chests, climb the league",
+    "point3": "Play Live against your friends",
     "google": "Continue with Google",
-    "guest": "Try without an account (saved on this device only)",
-    "privacy": "Your progress is saved to your Google account. Other players only see your Lumo username.",
+    "guest": "Try it first without an account",
+    "privacy": "Other players only ever see your Lumo name. No e-mail or real name needed.",
     "error": "Couldn't sign in. Try again.",
-    "domainError": "This site isn't allowed to sign in yet. Add it in Firebase → Authentication → Settings → Authorized domains.",
     "signOut": "Sign out",
-    "signedInAs": "Signed in with Google"
+    "signedInAs": "Signed in as {{name}}",
+    "headline": "Study like it's a game.",
+    "accountTabs": "Account",
+    "signupTab": "Create account",
+    "loginTab": "Log in",
+    "or": "or",
+    "name": "Lumo name",
+    "namePlaceholder": "e.g. NovaFox",
+    "nameHint": "3–20 letters, numbers or _. Friends add you with it, so don't use your real name.",
+    "password": "Password",
+    "show": "Show",
+    "hide": "Hide",
+    "create": "Create my account",
+    "login": "Log in",
+    "signedInGoogle": "Signed in with Google",
+    "makeAccount": "Create an account to save everywhere",
+    "errors": {
+      "google": "Google sign-in didn't finish. Try again, or use a Lumo name and password.",
+      "network": "Couldn't reach Lumo. Check your connection and try again.",
+      "unavailable": "Lumo is busy right now. Try again in a minute.",
+      "name_taken": "That name is taken. Try another one.",
+      "wrong_login": "That name and password don't match.",
+      "locked": "Too many tries. Wait 10 minutes, then try again.",
+      "rate_limited": "Too many tries. Wait a little, then try again.",
+      "weak_password": "Use at least 6 characters for your password.",
+      "bad_name": "That name can't be used. Try another one.",
+      "name_length": "Your Lumo name needs 3 to 20 characters.",
+      "name_characters": "Use only letters, numbers and _ (no spaces or accents).",
+      "name_blocked": "That name can't be used. Try another one.",
+      "name_personal_info": "Leave out birth years and long numbers: keep your info private."
+    },
+    "showSubject": "Science",
+    "showDeck": "Photosynthesis",
+    "showQuestion": "Where in the cell does photosynthesis happen?",
+    "showAnswers": [
+      "Chloroplast",
+      "Nucleus",
+      "Mitochondria",
+      "Cell wall"
+    ]
   },
   "bank": {
     "writing": "Lumo is writing real test questions…",
@@ -1316,5 +1378,66 @@
     "tapToFlip": "Tap to flip",
     "notYet": "Not yet",
     "knewIt": "Knew it"
+  },
+  "create": {
+    "eyebrow": "Create",
+    "title": "Make a study set",
+    "body": "Bring anything: Lumo pulls out what a test would ask and turns it into questions you can play.",
+    "from": "Make it from",
+    "tabs": {
+      "topic": "Topic",
+      "upload": "Upload",
+      "notes": "Paste notes"
+    },
+    "examples": [
+      "Photosynthesis, grade 8",
+      "Causes of World War I",
+      "Solving linear equations",
+      "Le passé composé"
+    ],
+    "dropTitle": "Drop your files here, or tap to choose",
+    "dropBody": "Photos of your notes or textbook (up to {{count}}), or a .txt file.",
+    "dropBodyPdf": "A PDF (notes, slides, a worksheet), photos of your notes or textbook, or a .txt file — up to {{count}} files.",
+    "tooBig": "“{{name}}” is too big. Try a smaller file (under 4 MB), or fewer pages.",
+    "remove": "Remove {{name}}",
+    "focus": "Anything Lumo should focus on? (optional)",
+    "focusPlaceholder": "e.g. Only chapter 3, my test is on Friday",
+    "privacySite": "Your files are only used to build this deck. Other players never see them.",
+    "useNotes": "Paste notes instead",
+    "more": "Name and language",
+    "howTitle": "How it works",
+    "how": [
+      "Pick a topic, upload a PDF or photos, or paste your notes.",
+      "Lumo finds the key ideas and writes real test questions.",
+      "Play until every idea turns gold. Lumo brings back what you miss."
+    ],
+    "lumoTip": "Tip: the more specific you are (“grade 9, chapter 4”), the better the questions.",
+    "generating": "Building your deck…",
+    "steps": {
+      "topic": [
+        "Looking up the topic",
+        "Picking the key ideas",
+        "Writing your deck"
+      ],
+      "upload": [
+        "Reading your files",
+        "Picking the key ideas",
+        "Writing your deck"
+      ],
+      "notes": [
+        "Reading your notes",
+        "Picking the key ideas",
+        "Writing your deck"
+      ]
+    },
+    "ai": {
+      "guestTitle": "AI needs a free account",
+      "guestBody": "Topics, PDFs and photos are read by Claude, which is for learners with an account (it's free and takes 20 seconds). Without one, you can still paste your notes.",
+      "offTitle": "Claude isn't available here",
+      "offBody": "You can still make a deck from your notes.",
+      "budget": "Lumo's AI has used up this month's free allowance on this site. Paste your notes instead, or ask the site owner to add an Anthropic key.",
+      "not_configured": "Claude isn't set up on this site yet. Paste your notes instead."
+    },
+    "readFiles": "Read my files"
   }
 }

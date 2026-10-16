@@ -15,6 +15,13 @@ import { useEffect, useState } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
+
+/**
+ * On the public website anyone can sign up, so learners only ever see the people they added as
+ * friends (by typing their exact Lumo name): no list of strangers, no strangers' decks or games.
+ * Inside a Claude page, everyone it was shared with is already a known group.
+ */
+export const FRIENDS_ONLY = import.meta.env.VITE_NETLIFY === '1';
 /** A plain copy of data handed over by the viewer (its objects may not survive copying as-is). */
 export const plain = <T>(x: T): T => (x === undefined ? x : (JSON.parse(JSON.stringify(x)) as T));
 
@@ -60,6 +67,7 @@ export function useReadOnly() {
 }
 
 let ready: Promise<Together | null> | null = null;
+let myId = '';
 /** Resolves once: null when this view can't share data (no viewer, signed out, not shared). */
 export function together(): Promise<Together | null> {
   ready ??= (async () => {
@@ -67,6 +75,7 @@ export function together(): Promise<Together | null> {
     if (!db || !user) return null;
     const me = await user.id();
     if (!me) return null;
+    myId = me;
     const can = await user.can('data.write');
     if (can === false) markReadOnly();
     return { db, room, user, me, canWrite: can !== false };
@@ -275,8 +284,9 @@ export async function myPublicDecks(): Promise<PublicDeck[]> {
   return (snap?.exists ? (plain(snap.data()?.decks) as PublicDeck[]) : []) ?? [];
 }
 
-/** Everyone's public decks, live, with the owner's id. */
+/** Everyone's public decks (on the website: my friends'), live, with the owner's id. */
 export function useSharedDecks() {
+  const friends = useFriends();
   const [decks, setDecks] = useState<(PublicDeck & { ownerId: string })[] | null>(null);
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -296,5 +306,7 @@ export function useSharedDecks() {
       unsub?.();
     };
   }, []);
-  return decks;
+  if (!FRIENDS_ONLY || !decks) return decks;
+  const circle = new Set(friends ?? []);
+  return decks.filter((d) => circle.has(d.ownerId) || d.ownerId === myId);
 }

@@ -133,7 +133,7 @@ export function Flashcards() {
 
       <div
         ref={cardRef}
-        className={`flip mx-auto mt-3 h-[58dvh] w-full max-w-md select-none ${leaving === 'right' ? 'swipe-out-right' : leaving === 'left' ? 'swipe-out-left' : ''}`}
+        className={`flip mx-auto mt-3 h-[58dvh] w-full max-w-md select-none lg:max-w-xl ${leaving === 'right' ? 'swipe-out-right' : leaving === 'left' ? 'swipe-out-left' : ''}`}
         data-flipped={flipped}
         style={leaving ? undefined : { transform: `translateX(${dx}px) rotate(${tiltDeg}deg)`, transition: drag.current ? 'none' : 'transform 0.25s' }}
         onPointerDown={(e) => {
@@ -168,7 +168,7 @@ export function Flashcards() {
             <span className={`leading-snug font-black ${card!.front.length < 60 ? 'text-3xl' : 'text-xl'}`}>{card!.front}</span>
             <span className="mt-6 text-sm font-bold text-slate-500">👆 {t('cards.tapToFlip')}</span>
           </button>
-          <div className="flip-face flip-back flex flex-col items-center justify-center overflow-y-auto rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-700 p-6 text-center text-white shadow-2xl">
+          <div className="flip-face flip-back flex flex-col items-center justify-center overflow-y-auto rounded-3xl royal p-6 text-center text-white shadow-2xl">
             <span className="mb-3 rounded-full bg-white/20 px-3 py-1 text-xs font-black tracking-wide uppercase">{t('cards.answer')}</span>
             <span className={`leading-snug font-black whitespace-pre-line ${card!.back.length < 60 ? 'text-3xl' : 'text-xl'}`}>{card!.back}</span>
             {card!.why && <span className="mt-4 text-sm leading-snug text-white/85">💡 {card!.why}</span>}
@@ -176,7 +176,7 @@ export function Flashcards() {
         </div>
       </div>
 
-      <div className="mx-auto mt-5 grid w-full max-w-md grid-cols-2 gap-3 pb-6">
+      <div className="mx-auto mt-5 grid w-full max-w-md grid-cols-2 gap-3 pb-6 lg:max-w-xl">
         <button type="button" disabled={!flipped} onClick={() => rate(false)} className="rounded-2xl bg-rose-500 py-4 text-lg font-black text-white shadow-[0_5px_0_0_rgb(0_0_0/0.3)] disabled:opacity-35">
           😅 {t('cards.notYet')}
         </button>
@@ -192,7 +192,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="arena relative" data-theme="dark">
       <div className="arena-stars" aria-hidden />
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-4 pt-3">{children}</div>
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-4 pt-3 lg:max-w-3xl lg:pt-8">{children}</div>
     </div>
   );
 }

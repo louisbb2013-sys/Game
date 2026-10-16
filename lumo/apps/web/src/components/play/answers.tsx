@@ -49,7 +49,7 @@ export function Shape({ i, size = 18 }: { i: number; size?: number }) {
 
 type TileState = 'idle' | 'right' | 'wrong' | 'dim' | 'gone';
 
-function Tile({ i, state, onTap, children, pressed, disabled, label }: { i: number; state: TileState; onTap: () => void; children: ReactNode; pressed?: boolean; disabled?: boolean; label: string }) {
+function Tile({ i, state, onTap, children, pressed, disabled, label, hint }: { i: number; state: TileState; onTap: () => void; children: ReactNode; pressed?: boolean; disabled?: boolean; label: string; hint?: string }) {
   return (
     <button
       type="button"
@@ -61,6 +61,11 @@ function Tile({ i, state, onTap, children, pressed, disabled, label }: { i: numb
       className={`tile tile-deal ${COLORS[i % 4]}`}
       style={{ ['--d' as string]: `${0.08 + i * 0.07}s` }}
     >
+      {hint && (
+        <kbd className="tile-key" aria-hidden>
+          {hint}
+        </kbd>
+      )}
       <span className="tile-shape">
         <Shape i={i} />
       </span>
@@ -111,6 +116,7 @@ export function ChoiceTiles({ q, chosen, reveal, removed, onPick, locked }: { q:
           disabled={locked || !!reveal || removed.includes(o.id)}
           onTap={() => onPick(o.id)}
           label={o.text}
+          hint={String(i + 1)}
         >
           {tf ? <span className="text-2xl">{o.text}</span> : o.text}
         </Tile>

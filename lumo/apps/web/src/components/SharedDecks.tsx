@@ -2,7 +2,7 @@ import type { Concept, Locale } from '@lumo/core';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { api } from '../lib/api';
+import { api, NETLIFY } from '../lib/api';
 import { myPublicDecks, setPublicDecks, useNames, useSharedDecks, useTogether } from '../local/together';
 
 /** Browser-only build: decks friends made public. Copy one to study it, or host a Live game with it. */
@@ -85,7 +85,7 @@ export function ShareDeckToggle({ deckId }: { deckId: string }) {
       <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-surface p-3.5 ring-1 ring-line">
         <span>
           <span className="block font-black">🤝 {t('together.shareDeck')}</span>
-          <span className="block text-xs text-muted">{t('together.shareDeckBody')}</span>
+          <span className="block text-xs text-muted">{t(NETLIFY ? 'together.shareDeckBodySite' : 'together.shareDeckBody')}</span>
         </span>
         <input type="checkbox" role="switch" checked={shared} onChange={() => void toggle()} className="size-6 accent-brand" />
       </label>

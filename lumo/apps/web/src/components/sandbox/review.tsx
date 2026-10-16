@@ -42,7 +42,7 @@ export function FlashcardsPlayer({ data, onComplete }: PlayerProps<Flashcards>) 
       <p className="text-center text-sm font-bold text-muted">{t('sandbox.cardsLeft', { n: queue.length })}</p>
       <button type="button" onClick={() => setFlipped((f) => !f)} className="block w-full [perspective:1000px]" aria-label={t('sandbox.flip')}>
         <div className={`relative min-h-64 w-full transition-transform duration-500 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-gradient-to-br from-indigo-700 to-violet-600 p-6 text-white [backface-visibility:hidden]">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl royal p-6 text-white [backface-visibility:hidden]">
             <p className="text-3xl font-black">{card.front}</p>
             <p className="text-sm text-indigo-100">{t('sandbox.thinkFirst')}</p>
           </div>

@@ -540,7 +540,7 @@ export function Play() {
           )}
 
           <div className="relative mb-4">
-            <h1 className={`pr-14 leading-snug font-black whitespace-pre-line ${q.prompt.length < 70 ? 'text-[1.7rem]' : q.prompt.length < 150 ? 'text-xl' : 'text-lg'}`}>{q.prompt}</h1>
+            <h1 className={`pr-14 leading-snug font-black whitespace-pre-line ${q.prompt.length < 70 ? 'text-[1.7rem] lg:text-[2.4rem]' : q.prompt.length < 150 ? 'text-xl lg:text-3xl' : 'text-lg lg:text-2xl'}`}>{q.prompt}</h1>
             {buddy && mode !== 'boss' && (
               <div className="absolute -top-3 right-0 size-16" aria-hidden>
                 <Creature3D ref={buddyRef} species={buddy.species} rarity={buddy.rarity} className="size-full">
@@ -601,7 +601,7 @@ export function Play() {
 
       {/* Check button for answers that aren't a single tap */}
       {q && (!oneTap || phase === 'followup') && (phase === 'answering' || phase === 'grading' || phase === 'followup') && (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
+        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl p-4 pb-[max(env(safe-area-inset-bottom),1rem)] lg:max-w-3xl">
           <button
             onClick={() => (phase === 'followup' ? void submit({ kind: 'text', text: followText }) : void submit())}
             disabled={phase === 'grading' || (phase === 'followup' ? !followText.trim() : !isReady(q, answer))}
@@ -686,7 +686,7 @@ function Shell({ mode, children }: { mode: Mode; children: React.ReactNode }) {
   return (
     <div className="arena relative" data-mode={mode} data-theme="dark">
       <div className="arena-stars" aria-hidden />
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-4 pt-3">{children}</div>
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-4 pt-3 lg:max-w-3xl lg:pt-8">{children}</div>
     </div>
   );
 }

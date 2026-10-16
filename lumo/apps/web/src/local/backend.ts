@@ -247,7 +247,7 @@ function freshDb(): DB {
     v: 1,
     user: {
       id: uid(),
-      username: generateUsername(),
+      username: (globalThis as { __LUMO_NAME__?: string }).__LUMO_NAME__ || generateUsername(),
       avatar: 'firefly-amber',
       locale,
       timezone,

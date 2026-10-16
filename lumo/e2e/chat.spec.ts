@@ -18,7 +18,7 @@ test('chat: notes → What I understood → edit → build → quiz & sandbox', 
   const name = 'c' + Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, '');
   await page.request.post('/api/auth/dev', { data: { name } });
   await page.request.patch('/api/me', { data: { locale: 'en', settings: { sound: false } } });
-  await page.goto('/');
+  await page.goto('/learn');
   await page.getByRole('link', { name: /Make a deck with Lumo/ }).click();
   await page.getByRole('button', { name: /New deck from my notes/ }).click();
   await expect(page.getByText(/Send me photos of your notes/)).toBeVisible();

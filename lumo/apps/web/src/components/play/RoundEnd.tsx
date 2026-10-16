@@ -53,7 +53,7 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
   return (
     <div className="arena relative" data-mode={mode} data-theme="dark">
       <div className="arena-stars" aria-hidden />
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col items-center px-4 pt-8 pb-10 text-center">
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col items-center px-4 pt-8 pb-10 text-center lg:max-w-2xl">
         <div className="pop-in">
           <Lumo size={110} mood={won ? 'cheer' : 'sad'} glow={1} />
         </div>
@@ -101,7 +101,7 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
         {rewards && (rewards.levelUp || rewards.chest || rewards.badges.length > 0 || rewards.questsCompleted.length > 0) && (
           <div className="mt-3 flex w-full flex-wrap justify-center gap-2 text-sm font-black">
             {rewards.levelUp && (
-              <span className="pop-in flex items-center gap-1.5 rounded-full bg-gradient-to-r from-fuchsia-700 to-indigo-700 px-3 py-1 text-white">
+              <span className="pop-in flex items-center gap-1.5 rounded-full royal px-3 py-1 text-white">
                 🚀 {t('rewards.levelUp', { level: rewards.levelUp.level })} +{rewards.levelUp.coins} 🪙
               </span>
             )}

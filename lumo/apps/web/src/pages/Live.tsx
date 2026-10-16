@@ -91,7 +91,7 @@ export function LiveHome() {
     <div className="space-y-5">
       <h1 className="text-2xl font-black">{t('live.title')}</h1>
 
-      <form onSubmit={join} className="space-y-3 rounded-3xl bg-gradient-to-br from-indigo-700 to-violet-600 p-5 text-white">
+      <form onSubmit={join} className="space-y-3 rounded-3xl royal p-5 text-white">
         <h2 className="text-lg font-black">{t('live.joinTitle')}</h2>
         <div className="flex gap-2">
           <input
@@ -290,7 +290,7 @@ function Lobby({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send
 
   return (
     <>
-      <section className="flex flex-col items-center gap-3 rounded-3xl bg-gradient-to-br from-indigo-700 to-violet-600 p-5 text-center text-white">
+      <section className="flex flex-col items-center gap-3 rounded-3xl royal p-5 text-center text-white">
         <p className="text-sm font-bold opacity-80">{s.title}</p>
         <p className="text-sm font-bold">{t('live.gameCode')}</p>
         <p className="font-mono text-5xl font-black tracking-[0.2em]" data-testid="live-code">
@@ -428,7 +428,7 @@ function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (q
         </fieldset>
       )}
       {error && <p className="mt-3 font-bold text-bad">{errText(t, error)}</p>}
-      <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur ${oneTap && !meAnswered ? 'hidden' : ''}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur lg:max-w-3xl ${oneTap && !meAnswered ? 'hidden' : ''}`}>
         {meAnswered ? (
           <p className="py-3 text-center font-black" role="status">
             ✅ {t('live.locked', { n: s.answeredCount, total: s.players.filter((p) => p.connected).length })}
@@ -468,7 +468,7 @@ function RevealView({ s, me, isHost, send }: { s: LivePublic; me: string; isHost
         {r.explanation && <p className="mt-1 text-sm text-muted">{r.explanation}</p>}
       </div>
       <Board players={ranked.slice(0, 5)} me={me} showMoves />
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur lg:max-w-3xl">
         {isHost ? (
           <div className="flex gap-2">
             {!last && (

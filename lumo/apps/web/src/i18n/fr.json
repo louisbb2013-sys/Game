@@ -8,7 +8,11 @@
     "live": "Live",
     "league": "Ligue",
     "profile": "Moi",
-    "sandbox": "Bac à sable"
+    "sandbox": "Bac à sable",
+    "create": "Créer",
+    "friends": "Amis",
+    "pets": "Compagnons",
+    "shop": "Boutique"
   },
   "signin": {
     "title": "Bienvenue sur Lumo",
@@ -66,7 +70,22 @@
     "adoptPet": "Adopte un compagnon d’étude",
     "adoptPetBody": "Les compagnons t’encouragent et donnent un petit bonus d’XP.",
     "levelProgress": "Progression vers le niveau suivant",
-    "jumpIn": "On continue!"
+    "jumpIn": "On continue!",
+    "createAsk": "Qu’est-ce que tu veux étudier?",
+    "createHint": "Écris un sujet, ou apporte tes notes, un PDF ou des photos de ton manuel. Lumo écrit les questions.",
+    "createPlaceholder": "ex. La Révolution française, la photosynthèse, les verbes en espagnol…",
+    "generate": "Générer",
+    "fromFile": "Téléverser un PDF ou des photos",
+    "fromNotes": "Coller des notes",
+    "yourDecks": "Tes paquets",
+    "seeAll": "Tout voir",
+    "explore": "D’autres façons d’étudier",
+    "liveTitle": "Jouer avec tes amis",
+    "liveBody": "Lance une partie Live et affronte ta classe sur les mêmes questions.",
+    "friendsTitle": "Amis",
+    "friendsBody": "Ajoute tes amis avec leur nom Lumo et vois qui étudie.",
+    "guestTitle": "Tu essaies Lumo sans compte.",
+    "guestBody": "Ta progression reste sur cet appareil. Crée un compte gratuit pour utiliser l’IA, jouer avec tes amis et tout retrouver sur n’importe quel appareil."
   },
   "stats": {
     "streak": "Jours de suite",
@@ -166,7 +185,9 @@
     "concepts_other": "{{count}} notions",
     "due_one": "{{count}} à revoir",
     "due_other": "{{count}} à revoir",
-    "mastered": "{{done}} sur {{total}} maîtrisées"
+    "mastered": "{{done}} sur {{total}} maîtrisées",
+    "eyebrow": "Ta bibliothèque",
+    "search": "Chercher dans tes paquets"
   },
   "deck": {
     "notFound": "Ce paquet n’existe pas (ou n’est pas à toi).",
@@ -1105,7 +1126,10 @@
     "nobodyOnline": "Personne d’autre n’a Lumo ouvert en ce moment.",
     "friend": "Ami",
     "readOnlyTitle": "Claude te laisse seulement regarder cette page",
-    "readOnlyBody": "Tu as ouvert un lien partagé depuis le compte Claude de quelqu’un d’autre : Claude n’enregistre donc pas tes amis ni ton profil ici. Demande au propriétaire de t’inviter par courriel comme Éditeur (menu Partager, lien public désactivé), ou utilise le site Web de Lumo : les amis y fonctionnent pour tout le monde."
+    "readOnlyBody": "Tu as ouvert un lien partagé depuis le compte Claude de quelqu’un d’autre : Claude n’enregistre donc pas tes amis ni ton profil ici. Demande au propriétaire de t’inviter par courriel comme Éditeur (menu Partager, lien public désactivé), ou utilise le site Web de Lumo : les amis y fonctionnent pour tout le monde.",
+    "noFriendsOnline": "Aucun de tes amis n’est sur Lumo en ce moment.",
+    "howToInviteSite": "Seuls les amis que tu ajoutes peuvent te voir, voir tes paquets et tes parties. Donne ton nom Lumo à tes camarades pour qu’ils t’ajoutent.",
+    "shareDeckBodySite": "Tes amis peuvent le copier et y jouer en Live avec toi."
   },
   "egg": {
     "title": "Œuf {{rarity}}",
@@ -1122,17 +1146,55 @@
     "keepGoing": "Continuer"
   },
   "gate": {
-    "tagline": "Transforme n’importe quel sujet ou tes notes en quiz — et comprends vraiment.",
-    "point1": "Photos, notes ou juste un sujet : Lumo crée le quiz",
-    "point2": "Fais éclore des œufs, collectionne des compagnons, ouvre des coffres",
-    "point3": "Joue en Live avec tes amis",
+    "tagline": "Transforme tes notes, une photo de ton manuel ou juste un sujet en quiz — puis joue jusqu’à vraiment comprendre.",
+    "point1": "Notes, photos, PDF ou juste un sujet : Lumo écrit les questions",
+    "point2": "Fais éclore des œufs, collectionne des compagnons, grimpe dans la ligue",
+    "point3": "Joue en Live contre tes amis",
     "google": "Continuer avec Google",
-    "guest": "Essayer sans compte (sauvegardé sur cet appareil seulement)",
-    "privacy": "Ta progression est sauvegardée dans ton compte Google. Les autres joueurs ne voient que ton nom d’utilisateur Lumo.",
+    "guest": "Essayer d’abord sans compte",
+    "privacy": "Les autres joueurs ne voient que ton nom Lumo. Pas besoin de courriel ni de vrai nom.",
     "error": "Connexion impossible. Réessaie.",
-    "domainError": "Ce site n’est pas encore autorisé. Ajoute-le dans Firebase → Authentication → Settings → Authorized domains.",
     "signOut": "Se déconnecter",
-    "signedInAs": "Connecté avec Google"
+    "signedInAs": "Connecté en tant que {{name}}",
+    "headline": "Étudie comme si c’était un jeu.",
+    "accountTabs": "Compte",
+    "signupTab": "Créer un compte",
+    "loginTab": "Se connecter",
+    "or": "ou",
+    "name": "Nom Lumo",
+    "namePlaceholder": "ex. NovaFox",
+    "nameHint": "3 à 20 lettres, chiffres ou _. Tes amis t’ajoutent avec ce nom : n’utilise pas ton vrai nom.",
+    "password": "Mot de passe",
+    "show": "Voir",
+    "hide": "Cacher",
+    "create": "Créer mon compte",
+    "login": "Se connecter",
+    "signedInGoogle": "Connecté avec Google",
+    "makeAccount": "Crée un compte pour tout sauvegarder",
+    "errors": {
+      "google": "La connexion Google n’a pas abouti. Réessaie, ou utilise un nom Lumo et un mot de passe.",
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion et réessaie.",
+      "unavailable": "Lumo est occupé. Réessaie dans une minute.",
+      "name_taken": "Ce nom est déjà pris. Essaie-en un autre.",
+      "wrong_login": "Ce nom et ce mot de passe ne correspondent pas.",
+      "locked": "Trop d’essais. Attends 10 minutes, puis réessaie.",
+      "rate_limited": "Trop d’essais. Attends un peu, puis réessaie.",
+      "weak_password": "Utilise au moins 6 caractères pour ton mot de passe.",
+      "bad_name": "Ce nom ne peut pas être utilisé. Essaie-en un autre.",
+      "name_length": "Ton nom Lumo doit avoir de 3 à 20 caractères.",
+      "name_characters": "Seulement des lettres, des chiffres et _ (sans espaces ni accents).",
+      "name_blocked": "Ce nom ne peut pas être utilisé. Essaie-en un autre.",
+      "name_personal_info": "Évite les années de naissance et les longs nombres : garde tes infos privées."
+    },
+    "showSubject": "Science",
+    "showDeck": "La photosynthèse",
+    "showQuestion": "Où dans la cellule se fait la photosynthèse?",
+    "showAnswers": [
+      "Chloroplaste",
+      "Noyau",
+      "Mitochondrie",
+      "Paroi cellulaire"
+    ]
   },
   "bank": {
     "writing": "Lumo écrit de vraies questions d’examen…",
@@ -1316,5 +1378,66 @@
     "tapToFlip": "Touche pour retourner",
     "notYet": "Pas encore",
     "knewIt": "Je savais"
+  },
+  "create": {
+    "eyebrow": "Créer",
+    "title": "Crée un paquet d’étude",
+    "body": "Apporte n’importe quoi : Lumo trouve ce qu’un examen demanderait et en fait des questions à jouer.",
+    "from": "À partir de",
+    "tabs": {
+      "topic": "Sujet",
+      "upload": "Téléverser",
+      "notes": "Coller des notes"
+    },
+    "examples": [
+      "La photosynthèse, secondaire 2",
+      "Les causes de la Première Guerre mondiale",
+      "Résoudre des équations",
+      "Le passé composé"
+    ],
+    "dropTitle": "Dépose tes fichiers ici, ou touche pour choisir",
+    "dropBody": "Des photos de tes notes ou de ton manuel (jusqu’à {{count}}), ou un fichier .txt.",
+    "dropBodyPdf": "Un PDF (notes, présentation, fiche), des photos de tes notes ou de ton manuel, ou un fichier .txt — jusqu’à {{count}} fichiers.",
+    "tooBig": "« {{name}} » est trop gros. Essaie un fichier plus petit (moins de 4 Mo) ou moins de pages.",
+    "remove": "Retirer {{name}}",
+    "focus": "Lumo doit-il se concentrer sur quelque chose? (facultatif)",
+    "focusPlaceholder": "ex. Seulement le chapitre 3, mon examen est vendredi",
+    "privacySite": "Tes fichiers servent seulement à créer ce paquet. Les autres joueurs ne les voient jamais.",
+    "useNotes": "Coller des notes à la place",
+    "more": "Nom et langue",
+    "howTitle": "Comment ça marche",
+    "how": [
+      "Choisis un sujet, téléverse un PDF ou des photos, ou colle tes notes.",
+      "Lumo trouve les idées clés et écrit de vraies questions d’examen.",
+      "Joue jusqu’à ce que chaque idée devienne dorée. Lumo ramène ce que tu rates."
+    ],
+    "lumoTip": "Astuce : plus tu es précis (« secondaire 3, chapitre 4 »), meilleures sont les questions.",
+    "generating": "Je crée ton paquet…",
+    "steps": {
+      "topic": [
+        "Recherche sur le sujet",
+        "Choix des idées clés",
+        "Écriture de ton paquet"
+      ],
+      "upload": [
+        "Lecture de tes fichiers",
+        "Choix des idées clés",
+        "Écriture de ton paquet"
+      ],
+      "notes": [
+        "Lecture de tes notes",
+        "Choix des idées clés",
+        "Écriture de ton paquet"
+      ]
+    },
+    "ai": {
+      "guestTitle": "L’IA demande un compte gratuit",
+      "guestBody": "Les sujets, PDF et photos sont lus par Claude, réservé aux comptes (c’est gratuit et ça prend 20 secondes). Sans compte, tu peux quand même coller tes notes.",
+      "offTitle": "Claude n’est pas disponible ici",
+      "offBody": "Tu peux quand même créer un paquet à partir de tes notes.",
+      "budget": "L’IA de Lumo a utilisé toute l’allocation gratuite du mois sur ce site. Colle tes notes à la place, ou demande au propriétaire du site d’ajouter une clé Anthropic.",
+      "not_configured": "Claude n’est pas encore configuré sur ce site. Colle tes notes à la place."
+    },
+    "readFiles": "Lire mes fichiers"
   }
 }

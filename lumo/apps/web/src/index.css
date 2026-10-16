@@ -113,7 +113,7 @@ html[data-dyslexic='true'] :is(h1, h2, .font-display) { font-family: var(--font-
   transition: transform 0.08s, box-shadow 0.08s;
 }
 .btn-gold:not(:disabled):active { transform: translateY(4px); box-shadow: 0 1px 0 0 #7a5716, 0 6px 14px -8px rgb(201 151 58 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.65); }
-.btn-gold:disabled { filter: grayscale(0.7) brightness(0.8); animation: none; }
+.btn-gold:disabled { opacity: 0.55; animation: none; cursor: not-allowed; }
 @keyframes foil { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 /* Gold lettering (big titles and numbers on dark backgrounds). */
 .text-gold {
@@ -312,6 +312,30 @@ html[data-reduce-motion='true'] *::after {
   animation: aurora 26s ease-in-out infinite alternate; }
 @keyframes aurora { from { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); } to { transform: translate3d(3%, 2%, 0) rotate(8deg) scale(1.08); } }
 
+/* Fine film grain over everything: keeps big dark areas from looking flat (like paper, not plastic). */
+.grain { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+:root:not([data-theme='dark']) .grain { opacity: 0.035; mix-blend-mode: multiply; }
+
+/* Sidebar: the page you're on gets a gold rule and a soft glow. */
+.side-link { position: relative; }
+.side-link.is-active { background: linear-gradient(90deg, rgb(232 196 104 / 0.16), rgb(232 196 104 / 0.02)); }
+.side-link.is-active::before { content: ''; position: absolute; left: -0.25rem; top: 22%; bottom: 22%; width: 3px; border-radius: 3px; background: linear-gradient(#f6e2a0, #c9973a); }
+.side-link.is-active svg { color: var(--lumo-accent); }
+
+/* The standard surface: satin card with a gold hairline in the dark theme. */
+.panel { background: var(--lumo-surface); border-radius: 1.5rem; box-shadow: inset 0 0 0 1px var(--lumo-line), 0 10px 30px -22px rgb(15 12 41 / 0.45); }
+:root[data-theme='dark'] .panel { background: linear-gradient(170deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.01)), var(--lumo-surface); box-shadow: inset 0 0 0 1px rgb(232 196 104 / 0.14), 0 18px 40px -26px rgb(0 0 0 / 0.8); }
+/* Royal: deep sapphire-indigo with a gold edge, for highlighted cards (Live, rewards, flashcard backs). */
+.royal { background: radial-gradient(110% 90% at 90% -10%, rgb(232 196 104 / 0.22), transparent 55%), linear-gradient(140deg, #31267e 0%, #1b1550 55%, #120e2e 100%); color: #f7f1e3; box-shadow: inset 0 0 0 1px rgb(232 196 104 / 0.45); }
+/* Small caps-free section label, in the display face. */
+.eyebrow { font-family: var(--font-display); font-style: italic; font-weight: 600; color: var(--lumo-accent); }
+
+/* Upload area: dashed gold, lights up when a file is dragged over it. */
+.drop-zone { border: 2px dashed rgb(201 151 58 / 0.55); background: radial-gradient(80% 120% at 50% 0%, rgb(232 196 104 / 0.1), transparent 70%), var(--lumo-surface); transition: border-color 0.15s, background-color 0.15s, transform 0.15s; }
+.drop-zone:hover, .drop-zone[data-over='true'] { border-color: #e8c468; transform: translateY(-1px); }
+.drop-zone:focus-within { outline: 3px solid var(--lumo-accent); outline-offset: 2px; }
+
 /* Things that pop in one after another. */
 .rise-in { animation: rise-in 0.5s cubic-bezier(.2,.9,.3,1.2) both; animation-delay: var(--d, 0s); }
 @keyframes rise-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
@@ -322,7 +346,7 @@ html[data-reduce-motion='true'] *::after {
 @keyframes shimmer { 60%, 100% { transform: translateX(100%); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .holo, .press, .press-right, .press-wrong, .aurora, .rise-in, .shimmer::after { animation: none !important; transition: none !important; }
+  .holo, .press, .press-right, .press-wrong, .aurora, .rise-in, .shimmer::after, .btn-gold { animation: none !important; transition: none !important; }
   .holo { transform: none; }
 }
 
@@ -391,6 +415,10 @@ html[data-reduce-motion='true'] *::after {
 .tile-green { background: linear-gradient(118deg, rgb(255 255 255 / 0.16) 0 16%, transparent 16% 58%, rgb(255 255 255 / 0.07) 58% 70%, transparent 70%), linear-gradient(155deg, #047857, #064e3b); }
 .tile-shape { display: grid; place-items: center; flex-shrink: 0; width: 2.1rem; height: 2.1rem; border-radius: 9999px; background: rgb(0 0 0 / 0.18); }
 .tile-grid .tile { flex-direction: column; justify-content: center; text-align: center; min-height: 7.5rem; }
+/* On a computer, each answer shows the number key that picks it. */
+.tile-key { display: none; position: absolute; top: 0.55rem; left: 0.7rem; font: 900 0.72rem/1.4 var(--font-sans); padding: 0 0.4rem; border-radius: 0.4rem; border: 1px solid rgb(255 255 255 / 0.45); opacity: 0.8; }
+@media (hover: hover) and (pointer: fine) { .tile-key { display: block; } }
+@media (min-width: 1024px) { .tile-grid .tile { min-height: 10.5rem; font-size: 1.2rem; } .tile-grid .tile-shape { width: 2.6rem; height: 2.6rem; } }
 .tile[data-state='dim'] { opacity: 0.32; filter: saturate(0.4); }
 .tile[data-state='right'] { box-shadow: 0 0 0 4px #4ade80, 0 0 28px 6px rgb(74 222 128 / 0.55), 0 6px 0 0 rgb(0 0 0 / 0.35); animation: tile-win 0.5s ease-out; }
 .tile[data-state='wrong'] { box-shadow: 0 0 0 4px #fb7185, 0 6px 0 0 rgb(0 0 0 / 0.35); animation: shake 0.45s ease-in-out; }

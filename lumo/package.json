@@ -27,6 +27,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
-    "jose": "^6.2.12"
+    "@netlify/blobs": "^11.1.4"
   }
 }

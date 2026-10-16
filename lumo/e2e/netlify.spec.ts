@@ -1,33 +1,51 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { answerAndCheck, answerCurrent, closeHatch, continueRound, ONE_TAP } from './helpers';
 
-// The standalone (Netlify) site against the local Firebase emulators.
-// Run with NETLIFY_URL=http://127.0.0.1:8899/ (a build made with VITE_FIREBASE_EMULATOR=127.0.0.1).
-test.skip(!process.env.NETLIFY_URL, 'needs the Netlify build and the Firebase emulators');
+// The standalone (Netlify) site with its real sign-in, data and room endpoints (in memory), a
+// stand-in Claude and a pretend Netlify Identity for Google: e2e/fixtures/netlify-serve.ts.
+// Run with NETLIFY_URL=http://127.0.0.1:8899/
+test.skip(!process.env.NETLIFY_URL, 'needs the Netlify build served by e2e/fixtures/netlify-serve.ts');
 
-const run = Date.now().toString(36);
+const tag = () => Math.random().toString(36).replace(/[^a-z]/g, '').slice(0, 6);
+const PHONE = { width: 400, height: 860 };
 
-/** A learner signs in with (a test) Google account in their own browser. */
-async function student(browser: Browser, id: string): Promise<Page> {
-  const ctx = await browser.newContext({ viewport: { width: 400, height: 860 } });
+async function open(browser: Browser, viewport = PHONE): Promise<Page> {
+  const ctx = await browser.newContext({ viewport });
   const p = await ctx.newPage();
   await p.goto(process.env.NETLIFY_URL!);
-  await expect(p.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
-  await p.evaluate((u) => (window as unknown as { __lumoTestSignIn: (id: string) => Promise<unknown> }).__lumoTestSignIn(u), `${id}-${run}`);
-  await expect(p.getByRole('link', { name: 'Learn', exact: true })).toBeVisible({ timeout: 15_000 });
+  return p;
+}
+const inApp = (p: Page) => expect(p.getByRole('link', { name: 'Learn', exact: true })).toBeVisible({ timeout: 15_000 });
+
+/** A learner makes an account with a Lumo name and password. */
+async function signUp(browser: Browser, name: string, viewport = PHONE): Promise<Page> {
+  const p = await open(browser, viewport);
+  await expect(p.getByRole('tab', { name: 'Create account' })).toHaveAttribute('aria-selected', 'true');
+  await p.locator('#gate-name').fill(name);
+  await p.locator('#gate-password').fill('secret123');
+  await p.getByRole('button', { name: 'Create my account' }).click();
+  await inApp(p);
+  return p;
+}
+async function logIn(browser: Browser, name: string): Promise<Page> {
+  const p = await open(browser);
+  await p.getByRole('tab', { name: 'Log in' }).click();
+  await p.locator('#gate-name').fill(name);
+  await p.locator('#gate-password').fill('secret123');
+  await p.getByRole('button', { name: 'Log in', exact: true }).click();
+  await inApp(p);
   return p;
 }
 
-test('sign in with Google, make a deck from a topic, progress follows the account', async ({ browser }) => {
+test('make an account, build a deck from a topic on Home, progress follows the account', async ({ browser }) => {
   test.setTimeout(120_000);
-  const a = await student(browser, 'ana');
-  await a.screenshot({ path: 'e2e/screens/netlify-home.png', fullPage: true });
-  await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
-  await a.getByLabel('Just type a topic').fill('récit psychologique français secondaire 2');
-  await a.getByLabel('Just type a topic').press('Enter');
+  const name = `Ana_${tag()}`;
+  const a = await signUp(browser, name);
+  await expect(a.getByRole('heading', { level: 1 })).toContainText(name);
+  // Home's "what do you want to study?" goes straight to building the deck.
+  await a.getByRole('textbox', { name: 'What do you want to study?' }).fill('récit psychologique français secondaire 2');
+  await a.getByRole('button', { name: /Generate/ }).click();
   await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 15_000 });
-  // Claude writes the test questions right after the deck is made.
   await expect(a.getByText(/\d+ test questions/)).toBeVisible({ timeout: 20_000 });
   await a.getByRole('button', { name: /^Play\b/ }).click();
   for (let i = 0; i < 3; i++) {
@@ -42,48 +60,57 @@ test('sign in with Google, make a deck from a topic, progress follows the accoun
   await a.getByRole('button', { name: 'Leave quiz' }).click();
   await a.waitForTimeout(3000); // the account copy is written a moment after a change
 
-  // Same Google account on a new device: the deck is there.
-  const again = await student(browser, 'ana');
+  // Same account on another device: the deck is there.
+  const again = await logIn(browser, name.toLowerCase());
   await again.getByRole('link', { name: 'Learn', exact: true }).click();
-  await expect(again.getByText('Le récit psychologique')).toBeVisible({ timeout: 15_000 });
+  await expect(again.getByText('Le récit psychologique').first()).toBeVisible({ timeout: 15_000 });
 
-  // Signing out goes back to the sign-in screen.
+  // A wrong password is refused; signing out goes back to the sign-in screen.
+  const wrong = await open(browser);
+  await wrong.getByRole('tab', { name: 'Log in' }).click();
+  await wrong.locator('#gate-name').fill(name);
+  await wrong.locator('#gate-password').fill('not-it');
+  await wrong.getByRole('button', { name: 'Log in', exact: true }).click();
+  await expect(wrong.getByRole('alert')).toHaveText("That name and password don't match.");
   await again.getByRole('link', { name: 'Me', exact: true }).click();
   await again.getByRole('button', { name: 'Sign out' }).click();
-  await expect(again.getByRole('button', { name: 'Continue with Google' })).toBeVisible({ timeout: 15_000 });
-  await a.context().close();
-  await again.context().close();
+  await expect(again.getByRole('button', { name: 'Create my account' })).toBeVisible({ timeout: 15_000 });
+  for (const p of [a, again, wrong]) await p.context().close();
 });
 
-test('two Google accounts: add a friend by username, share a deck, play Live', async ({ browser }) => {
+test('Google sign-in and a name/password friend: add a friend, share a deck, play Live', async ({ browser }) => {
   test.setTimeout(180_000);
-  const a = await student(browser, 'host');
-  const b = await student(browser, 'guest');
+  const a = await open(browser);
+  await a.getByRole('button', { name: 'Continue with Google' }).click();
+  await inApp(a);
+  const b = await signUp(browser, `Ben_${tag()}`);
 
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).first().click();
   await a.getByRole('switch', { name: /Share with friends/ }).click();
   await expect(a.getByText('Your friends can see this deck now.')).toBeVisible({ timeout: 10_000 });
   await a.getByRole('link', { name: 'Me', exact: true }).click();
-  await a.getByRole('link', { name: /Friends/ }).click();
+  await a.getByRole('link', { name: /Friends/ }).first().click();
   const hostName = (await a.getByTestId('my-username').textContent())!.trim();
 
   await b.getByRole('link', { name: 'Me', exact: true }).click();
-  await b.getByRole('link', { name: /Friends/ }).click();
-  await expect(b.getByRole('heading', { name: /Online now \([1-9]/ })).toBeVisible({ timeout: 15_000 });
+  await b.getByRole('link', { name: /Friends/ }).first().click();
+  // Strangers are never listed on the website: only people you add.
+  await expect(b.getByText('People on this Lumo')).toHaveCount(0);
   await b.getByLabel("Type a friend's username, press Enter").fill(hostName);
   await b.getByLabel("Type a friend's username, press Enter").press('Enter');
   await expect(b.getByRole('status')).toHaveText(`${hostName} is now your friend!`, { timeout: 10_000 });
+  await expect(b.getByRole('heading', { name: /Online now \([1-9]/ })).toBeVisible({ timeout: 20_000 });
   await b.screenshot({ path: 'e2e/screens/netlify-friends.png', fullPage: true });
   await b.getByRole('link', { name: 'Learn', exact: true }).click();
-  await expect(b.getByText('Cells — the basics').first()).toBeVisible({ timeout: 10_000 });
+  await expect(b.getByText('Cells — the basics').first()).toBeVisible({ timeout: 15_000 });
 
   await a.getByRole('link', { name: 'Live', exact: true }).click();
   await a.getByRole('button', { name: '5', exact: true }).click();
   await a.getByRole('button', { name: /Create game/ }).click();
   await expect(a.getByTestId('live-code')).toBeVisible({ timeout: 15_000 });
   await b.getByRole('link', { name: 'Live', exact: true }).click();
-  await b.getByRole('button', { name: new RegExp(`Cells — the basics.*${hostName}`) }).click({ timeout: 15_000 });
+  await b.getByRole('button', { name: new RegExp(`Cells — the basics.*${hostName}`) }).click({ timeout: 20_000 });
   await expect(b.getByText('Waiting for the host to start…')).toBeVisible({ timeout: 15_000 });
   await a.getByRole('button', { name: 'Start with 2 players' }).click({ timeout: 15_000 });
   for (let i = 1; i <= 5; i++) {
@@ -103,4 +130,31 @@ test('two Google accounts: add a friend by username, share a deck, play Live', a
   await b.screenshot({ path: 'e2e/screens/netlify-podium.png', fullPage: true });
   await a.context().close();
   await b.context().close();
+});
+
+test('try without an account, make a deck from notes, then keep it in a new account', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const p = await open(browser, { width: 1440, height: 900 });
+  await p.getByRole('button', { name: 'Try it first without an account' }).click();
+  await inApp(p);
+  await expect(p.getByText("You're trying Lumo without an account.")).toBeVisible();
+  // AI needs an account: the create page says so and offers notes.
+  await p.getByRole('link', { name: 'Create', exact: true }).click();
+  await expect(p.getByText('AI needs a free account')).toBeVisible();
+  await p.getByRole('button', { name: 'Paste notes instead' }).click();
+  await p.getByRole('button', { name: 'Use an example' }).click();
+  await p.getByRole('button', { name: /Make my deck/ }).click();
+  await expect(p.getByRole('button', { name: /^Play\b/ })).toBeVisible({ timeout: 15_000 }); // the new deck's page
+  const deckTitle = (await p.getByRole('heading', { level: 1 }).textContent())!.trim();
+  await p.getByRole('link', { name: 'Home', exact: true }).click();
+  await p.getByRole('button', { name: 'Create an account to save everywhere' }).click();
+  const name = `Cam_${tag()}`;
+  await p.locator('#gate-name').fill(name);
+  await p.locator('#gate-password').fill('secret123');
+  await p.getByRole('button', { name: 'Create my account' }).click();
+  await inApp(p);
+  await expect(p.getByRole('heading', { level: 1 })).toContainText(name);
+  await p.getByRole('link', { name: 'Learn', exact: true }).click();
+  await expect(p.getByText(deckTitle).first()).toBeVisible();
+  await p.context().close();
 });

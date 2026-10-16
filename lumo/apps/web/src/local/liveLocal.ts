@@ -31,7 +31,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import type { LivePublic, LiveReward, RoomStatus } from '../lib/live';
 import { judgeShort } from './reader';
-import { namesFor, plain, together } from './together';
+import { FRIENDS_ONLY, namesFor, plain, together, useFriends } from './together';
 
 /**
  * Live games in the browser-only build. The HOST's page runs the game (the same core state machine the
@@ -290,6 +290,7 @@ export async function hostLocalGame(deckId: string, count: number): Promise<stri
 // ------------------------------------------------------------------ open games (lobby list)
 
 export function useOpenGames() {
+  const friends = useFriends();
   const [docs, setDocs] = useState<GameDoc[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -317,6 +318,8 @@ export function useOpenGames() {
   if (!docs) return docs;
   return docs
     .filter((g) => now - g.updatedAt < 90_000)
+    // The website lists only games my friends host (anyone can still join with the code).
+    .filter((g) => !FRIENDS_ONLY || (friends ?? []).includes(g.hostId))
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .map((g) => ({ code: g.code, title: g.title, hostId: g.hostId, players: g.view?.players?.length ?? 0 }));
 }

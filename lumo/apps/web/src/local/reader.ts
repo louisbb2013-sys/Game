@@ -81,7 +81,7 @@ function clean(raw: unknown): ConceptInput[] {
   });
 }
 
-const PROMPT = (language: Locale, extra: string) => `You are Lumo, a study helper for school students. The images are photos of a student's notes or textbook pages.
+const PROMPT = (language: Locale, extra: string) => `You are Lumo, a study helper for school students. The attached files are a student's study material: photos of their notes or textbook pages, or a PDF (notes, slides, a worksheet).
 Read them and pull out the important ideas a student must understand for a test. Skip page numbers, headers, admin info and decoration.
 Write everything in ${language === 'fr' ? 'French' : 'English'}.
 ${extra ? `The student says: """${extra.slice(0, 2000)}"""\n` : ''}
@@ -92,7 +92,7 @@ Reply with only one JSON object, no other text:
    "keyPoints": string[] (2-4 short facts a good answer mentions), "examples": string[] (0-2 real-life examples),
    "misconceptions": string[] (0-2 common mistakes), "synonyms": string[],
    "steps"?: string[] (only for processes, in order), "causeEffects"?: [{"cause": string, "effect": string}]}]}
-Aim for 6-25 concepts. If the images hold no readable study notes, reply {"title": "", "concepts": []}.`;
+Aim for 6-25 concepts. If the files hold no readable study material, reply {"title": "", "concepts": []}.`;
 
 /** Photos (and optional instructions) → a deck draft. Throws ReaderError with a code for the UI. */
 export async function readPhotos(files: File[], language: Locale, extra: string, signal?: AbortSignal) {

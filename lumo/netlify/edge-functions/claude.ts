@@ -1,105 +1,171 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { getStore } from '@netlify/blobs';
+import { blobsKV, type KV } from '../lib/kv.ts';
+import { bearer, json, limiter, verifySession } from '../lib/session.ts';
 
 /**
  * Lumo's Claude endpoint for the standalone site (Netlify Edge Function at /api/claude).
  *
- * Only signed-in learners (a valid Firebase ID token) can use it. The Anthropic key stays here, in
- * the site's environment variables, never in the page. The answer is streamed back as it is written,
- * so long jobs (building a deck from a topic with web research) don't hit a time limit.
+ * Only learners signed in to the site can use it. Claude is reached either with the site's own
+ * Anthropic key (ANTHROPIC_API_KEY set by the owner), or, with nothing set up, through Netlify's AI
+ * Gateway, which Netlify switches on for every site and bills to the site's monthly credits. Those
+ * credits are shared with the site itself (a free site pauses when they run out), so through the
+ * gateway Claude stops for the month once LUMO_AI_MONTHLY_USD (default $0.75) has been spent.
  *
- * Environment variables: ANTHROPIC_API_KEY, FIREBASE_PROJECT_ID, optionally CLAUDE_MODEL.
+ * The answer is streamed back as it is written, so long jobs don't hit a time limit.
+ * Environment variables (all optional): ANTHROPIC_API_KEY, CLAUDE_MODEL, LUMO_AI_MONTHLY_USD.
  */
 
-const GOOGLE_KEYS = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 const MEDIA = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const MAX_IMAGE_B64 = 6_000_000; // ~4.5 MB per photo
 const SYSTEM = 'You are the helper inside Lumo, a study app for school students (about 11-18 years old). Follow the instructions in the message exactly and reply in the format it asks for. Keep everything accurate, age-appropriate and focused on learning.';
+/** US dollars per million tokens (input, output), for keeping the monthly gateway budget. */
+const PRICES: Record<string, [number, number]> = {
+  'claude-opus-5-5': [4, 20],
+  'claude-sonnet-5-5': [2, 10],
+  'claude-haiku-5-5': [0.1, 0.5],
+};
+const SEARCH_USD = 0.01;
 
 type Env = (name: string) => string | undefined;
 interface Deps {
   env: Env;
-  keys: JWTVerifyGetKey;
+  kv: KV;
   fetch?: typeof fetch;
   now?: () => number;
 }
 
-const json = (status: number, error: string) => new Response(JSON.stringify({ error }), { status, headers: { 'content-type': 'application/json' } });
+const month = (t: number) => new Date(t).toISOString().slice(0, 7);
 
-/** A small per-instance limit so one account can't run up the bill by accident. */
-const recent = new Map<string, number[]>();
-function allowed(uid: string, now: number): boolean {
-  const windowMs = 10 * 60_000;
-  const list = (recent.get(uid) ?? []).filter((t) => now - t < windowMs);
-  if (list.length >= 40) return false;
-  list.push(now);
-  recent.set(uid, list);
-  if (recent.size > 5000) recent.clear();
-  return true;
+/** Spend through the gateway this month (approximate: two answers finishing together may count once). */
+async function spent(kv: KV, t: number): Promise<number> {
+  const v = await kv.get(`ai/${month(t)}`);
+  return v ? Number((JSON.parse(v.value) as { usd?: number }).usd) || 0 : 0;
+}
+async function addSpend(kv: KV, t: number, usd: number) {
+  const key = `ai/${month(t)}`;
+  for (let i = 0; i < 4; i++) {
+    const cur = await kv.get(key);
+    const before = cur ? Number((JSON.parse(cur.value) as { usd?: number }).usd) || 0 : 0;
+    if (await kv.set(key, JSON.stringify({ usd: before + usd }), cur ? { ifMatch: cur.etag } : { ifNew: true })) return;
+  }
+}
+
+/** Passes Claude's event stream through untouched while reading what it cost. */
+function metered(body: ReadableStream<Uint8Array>, onDone: (u: { input: number; output: number; searches: number }) => Promise<void>) {
+  const dec = new TextDecoder();
+  let buf = '';
+  const u = { input: 0, output: 0, searches: 0 };
+  const read = (chunk: string) => {
+    buf += chunk;
+    let i: number;
+    while ((i = buf.indexOf('\n\n')) >= 0) {
+      const line = buf
+        .slice(0, i)
+        .split('\n')
+        .find((l) => l.startsWith('data:'));
+      buf = buf.slice(i + 2);
+      if (!line) continue;
+      try {
+        const ev = JSON.parse(line.slice(5));
+        const usage = ev.type === 'message_start' ? ev.message?.usage : ev.type === 'message_delta' ? ev.usage : null;
+        if (usage) {
+          u.input = Math.max(u.input, (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0));
+          u.output = Math.max(u.output, usage.output_tokens ?? 0);
+          u.searches = Math.max(u.searches, usage.server_tool_use?.web_search_requests ?? 0);
+        }
+      } catch {
+        /* not ours to judge: pass it on */
+      }
+    }
+  };
+  return body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, ctl) {
+        read(dec.decode(chunk, { stream: true }));
+        ctl.enqueue(chunk);
+      },
+      async flush() {
+        await onDone(u).catch(() => {});
+      },
+    }),
+  );
 }
 
 export function makeHandler(deps: Deps) {
+  const allow = limiter(40, 10 * 60_000);
   return async (req: Request): Promise<Response> => {
-    if (req.method !== 'POST') return json(405, 'method_not_allowed');
+    if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+    const now = (deps.now ?? Date.now)();
+    const me = await verifySession(deps.kv, deps.env, bearer(req), now);
+    if (!me) return json(401, { error: 'signed_out' });
     const apiKey = deps.env('ANTHROPIC_API_KEY');
-    const projectId = deps.env('FIREBASE_PROJECT_ID');
-    if (!apiKey || !projectId) return json(503, 'not_configured');
-
-    // Who is asking: a learner signed in to this site with Google.
-    const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-    let uid: string;
+    if (!apiKey) return json(503, { error: 'not_configured' });
+    const baseURL = deps.env('ANTHROPIC_BASE_URL') || undefined;
+    // Through Netlify's gateway (no key of the site's own): keep within the monthly budget.
+    let host = '';
     try {
-      const { payload } = await jwtVerify(token, deps.keys, { issuer: `https://securetoken.google.com/${projectId}`, audience: projectId });
-      if (!payload.sub) throw new Error('no subject');
-      uid = payload.sub;
+      host = baseURL ? new URL(baseURL).host : '';
     } catch {
-      return json(401, 'signed_out');
+      /* not a full address: treat it as a gateway */
     }
-    if (!allowed(uid, (deps.now ?? Date.now)())) return json(429, 'rate_limited');
+    const gateway = !!baseURL && !/(^|\.)anthropic\.com$/.test(host);
+    const budget = Number(deps.env('LUMO_AI_MONTHLY_USD') ?? (gateway ? '0.75' : 'Infinity'));
+    if (Number.isFinite(budget) && (await spent(deps.kv, now)) >= budget) return json(402, { error: 'budget' });
+    if (!allow(me.u, now)) return json(429, { error: 'rate_limited' });
 
     let body: { input?: unknown; images?: unknown; tier?: unknown; research?: unknown };
     try {
       body = (await req.json()) as typeof body;
     } catch {
-      return json(400, 'bad_request');
+      return json(400, { error: 'bad_request' });
     }
     const input = typeof body.input === 'string' ? body.input.slice(0, 60_000) : '';
-    if (!input.trim()) return json(400, 'bad_request');
-    const images = (Array.isArray(body.images) ? body.images : []).slice(0, 5).flatMap((i: { media_type?: unknown; data?: unknown }) =>
-      typeof i?.data === 'string' && typeof i.media_type === 'string' && MEDIA.has(i.media_type) && i.data.length <= MAX_IMAGE_B64
-        ? [{ type: 'image' as const, source: { type: 'base64' as const, media_type: i.media_type as 'image/jpeg', data: i.data } }]
-        : [],
-    );
+    if (!input.trim()) return json(400, { error: 'bad_request' });
+    // Photos become image blocks; a PDF (notes, slides, a worksheet) becomes a document block.
+    const images = (Array.isArray(body.images) ? body.images : []).slice(0, 5).flatMap((i: { media_type?: unknown; data?: unknown }): Anthropic.ContentBlockParam[] => {
+      if (typeof i?.data !== 'string' || typeof i.media_type !== 'string' || i.data.length > MAX_IMAGE_B64) return [];
+      if (i.media_type === 'application/pdf') return [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: i.data } }];
+      return MEDIA.has(i.media_type) ? [{ type: 'image', source: { type: 'base64', media_type: i.media_type as 'image/jpeg', data: i.data } }] : [];
+    });
     const research = body.research === true;
+    const model = deps.env('CLAUDE_MODEL') || 'claude-opus-5-5';
 
-    const client = new Anthropic({ apiKey, maxRetries: 1, ...(deps.fetch ? { fetch: deps.fetch } : {}) });
+    const client = new Anthropic({ apiKey, baseURL, maxRetries: 1, ...(deps.fetch ? { fetch: deps.fetch } : {}) });
+    const params = {
+      model,
+      max_tokens: 16000,
+      stream: true as const,
+      system: SYSTEM,
+      messages: [{ role: 'user' as const, content: [...images, { type: 'text' as const, text: input }] }],
+      output_config: { effort: body.tier === 'quick' ? ('low' as const) : ('medium' as const) },
+      ...(research ? { tools: [{ type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: gateway ? 3 : 4 }] } : {}),
+    };
     try {
-      const upstream = await client.beta.messages
-        .create({
-          model: deps.env('CLAUDE_MODEL') || 'claude-opus-5-5',
-          max_tokens: 16000,
-          stream: true,
-          system: SYSTEM,
-          messages: [{ role: 'user', content: [...images, { type: 'text', text: input }] }],
-          output_config: { effort: body.tier === 'quick' ? 'low' : 'medium' },
-          ...(research ? { tools: [{ type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: 4 }] } : {}),
-          betas: ['server-side-fallback-2026-07-01'],
-          fallbacks: 'default',
-        })
-        .asResponse();
+      // The gateway passes no beta headers, so the refusal fallback is only asked for on a direct key.
+      const upstream = gateway
+        ? await client.messages.create(params).asResponse()
+        : await client.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }).asResponse();
+      const [inUsd, outUsd] = PRICES[model] ?? [4, 20];
+      const out = Number.isFinite(budget)
+        ? metered(upstream.body!, (u) => addSpend(deps.kv, now, (u.input * inUsd + u.output * outUsd) / 1e6 + u.searches * SEARCH_USD))
+        : upstream.body;
       // Pass Claude's event stream straight through: the page reads the text as it arrives.
-      return new Response(upstream.body, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' } });
+      return new Response(out, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' } });
     } catch (e) {
-      if (e instanceof Anthropic.RateLimitError) return json(429, 'rate_limited');
-      if (e instanceof Anthropic.AuthenticationError) return json(503, 'not_configured');
-      if (e instanceof Anthropic.APIError) return json(502, 'upstream_error');
-      return json(502, 'upstream_error');
+      if (e instanceof Anthropic.RateLimitError) return json(429, { error: 'rate_limited' });
+      if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) return json(503, { error: 'not_configured' });
+      return json(502, { error: 'upstream_error' });
     }
   };
 }
 
 const netlifyEnv: Env = (name) => (globalThis as { Netlify?: { env: { get(k: string): string | undefined } } }).Netlify?.env.get(name);
 
-export default makeHandler({ env: netlifyEnv, keys: createRemoteJWKSet(new URL(GOOGLE_KEYS)) });
+let handler: ((req: Request) => Promise<Response>) | null = null;
+export default (req: Request) => {
+  handler ??= makeHandler({ env: netlifyEnv, kv: blobsKV(getStore({ name: 'lumo', consistency: 'strong' }) as never) });
+  return handler(req);
+};
 
 export const config = { path: '/api/claude' };

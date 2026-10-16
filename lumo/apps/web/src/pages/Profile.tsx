@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { loadSession } from '../netlify/cloud';
 import { Link } from 'react-router';
 import { GearIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
@@ -164,25 +165,19 @@ function BadgesSection() {
   );
 }
 
-/** Standalone site: which Google account this is, and signing out. */
+/** Standalone site: which account this is, and signing out (or making an account, for a guest). */
 function NetlifyAccount() {
   const { t } = useTranslation();
-  const signedIn = typeof (window as { claude?: unknown }).claude !== 'undefined';
+  const [s] = useState(() => loadSession());
   const out = async () => {
-    const { signOutEverywhere } = await import('../netlify/firebase');
-    await signOutEverywhere();
-    try {
-      localStorage.removeItem('lumo_guest');
-    } catch {
-      /* ignore */
-    }
-    location.reload();
+    const { signOut } = await import('../netlify/Gate');
+    signOut();
   };
   return (
     <div className="space-y-2 text-center">
-      <p className="text-xs text-muted">{signedIn ? t('gate.signedInAs') : t('local.savedHere')}</p>
-      <button onClick={() => void out()} className="w-full rounded-2xl py-3 font-extrabold text-bad ring-1 ring-line">
-        {signedIn ? t('gate.signOut') : t('gate.google')}
+      <p className="text-xs text-muted">{s ? t(s.kind === 'g' ? 'gate.signedInGoogle' : 'gate.signedInAs', { name: s.name }) : t('local.savedHere')}</p>
+      <button onClick={() => void out()} className={`w-full rounded-2xl py-3 font-extrabold ring-1 ring-line ${s ? 'text-bad' : 'text-brand'}`}>
+        {s ? t('gate.signOut') : t('gate.makeAccount')}
       </button>
     </div>
   );

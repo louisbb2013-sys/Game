@@ -195,7 +195,7 @@ export function Audio() {
         </section>
       ) : (
         <section className="space-y-4">
-          <div className="flex flex-col items-center gap-3 rounded-3xl bg-gradient-to-br from-indigo-700 to-violet-600 p-6 text-center text-white" aria-live="polite">
+          <div className="flex flex-col items-center gap-3 rounded-3xl royal p-6 text-center text-white" aria-live="polite">
             <Lumo size={80} mood={step === 'listening' ? 'thinking' : 'happy'} />
             <p className="text-xs font-bold opacity-80">
               {index + 1} / {items.length}

@@ -43,7 +43,8 @@ export default defineConfig({
             ],
           },
           workbox: {
-            navigateFallbackDenylist: [/^\/api/],
+            // Sign-in with Google (Netlify Identity) and the site's endpoints must reach the server, never the cached app.
+            navigateFallbackDenylist: [/^\/api/, /^\/\.netlify\//],
             globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
           },
         }),

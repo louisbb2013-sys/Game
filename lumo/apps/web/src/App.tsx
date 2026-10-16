@@ -182,7 +182,7 @@ function ResumeLink() {
 /** Full-screen pages without the tab bar (a live game). */
 function Bare() {
   return (
-    <div className="mx-auto min-h-dvh max-w-xl px-4 pt-4 pb-6">
+    <div className="mx-auto min-h-dvh max-w-xl px-4 pt-4 pb-6 lg:max-w-3xl lg:pt-8">
       <Suspense fallback={<PageLoading />}>
         <Outlet />
       </Suspense>

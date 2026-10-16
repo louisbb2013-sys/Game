@@ -201,6 +201,7 @@ test('decks made on two devices are both kept', async ({ browser }) => {
   await open(a, 'u_d');
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('tab', { name: 'Paste notes' }).click();
   await a.getByRole('button', { name: 'Use an example' }).click();
   await a.getByRole('button', { name: /Make my deck/ }).click();
   await expect(a.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();
@@ -296,7 +297,7 @@ test('website game: the study egg hatches, a round earns a chest, quests and sho
   await a.screenshot({ path: 'e2e/screens/web-chest.png' });
   // The new pet shows on the home screen.
   await a.goto(`${process.env.MULTI_URL}?uid=u_g`);
-  await expect(a.locator('a[href="/pets"]').first()).toBeVisible();
+  await expect(a.locator('main a[href="/pets"]').first()).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -398,6 +399,7 @@ test('website: an older deck without questions gets them written the first time 
   await a.goto(`${process.env.MULTI_URL}?uid=u_old`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('tab', { name: 'Paste notes' }).click();
   await a.getByRole('button', { name: 'Use an example' }).click();
   await a.getByRole('button', { name: /Make my deck/ }).click();
   await expect(a.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();
@@ -425,6 +427,7 @@ test('website: saying no to Claude explains how to allow it, and basic questions
   await a.goto(`${process.env.MULTI_URL}?uid=u_no`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('tab', { name: 'Paste notes' }).click();
   await a.getByRole('button', { name: 'Use an example' }).click();
   await a.getByRole('button', { name: /Make my deck/ }).click();
   await expect(a.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();

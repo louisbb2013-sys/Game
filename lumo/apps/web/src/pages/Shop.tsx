@@ -178,7 +178,7 @@ export function Shop() {
 
       {opening && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={t('shop.opening')}>
-          <div className="w-full max-w-sm space-y-4 rounded-3xl bg-gradient-to-br from-indigo-950 to-violet-800 p-6 text-center text-white shadow-2xl ring-2 ring-amber-glow">
+          <div className="w-full max-w-sm space-y-4 rounded-3xl royal p-6 text-center text-white shadow-2xl ring-2 ring-amber-glow">
             {!opening.result ? (
               <>
                 <span className="shake inline-block text-8xl" style={{ animationIterationCount: 'infinite' }}>

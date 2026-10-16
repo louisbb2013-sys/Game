@@ -1,11 +1,13 @@
 import { canRepair, dayKey, type StreakState } from '@lumo/core';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { TodayPlans } from '../components/TodayPlans';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
-import { CameraIcon, CoinIcon, FlameIcon, HeartIcon } from '../components/icons';
+import { CoinIcon, FlameIcon, HeartIcon, TextIcon, UploadIcon } from '../components/icons';
+import { DeckCard } from '../components/DeckCard';
+import { loadSession } from '../netlify/cloud';
 import { Lumo, type LumoMood } from '../components/Lumo';
-import { api, ApiError, LOCAL } from '../lib/api';
+import { api, ApiError, LOCAL, NETLIFY } from '../lib/api';
 import { EggRing, type EggState } from '../components/Egg';
 import { Creature3D } from '../components/Pet3D';
 import { useAuth } from '../lib/auth';
@@ -36,7 +38,7 @@ function EggCard({ egg }: { egg: EggState }) {
   const { t } = useTranslation();
   const left = Math.max(0, egg.target - egg.progress);
   return (
-    <Link to="/learn" className="flex items-center gap-4 rounded-3xl bg-gradient-to-r from-amber-glow/20 to-fuchsia-400/10 p-4 ring-1 ring-amber-glow/60">
+    <Link to="/learn" className="panel flex items-center gap-4 p-4">
       <EggRing egg={egg} size={76} three />
       <div className="min-w-0 flex-1">
         <h2 className="font-black">{t('egg.title', { rarity: t(`pets.rarity.${egg.rarity}`) })}</h2>
@@ -48,53 +50,170 @@ function EggCard({ egg }: { egg: EggState }) {
 }
 
 /** One tap from Home back into the game: your last deck, with Play, a speed run or the boss. */
-function JumpIn() {
+function JumpIn({ decks }: { decks: DeckListItem[] | null }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [deck, setDeck] = useState<DeckListItem | null>(null);
-  useEffect(() => {
-    api<{ decks: DeckListItem[] }>('/api/decks').then(
-      (r) => {
-        const last = lastDeckId();
-        setDeck(r.decks.find((d) => d.id === last) ?? r.decks[0] ?? null);
-      },
-      () => {},
-    );
-  }, []);
+  const last = lastDeckId();
+  const deck = decks?.find((d) => d.id === last) ?? decks?.[0] ?? null;
   if (!deck) return null;
   const go = (mode: 'practice' | 'speed' | 'boss') => navigate(`/decks/${deck.id}`, { state: { autoplay: mode } });
   return (
-    <section aria-labelledby="jump-title" className="lacquer lux-frame relative overflow-hidden rounded-3xl p-5 shadow-lg">
-      <p className="font-display text-sm font-semibold text-[#f2d58a] italic">{t('home.jumpIn')}</p>
-      <h2 id="jump-title" className="mt-0.5 truncate text-[1.7rem] leading-tight font-black">
-        {deck.title}
+    <section aria-labelledby="jump-title" className="lacquer lux-frame relative overflow-hidden rounded-[1.75rem] p-5 shadow-lg sm:p-6">
+      <div className="sm:flex sm:items-center sm:gap-6">
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-sm font-semibold text-[#f2d58a] italic">{t('home.jumpIn')}</p>
+          <h2 id="jump-title" className="mt-0.5 truncate text-[1.7rem] leading-tight font-black">
+            {deck.title}
+          </h2>
+          <p className="text-sm font-bold text-[#f7f1e3]/80">
+            {t('learn.mastered', { done: deck.masteredCount, total: deck.conceptCount })}
+            {deck.dueCount > 0 && ` · ${t('learn.due', { count: deck.dueCount })}`}
+          </p>
+        </div>
+        <div className="mt-3 flex gap-2 sm:mt-0 sm:w-80 sm:shrink-0">
+          <button type="button" onClick={() => go('practice')} className="btn-gold breathe flex-1 rounded-2xl py-3.5 text-lg font-black">
+            ▶ {t('hub.play')}
+          </button>
+          <button type="button" onClick={() => go('speed')} aria-label={t('play.modes.speed')} title={t('play.modes.speed')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-[#e8c468]/45 active:scale-95">
+            ⚡
+          </button>
+          <button type="button" onClick={() => go('boss')} aria-label={t('play.boss.title')} title={t('play.boss.title')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-[#e8c468]/45 active:scale-95">
+            🐉
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Gizmo-style: the first thing on Home is "what do you want to study?" */
+function QuickCreate() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [text, setText] = useState('');
+  const go = (state: { text?: string; source?: 'file' | 'notes' | 'topic' }) => navigate('/chat', { state });
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (text.trim()) go({ text: text.trim() });
+    else document.getElementById('home-create')?.focus();
+  };
+  const chip = 'flex items-center gap-2 rounded-full bg-white/8 px-3.5 py-2 text-sm font-bold text-white/90 ring-1 ring-white/15 transition hover:bg-white/15 hover:ring-[#e8c468]/50';
+  return (
+    <section aria-labelledby="create-ask" className="lacquer lux-frame relative overflow-hidden rounded-[1.75rem] p-5 shadow-xl sm:p-7">
+      <div aria-hidden className="pointer-events-none absolute -top-16 -right-10 size-56 rounded-full bg-[#e8c468]/15 blur-3xl" />
+      <h2 id="create-ask" className="font-display relative text-2xl leading-tight font-black sm:text-[2rem]">
+        {t('home.createAsk')}
       </h2>
-      <p className="text-sm font-bold text-[#f7f1e3]/80">
-        {t('learn.mastered', { done: deck.masteredCount, total: deck.conceptCount })}
-        {deck.dueCount > 0 && ` · ${t('learn.due', { count: deck.dueCount })}`}
-      </p>
-      <div className="mt-3 flex gap-2">
-        <button type="button" onClick={() => go('practice')} className="btn-gold breathe flex-1 rounded-2xl py-3.5 text-lg font-black">
-          ▶ {t('hub.play')}
+      <p className="relative mt-1 text-sm text-white/75 sm:text-base">{t('home.createHint')}</p>
+      <form onSubmit={submit} className="relative mt-4 flex flex-col gap-2 sm:flex-row">
+        <input
+          id="home-create"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={300}
+          enterKeyHint="go"
+          aria-label={t('home.createAsk')}
+          placeholder={t('home.createPlaceholder')}
+          className="min-w-0 flex-1 rounded-2xl border border-white/15 bg-black/25 px-4 py-3.5 text-base font-bold text-white outline-none placeholder:text-white/45 focus:border-gold"
+        />
+        <button className="btn-gold shrink-0 rounded-2xl px-6 py-3.5 text-base font-black">
+          ✨ {t('home.generate')}
         </button>
-        <button type="button" onClick={() => go('speed')} aria-label={t('play.modes.speed')} title={t('play.modes.speed')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-[#e8c468]/45 active:scale-95">
-          ⚡
+      </form>
+      <div className="relative mt-3 flex flex-wrap gap-2">
+        <button type="button" onClick={() => go({ source: 'file' })} className={chip}>
+          <UploadIcon size={17} />
+          {t('home.fromFile')}
         </button>
-        <button type="button" onClick={() => go('boss')} aria-label={t('play.boss.title')} title={t('play.boss.title')} className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl ring-1 ring-[#e8c468]/45 active:scale-95">
-          🐉
+        <button type="button" onClick={() => go({ source: 'notes' })} className={chip}>
+          <TextIcon size={17} />
+          {t('home.fromNotes')}
         </button>
       </div>
     </section>
   );
 }
 
-export function Home() {
+function YourDecks({ decks }: { decks: DeckListItem[] | null }) {
   const { t } = useTranslation();
+  if (!decks || decks.length === 0) return null;
+  return (
+    <section aria-labelledby="your-decks" className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 id="your-decks" className="text-2xl font-black">
+          {t('home.yourDecks')}
+        </h2>
+        <Link to="/learn" className="text-sm font-black text-accent hover:underline">
+          {t('home.seeAll')}
+        </Link>
+      </div>
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {decks.slice(0, 6).map((d, i) => (
+          <li key={d.id}>
+            <DeckCard deck={d} index={i} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Explore() {
+  const { t } = useTranslation();
+  const items = [
+    { to: '/live', icon: '⚡', title: t('home.liveTitle'), body: t('home.liveBody') },
+    { to: '/sandbox', icon: '🎨', title: t('home.sandboxTitle'), body: t('home.sandboxBody') },
+    { to: '/friends', icon: '🤝', title: t('home.friendsTitle'), body: t('home.friendsBody') },
+  ];
+  return (
+    <section aria-labelledby="explore" className="space-y-3">
+      <h2 id="explore" className="text-2xl font-black">
+        {t('home.explore')}
+      </h2>
+      <ul className="grid gap-3 sm:grid-cols-3">
+        {items.map((x) => (
+          <li key={x.to}>
+            <Link to={x.to} className="panel flex h-full items-start gap-3 p-4 transition hover:-translate-y-0.5">
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-surface-2 text-2xl">{x.icon}</span>
+              <span className="min-w-0">
+                <span className="block font-black">{x.title}</span>
+                <span className="block text-sm text-muted">{x.body}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Standalone site, trying without an account: say what an account adds. */
+function GuestNote() {
+  const { t } = useTranslation();
+  if (!NETLIFY || loadSession()) return null;
+  return (
+    <div className="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+      <p className="flex-1 text-sm">
+        <span className="font-black">{t('home.guestTitle')}</span> {t('home.guestBody')}
+      </p>
+      <button type="button" onClick={() => void import('../netlify/Gate').then((m) => m.signOut())} className="btn-gold shrink-0 rounded-xl px-4 py-2 text-sm font-black">
+        {t('gate.makeAccount')}
+      </button>
+    </div>
+  );
+}
+
+export function Home() {
+  const { t, i18n } = useTranslation();
   const { user, refresh } = useAuth();
   const [ov, setOv] = useState<Overview | null>(null);
+  const [decks, setDecks] = useState<DeckListItem[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => api<Overview>('/api/game/overview').then(setOv, () => {}), []);
   useEffect(() => void load(), [load]);
+  useEffect(() => {
+    api<{ decks: DeckListItem[] }>('/api/decks').then((r) => setDecks(r.decks), () => setDecks([]));
+  }, []);
   if (!user) return null;
 
   const claim = async (q: Quest) => {
@@ -131,168 +250,148 @@ export function Home() {
     broken: t('home.streakBroken'),
   }[status];
   const minutesToHeart = user.hearts.nextRefillAt ? Math.max(1, Math.ceil((user.hearts.nextRefillAt - Date.now()) / 60_000)) : null;
+  const today = new Date().toLocaleDateString(i18n.language === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div className="space-y-5">
-      <section className="lacquer lux-frame flex items-center gap-4 rounded-3xl p-4 shadow-lg">
-        {ov?.pet ? (
-          <Link to="/pets" aria-label={t('pets.title')} className="-my-4 -ml-3 block size-[118px] shrink-0">
-            <Creature3D species={ov.pet.species} rarity={ov.pet.rarity} className="size-full">
-              <Lumo size={92} mood={mood} glow={Math.min(1, 0.4 + user.streak.days / 20)} />
-            </Creature3D>
-          </Link>
-        ) : (
-          <Lumo size={92} mood={mood} glow={Math.min(1, 0.4 + user.streak.days / 20)} />
-        )}
-        <div className="min-w-0">
-          <h1 className="text-xl font-black">{t(greetingKey, { name: user.username })}</h1>
-          <p className="mt-1 text-sm text-indigo-100">{streakMsg}</p>
-        </div>
-      </section>
-
-      <JumpIn />
-
-      <section aria-label={t('home.level', { level: user.level.level })} className="rounded-3xl bg-surface p-4 ring-1 ring-line">
-        <div className="flex items-baseline justify-between">
-          <span className="text-lg font-black">{t('home.level', { level: user.level.level })}</span>
-          <span className="text-sm font-bold text-muted">{t('home.xpToNext', { current: user.level.current, needed: user.level.needed })}</span>
-        </div>
-        <div className="mt-2 h-3.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label={t('home.levelProgress')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(user.level.ratio * 100)}>
-          <div className="h-full rounded-full bg-gradient-to-r from-amber-glow to-amber-300 transition-[width] duration-700" style={{ width: `${Math.max(3, user.level.ratio * 100)}%` }} />
-        </div>
-      </section>
-
-      <section className="grid grid-cols-3 gap-3">
-        <Tile icon={<FlameIcon size={28} />} value={user.streak.days} label={t('stats.streak')} />
-        <Tile
-          icon={<HeartIcon size={28} className="text-heart" />}
-          value={user.hearts.current}
-          label={minutesToHeart ? t('stats.nextHeart', { minutes: minutesToHeart }) : t('stats.full')}
-        />
-        <Link to="/shop">
-          <Tile icon={<CoinIcon size={28} />} value={user.coins} label={t('stats.coins')} />
-        </Link>
-      </section>
-
-      {(user.streak.freezes > 0 || repairable) && (
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface p-3 text-sm font-bold ring-1 ring-line">
-          {user.streak.freezes > 0 && <span>🧊 {t('home.freezes', { count: user.streak.freezes })}</span>}
-          {repairable && (
-            <button onClick={() => void repair()} className="ml-auto rounded-xl bg-amber-glow px-3 py-1.5 font-black text-night">
-              🔧 {t('home.repairStreak', { days: (user.streak as unknown as StreakState).lost?.days ?? 0 })}
-            </button>
-          )}
-        </section>
-      )}
-      {user.boostUntil && <p className="rounded-2xl bg-amber-glow/20 px-3 py-2 text-sm font-bold">⚡ {t('home.boostOn')}</p>}
-      {err && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">{t(`shop.errors.${err}`, { defaultValue: t('signin.errors.network') })}</p>}
-
-      <TodayPlans />
-
-      {ov && ov.chests > 0 && (
-        <Link to="/shop?tab=mine" className="flex items-center gap-3 rounded-3xl bg-gradient-to-r from-amber-glow/30 to-amber-glow/10 p-4 ring-1 ring-amber-glow">
-          <span className="lumo-bounce text-4xl">🎁</span>
-          <span className="flex-1 font-black">{t('home.chestsWaiting', { count: ov.chests })}</span>
-          <span className="text-2xl">›</span>
-        </Link>
-      )}
-
-      {ov?.egg && <EggCard egg={ov.egg} />}
-
-      {ov && (
-        <section className="space-y-2 rounded-3xl bg-surface p-4 ring-1 ring-line" aria-labelledby="quests-title">
-          <h2 id="quests-title" className="font-black">
-            📜 {t('home.quests')}
-          </h2>
-          {(['daily', 'weekly'] as const).map((period) => (
-            <div key={period} className="space-y-2">
-              <p className="text-xs font-black tracking-wide text-muted uppercase">{t(`home.${period}`)}</p>
-              {ov.quests
-                .filter((q) => q.period === period)
-                .map((q) => {
-                  const done = q.progress >= q.target;
-                  return (
-                    <div key={q.id} className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-bold ${q.claimed ? 'text-muted line-through' : ''}`}>{t(`quests.${q.metric}`, { count: q.target })}</p>
-                        <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-surface-2">
-                          <div className={`h-full rounded-full ${done ? 'bg-good' : 'bg-amber-glow'}`} style={{ width: `${Math.max(4, (q.progress / q.target) * 100)}%` }} />
-                        </div>
-                      </div>
-                      {done && !q.claimed ? (
-                        <button onClick={() => void claim(q)} className="combo-pop shrink-0 rounded-xl bg-good px-3 py-1.5 text-sm font-black text-white">
-                          {t('home.claim')}
-                        </button>
-                      ) : (
-                        <span className="flex shrink-0 items-center gap-0.5 text-xs font-black text-muted">
-                          {q.claimed ? '✓' : (
-                            <>
-                              <CoinIcon size={14} />
-                              {q.reward.coins}
-                              {q.reward.chest && ' 🎁'}
-                            </>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-          ))}
-        </section>
-      )}
-
-      {ov && (
-        <Link to="/pets" className="flex items-center gap-4 rounded-3xl bg-surface p-4 ring-1 ring-line">
-          {ov.pet ? <PetAvatar pet={ov.pet} size="sm" three /> : <span className="grid size-14 place-items-center rounded-full bg-surface-2 text-3xl">🥚</span>}
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="min-w-0 space-y-6">
+        <header className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
-            <h2 className="font-black">{ov.pet ? ov.pet.name || t(`pets.species.${ov.pet.species}`) : t('home.adoptPet')}</h2>
-            <p className="text-sm text-muted">{ov.pet ? t(`pets.moodLine.${ov.pet.mood}`) : t('home.adoptPetBody')}</p>
+            <p className="eyebrow text-sm first-letter:uppercase">{today}</p>
+            <h1 className="mt-0.5 text-[1.9rem] leading-tight font-black sm:text-4xl lg:text-[2.6rem]">{t(greetingKey, { name: user.username })}</h1>
+            <p className="mt-1 text-muted">{streakMsg}</p>
           </div>
-          <span className="text-2xl text-muted">›</span>
-        </Link>
-      )}
+          {ov?.pet ? (
+            <Link to="/pets" aria-label={t('pets.title')} className="block size-[104px] shrink-0 sm:size-[128px]">
+              <Creature3D species={ov.pet.species} rarity={ov.pet.rarity} className="size-full">
+                <Lumo size={92} mood={mood} glow={Math.min(1, 0.4 + user.streak.days / 20)} />
+              </Creature3D>
+            </Link>
+          ) : (
+            <Lumo size={92} mood={mood} glow={Math.min(1, 0.4 + user.streak.days / 20)} />
+          )}
+        </header>
 
-      <section className="space-y-3">
-        <Link to="/chat" className="block">
-          <ActionCard accent icon={<CameraIcon size={28} />} title={t('home.createTitle')} body={t(LOCAL ? 'local.createBody' : 'home.createBody')} />
-        </Link>
-        <Link to="/sandbox" className="block">
-          <ActionCard icon={<span className="text-2xl">🎨</span>} title={t('home.sandboxTitle')} body={t('home.sandboxBody')} />
-        </Link>
-        <Link to="/learn" className="block">
-          <ActionCard icon={<span className="text-2xl">📚</span>} title={t('home.reviewTitle')} body={t('home.reviewBody')} />
-        </Link>
-      </section>
+        <GuestNote />
+        <QuickCreate />
+        <JumpIn decks={decks} />
+        <YourDecks decks={decks} />
+        <TodayPlans />
+        <Explore />
+      </div>
 
-      {!LOCAL && (
-        <Link to="/league" className="block text-center text-xs font-bold text-muted">
-          {t('stats.league')}: {t(`leagues.${user.leagueTier}`)} ›
-        </Link>
-      )}
+      <aside className="mt-6 space-y-4 lg:sticky lg:top-8 lg:mt-0">
+        <section aria-label={t('home.level', { level: user.level.level })} className="panel p-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-lg font-black">{t('home.level', { level: user.level.level })}</span>
+            <span className="text-sm font-bold text-muted">{t('home.xpToNext', { current: user.level.current, needed: user.level.needed })}</span>
+          </div>
+          <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label={t('home.levelProgress')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(user.level.ratio * 100)}>
+            <div className="h-full rounded-full bg-gradient-to-r from-[#c9973a] to-[#f6e2a0] transition-[width] duration-700" style={{ width: `${Math.max(3, user.level.ratio * 100)}%` }} />
+          </div>
+        </section>
+
+        <section className="grid grid-cols-3 gap-3">
+          <Tile icon={<FlameIcon size={26} />} value={user.streak.days} label={t('stats.streak')} />
+          <Tile icon={<HeartIcon size={26} className="text-heart" />} value={user.hearts.current} label={minutesToHeart ? t('stats.nextHeart', { minutes: minutesToHeart }) : t('stats.full')} />
+          <Link to="/shop">
+            <Tile icon={<CoinIcon size={26} />} value={user.coins} label={t('stats.coins')} />
+          </Link>
+        </section>
+
+        {(user.streak.freezes > 0 || repairable) && (
+          <section className="panel flex flex-wrap items-center gap-2 p-3 text-sm font-bold">
+            {user.streak.freezes > 0 && <span>🧊 {t('home.freezes', { count: user.streak.freezes })}</span>}
+            {repairable && (
+              <button onClick={() => void repair()} className="ml-auto rounded-xl bg-amber-glow px-3 py-1.5 font-black text-night">
+                🔧 {t('home.repairStreak', { days: (user.streak as unknown as StreakState).lost?.days ?? 0 })}
+              </button>
+            )}
+          </section>
+        )}
+        {user.boostUntil && <p className="rounded-2xl bg-amber-glow/20 px-3 py-2 text-sm font-bold">⚡ {t('home.boostOn')}</p>}
+        {err && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">{t(`shop.errors.${err}`, { defaultValue: t('signin.errors.network') })}</p>}
+
+        {ov && ov.chests > 0 && (
+          <Link to="/shop?tab=mine" className="flex items-center gap-3 rounded-3xl bg-gradient-to-r from-amber-glow/30 to-amber-glow/10 p-4 ring-1 ring-amber-glow">
+            <span className="lumo-bounce text-4xl">🎁</span>
+            <span className="flex-1 font-black">{t('home.chestsWaiting', { count: ov.chests })}</span>
+            <span className="text-2xl">›</span>
+          </Link>
+        )}
+
+        {ov?.egg && <EggCard egg={ov.egg} />}
+
+        {ov && (
+          <section className="panel space-y-2 p-4" aria-labelledby="quests-title">
+            <h2 id="quests-title" className="font-black">
+              📜 {t('home.quests')}
+            </h2>
+            {(['daily', 'weekly'] as const).map((period) => (
+              <div key={period} className="space-y-2">
+                <p className="eyebrow text-xs">{t(`home.${period}`)}</p>
+                {ov.quests
+                  .filter((q) => q.period === period)
+                  .map((q) => {
+                    const done = q.progress >= q.target;
+                    return (
+                      <div key={q.id} className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-bold ${q.claimed ? 'text-muted line-through' : ''}`}>{t(`quests.${q.metric}`, { count: q.target })}</p>
+                          <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-2">
+                            <div className={`h-full rounded-full ${done ? 'bg-good' : 'bg-gradient-to-r from-[#c9973a] to-[#f6e2a0]'}`} style={{ width: `${Math.max(4, (q.progress / q.target) * 100)}%` }} />
+                          </div>
+                        </div>
+                        {done && !q.claimed ? (
+                          <button onClick={() => void claim(q)} className="combo-pop shrink-0 rounded-xl bg-good px-3 py-1.5 text-sm font-black text-white">
+                            {t('home.claim')}
+                          </button>
+                        ) : (
+                          <span className="flex shrink-0 items-center gap-0.5 text-xs font-black text-muted">
+                            {q.claimed ? '✓' : (
+                              <>
+                                <CoinIcon size={14} />
+                                {q.reward.coins}
+                                {q.reward.chest && ' 🎁'}
+                              </>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {ov && (
+          <Link to="/pets" className="panel flex items-center gap-4 p-4">
+            {ov.pet ? <PetAvatar pet={ov.pet} size="sm" three /> : <span className="grid size-14 place-items-center rounded-full bg-surface-2 text-3xl">🥚</span>}
+            <div className="min-w-0 flex-1">
+              <h2 className="font-black">{ov.pet ? ov.pet.name || t(`pets.species.${ov.pet.species}`) : t('home.adoptPet')}</h2>
+              <p className="text-sm text-muted">{ov.pet ? t(`pets.moodLine.${ov.pet.mood}`) : t('home.adoptPetBody')}</p>
+            </div>
+            <span className="text-2xl text-muted">›</span>
+          </Link>
+        )}
+
+        {!LOCAL && (
+          <Link to="/league" className="block text-center text-xs font-bold text-muted">
+            {t('stats.league')}: {t(`leagues.${user.leagueTier}`)} ›
+          </Link>
+        )}
+      </aside>
     </div>
   );
 }
 
 function Tile({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl bg-surface p-3 text-center ring-1 ring-line">
+    <div className="panel flex flex-col items-center p-3 text-center">
       {icon}
       <span className="font-display mt-1 text-2xl font-black">{value}</span>
       <span className="text-[0.7rem] leading-tight font-bold text-muted">{label}</span>
-    </div>
-  );
-}
-
-function ActionCard({ icon, title, body, soon, accent }: { icon: React.ReactNode; title: string; body: string; soon?: string; accent?: boolean }) {
-  return (
-    <div className={`flex items-center gap-4 rounded-3xl p-4 ring-1 ${accent ? 'bg-amber-glow/15 ring-amber-glow/40' : 'bg-surface ring-line'}`}>
-      <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${accent ? 'bg-amber-glow text-night' : 'bg-surface-2'}`}>{icon}</span>
-      <div className="min-w-0 flex-1">
-        <h2 className="font-black">{title}</h2>
-        <p className="text-sm text-muted">{body}</p>
-      </div>
-      {soon ? <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[0.7rem] font-extrabold text-muted">{soon}</span> : <span className="shrink-0 text-2xl text-muted">›</span>}
     </div>
   );
 }

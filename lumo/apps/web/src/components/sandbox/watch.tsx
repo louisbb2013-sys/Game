@@ -164,7 +164,7 @@ export function PodcastPlayer({ data, language, onComplete }: PlayerProps<Podcas
   const host = data.lines[line]!.host;
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-around rounded-3xl bg-gradient-to-br from-indigo-900 to-violet-700 p-5 text-white">
+      <div className="flex items-center justify-around rounded-3xl royal p-5 text-white">
         {data.hosts.map((name, h) => (
           <div key={name} className={`flex flex-col items-center gap-1 transition ${playing && host === h ? 'scale-110' : 'opacity-70'}`}>
             {h === 0 ? <Lumo size={72} mood={playing && host === 0 ? 'cheer' : 'happy'} /> : <NovaAvatar talking={playing && host === 1} />}
@@ -241,7 +241,7 @@ export function StoryPlayer({ data, onComplete }: PlayerProps<Story>) {
       <h2 className="text-center text-2xl font-black">{data.title}</h2>
       <ProgressDots total={data.chapters.length + 1} current={ch} />
       {ended ? (
-        <div className="pop-in space-y-4 rounded-3xl bg-gradient-to-br from-indigo-900 to-violet-700 p-6 text-center text-white">
+        <div className="pop-in space-y-4 rounded-3xl royal p-6 text-center text-white">
           <span className="text-6xl">🏁</span>
           <p className="text-lg font-bold">{data.ending}</p>
           <BigButton tone="good" onClick={() => onComplete(results.filter(Boolean).length / data.chapters.length)}>
