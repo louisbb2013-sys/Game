@@ -71,7 +71,7 @@ test('make an account, build a deck from a topic on Home, progress follows the a
   await wrong.locator('#gate-name').fill(name);
   await wrong.locator('#gate-password').fill('not-it');
   await wrong.getByRole('button', { name: 'Log in', exact: true }).click();
-  await expect(wrong.getByRole('alert')).toHaveText("That name and password don't match.");
+  await expect(wrong.getByRole('alert')).toHaveText("That name and password don't match. (wrong_login)");
   await again.getByRole('link', { name: 'Me', exact: true }).click();
   await again.getByRole('button', { name: 'Sign out' }).click();
   await expect(again.getByRole('button', { name: 'Create my account' })).toBeVisible({ timeout: 15_000 });
@@ -99,7 +99,7 @@ test('Google sign-in and a name/password friend: add a friend, share a deck, pla
   await expect(b.getByText('People on this Lumo')).toHaveCount(0);
   await b.getByLabel("Type a friend's username, press Enter").fill(hostName);
   await b.getByLabel("Type a friend's username, press Enter").press('Enter');
-  await expect(b.getByRole('status')).toHaveText(`${hostName} is now your friend!`, { timeout: 10_000 });
+  await expect(b.getByRole('status')).toContainText(`${hostName} is now your friend!`, { timeout: 10_000 });
   await expect(b.getByRole('heading', { name: /Online now \([1-9]/ })).toBeVisible({ timeout: 20_000 });
   await b.screenshot({ path: 'e2e/screens/netlify-friends.png', fullPage: true });
   await b.getByRole('link', { name: 'Learn', exact: true }).click();
@@ -156,5 +156,61 @@ test('try without an account, make a deck from notes, then keep it in a new acco
   await expect(p.getByRole('heading', { level: 1 })).toContainText(name);
   await p.getByRole('link', { name: 'Learn', exact: true }).click();
   await expect(p.getByText(deckTitle).first()).toBeVisible();
+  await p.context().close();
+});
+
+// A tiny real PNG (1×1), for photo uploads.
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
+test('invite link adds a friend, the friend gets a request to add back, and a shared deck plays right away', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const aName = `Ivy_${tag()}`;
+  const a = await signUp(browser, aName);
+  const b = await signUp(browser, `Max_${tag()}`);
+  const bName = (await b.getByRole('heading', { level: 1 }).textContent())!.match(/(Max_\w+)/)![1]!;
+
+  // A shares the sample deck (with its questions).
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).first().click();
+  await a.getByRole('switch', { name: /Share with friends/ }).click();
+  await expect(a.getByText('Your friends can see this deck now.')).toBeVisible({ timeout: 10_000 });
+
+  // B opens A's invite link.
+  await b.goto(`${process.env.NETLIFY_URL}add/${aName}`);
+  await expect(b.getByText(`${aName} is now your friend!`)).toBeVisible({ timeout: 20_000 });
+  await b.getByRole('link', { name: 'Friends' }).last().click();
+  // A's shared deck is on B's Friends page; B's copy plays straight away (its questions came along).
+  await expect(b.getByText('Cells — the basics').first()).toBeVisible({ timeout: 15_000 });
+  await b.getByRole('button', { name: 'Add to my decks' }).first().click();
+  await expect(b.getByRole('heading', { name: 'Cells — the basics', level: 1 })).toBeVisible({ timeout: 15_000 });
+  await expect(b.getByText(/\d+ test questions/)).toBeVisible();
+
+  // A sees B's request and adds them back.
+  await a.getByRole('link', { name: 'Me', exact: true }).click();
+  await a.getByRole('link', { name: /Friends/ }).first().click();
+  await expect(a.getByRole('heading', { name: /Friend requests \(1\)/ })).toBeVisible({ timeout: 20_000 });
+  await a.getByRole('button', { name: 'Add back' }).click();
+  await expect(a.getByRole('status')).toHaveText(`${bName} is now your friend!`);
+  await expect(a.getByRole('heading', { name: /Friend requests/ })).toHaveCount(0, { timeout: 15_000 });
+  await expect(a.getByRole('list').getByText(bName).first()).toBeVisible();
+  await a.screenshot({ path: 'e2e/screens/netlify-requests.png', fullPage: true });
+  for (const p of [a, b]) await p.context().close();
+});
+
+test('make a deck straight from a photo: from Home, and from the create page', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const p = await signUp(browser, `Pix_${tag()}`);
+  // Home: "Take a photo" opens the camera; the deck builds as soon as the photo is chosen.
+  await p.locator('main input[capture]').first().setInputFiles({ name: 'notes.png', mimeType: 'image/png', buffer: PNG });
+  await expect(p.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 20_000 });
+
+  // Create page: take two photos, see them, then read them.
+  await p.goto(`${process.env.NETLIFY_URL}chat`);
+  await expect(p.getByRole('tab', { name: 'Photo / PDF' })).toHaveAttribute('aria-selected', 'true');
+  await p.locator('#deck-camera').setInputFiles({ name: 'page1.png', mimeType: 'image/png', buffer: PNG });
+  await p.locator('#deck-camera').setInputFiles({ name: 'page2.png', mimeType: 'image/png', buffer: PNG });
+  await expect(p.getByRole('img', { name: /Photo 2/ })).toBeVisible();
+  await p.getByRole('button', { name: /Read my files/ }).click();
+  await expect(p.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 20_000 });
   await p.context().close();
 });

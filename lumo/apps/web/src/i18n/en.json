@@ -35,7 +35,7 @@
       "invalid_code": "Enter the 6 digits from the email.",
       "google": "Google sign-in didn't work. Try again.",
       "state": "Sign-in expired. Try again.",
-      "network": "Can't reach Lumo. Check your connection."
+      "network": "Something went wrong. Check your connection and try again."
     },
     "guest": "Try Lumo now — no account needed",
     "guestHint": "No email, no name. Come back on this device to keep your progress."
@@ -85,7 +85,8 @@
     "friendsTitle": "Friends",
     "friendsBody": "Add friends by their Lumo name and see who's studying.",
     "guestTitle": "You're trying Lumo without an account.",
-    "guestBody": "Your progress stays on this device. Make a free account to use AI, play with friends and keep everything on any device."
+    "guestBody": "Your progress stays on this device. Make a free account to use AI, play with friends and keep everything on any device.",
+    "takePhoto": "Take a photo"
   },
   "stats": {
     "streak": "Day streak",
@@ -1100,7 +1101,7 @@
     "sharedBy_one": "by {{name}} · {{count}} idea",
     "sharedBy_other": "by {{name}} · {{count}} ideas",
     "playLiveWith": "Play {{deck}} Live",
-    "addToMine": "Add",
+    "addToMine": "Add to my decks",
     "shareDeck": "Share with friends",
     "shareDeckBody": "Everyone you shared this Lumo page with can copy it and play it Live.",
     "nowPublic": "Your friends can see this deck now.",
@@ -1129,7 +1130,19 @@
     "readOnlyBody": "You opened a link shared from someone else’s Claude account, so Claude won’t save your friends or your profile here. Ask the owner to invite you by email as Editor (Share menu, with the public link turned off), or use the Lumo website: friends work there for everyone.",
     "noFriendsOnline": "None of your friends are on Lumo right now.",
     "howToInviteSite": "Only the friends you add can see you, your decks and your games. Give classmates your Lumo name so they can add you.",
-    "shareDeckBodySite": "Your friends can copy it and play it Live with you."
+    "shareDeckBodySite": "Your friends can copy it and play it Live with you.",
+    "requests": "Friend requests ({{count}})",
+    "addedYou": "added you as a friend",
+    "accept": "Add back",
+    "decline": "Ignore {{name}}",
+    "addedSite": "{{name}} is now your friend! They'll get a request to add you back.",
+    "inviteBody": "Send your invite link: friends who open it are added right away.",
+    "inviteButton": "Invite friends",
+    "inviteText": "Study with me on Lumo! My Lumo name is {{name}}.",
+    "inviteTitle": "Adding your friend…",
+    "inviteDone": "{{name}} is now your friend!",
+    "inviteSelf": "That's your own invite link. Send it to a friend!",
+    "inviteNotFound": "No one called “{{name}}” on Lumo. Check the name and try again."
   },
   "egg": {
     "title": "{{rarity}} egg",
@@ -1386,7 +1399,7 @@
     "from": "Make it from",
     "tabs": {
       "topic": "Topic",
-      "upload": "Upload",
+      "upload": "Photo / PDF",
       "notes": "Paste notes"
     },
     "examples": [
@@ -1438,6 +1451,9 @@
       "budget": "Lumo's AI has used up this month's free allowance on this site. Paste your notes instead, or ask the site owner to add an Anthropic key.",
       "not_configured": "Claude isn't set up on this site yet. Paste your notes instead."
     },
-    "readFiles": "Read my files"
+    "readFiles": "Read my files",
+    "takePhoto": "Take a photo of your notes",
+    "anotherPhoto": "Add another page",
+    "photoTab": "Photo"
   }
 }

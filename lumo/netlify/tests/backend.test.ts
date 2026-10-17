@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { makeAuthHandler } from '../lib/auth';
 import { makeDataHandler } from '../lib/data';
 import { memoryKV } from '../lib/kv';
@@ -119,6 +119,40 @@ describe('shared data', () => {
     expect(after.body.docs).toEqual([]);
     const doc = await s.db(b.token, { op: 'get', path: `games/${b.uid}` });
     expect((await s.db(b.token, { op: 'get', path: `games/${b.uid}`, known: doc.body.etag })).body.same).toBe(true);
+  });
+});
+
+describe('friend requests', () => {
+  it('lets anyone send me a request, only me read them, and either of us clear it', async () => {
+    const s = site();
+    const a = (await s.signup('Ana', 'secret123')).body;
+    const b = (await s.signup('Ben', 'secret123')).body;
+    const c = (await s.signup('Cam', 'secret123')).body;
+    expect((await s.db(b.token, { op: 'set', path: `inbox/${a.uid}/req/${b.uid}`, data: { name: 'Ben', at: 1 } })).status).toBe(200);
+    // Nobody can send a request in someone else's name, or to themselves.
+    expect((await s.db(c.token, { op: 'set', path: `inbox/${a.uid}/req/${b.uid}`, data: { name: 'fake' } })).status).toBe(403);
+    expect((await s.db(a.token, { op: 'set', path: `inbox/${a.uid}/req/${a.uid}`, data: {} })).status).toBe(403);
+    expect((await s.db(a.token, { op: 'list', coll: `inbox/${a.uid}/req` })).body.docs).toEqual([{ id: b.uid, data: { name: 'Ben', at: 1 } }]);
+    expect((await s.db(c.token, { op: 'list', coll: `inbox/${a.uid}/req` })).status).toBe(403);
+    expect((await s.db(c.token, { op: 'delete', path: `inbox/${a.uid}/req/${b.uid}` })).status).toBe(403);
+    expect((await s.db(a.token, { op: 'delete', path: `inbox/${a.uid}/req/${b.uid}` })).status).toBe(200);
+    expect((await s.db(a.token, { op: 'list', coll: `inbox/${a.uid}/req` })).body.docs).toEqual([]);
+  });
+});
+
+describe('when the store has a blip', () => {
+  it("answers 'try again' instead of signing the learner out", async () => {
+    const s = site();
+    const a = (await s.signup('Ana', 'secret123')).body;
+    // A fresh server instance (nothing cached) whose store fails: the sign-in can't be checked yet.
+    const { makeDataHandler: fresh } = await import('../lib/data');
+    const broken = { ...s.kv, get: async () => { throw new Error('store down'); }, list: async () => { throw new Error('store down'); } };
+    vi.resetModules();
+    const { makeDataHandler } = await import('../lib/data');
+    const h = makeDataHandler({ kv: broken, env: () => undefined, now: () => 1_000_000 });
+    const res = await h(new Request('https://lumo.example/api/data', { method: 'POST', headers: { authorization: `Bearer ${a.token}` }, body: JSON.stringify({ op: 'get', path: `profiles/${a.uid}` }) }));
+    expect(res.status).toBe(503);
+    expect(fresh).toBeTypeOf('function');
   });
 });
 

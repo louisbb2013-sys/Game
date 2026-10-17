@@ -38,3 +38,25 @@ export async function prepareFile(file: File): Promise<PreparedFile> {
   const text = await file.text();
   return { kind: 'text', mime: 'text/plain', name: file.name, data: toBase64(new TextEncoder().encode(text).buffer as ArrayBuffer) };
 }
+
+/**
+ * A phone photo made small enough to send quickly (and well within what Claude reads best): the long
+ * side at most 1600 px, re-encoded as JPEG (which also drops location data). Anything that isn't a
+ * photo, or a photo this browser can't open, is returned as it was.
+ */
+export async function shrinkPhoto(file: File): Promise<File> {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 1_500_000 && file.type === 'image/jpeg') return file;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('encode'))), 'image/jpeg', 0.85));
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}

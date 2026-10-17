@@ -1,11 +1,12 @@
 import { weekId } from '@lumo/core';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { FlameIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { useAuth } from '../lib/auth';
-import { findProfiles, FRIENDS_ONLY, setFriends, useFriends, useNames, useOnlineNow, useProfiles, useReadOnly, useTogether, type PublicProfile } from '../local/together';
+import { SharedDecks } from '../components/SharedDecks';
+import { answerFriendRequest, findProfiles, FRIENDS_ONLY, sendFriendRequest, setFriends, useFriendRequests, useFriends, useNames, useOnlineNow, useProfiles, useReadOnly, useTogether, type PublicProfile } from '../local/together';
 
 /**
  * Browser-only build: add friends by typing their username (Enter), or tap Add next to someone who is
@@ -21,6 +22,11 @@ export function LocalFriends() {
   const [typed, setTyped] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const requests = useFriendRequests();
+  // A request from someone I already added is just cleared.
+  useEffect(() => {
+    for (const r of requests) if (friends?.includes(r.id)) void answerFriendRequest(r.id, false, friends);
+  }, [requests, friends]);
   const avatars = useNames((profiles ?? []).map((p) => p.id));
   const readOnly = useReadOnly();
 
@@ -55,7 +61,9 @@ export function LocalFriends() {
     setMsg(null);
     try {
       await setFriends([...myFriends, id]);
-      setMsg({ ok: true, text: t('together.added', { name: nameOf(id) }) });
+      // On the website they get a request, so they can add me back with one tap.
+      void sendFriendRequest(id, user?.username ?? '');
+      setMsg({ ok: true, text: t(FRIENDS_ONLY ? 'together.addedSite' : 'together.added', { name: nameOf(id) }) });
     } catch {
       setMsg({ ok: false, text: t('together.cantAdd') });
     }
@@ -65,6 +73,22 @@ export function LocalFriends() {
     setBusy(true);
     await setFriends([...myFriends].filter((x) => x !== id)).catch(() => {});
     setBusy(false);
+  };
+
+  // Requests from people I haven't added yet (one I already added is just cleared).
+  const pending = requests.filter((r) => !myFriends.has(r.id));
+  const answer = async (id: string, accept: boolean, name: string) => {
+    setBusy(true);
+    await answerFriendRequest(id, accept, [...myFriends]).catch(() => {});
+    if (accept) setMsg({ ok: true, text: t('together.added', { name: byId.get(id)?.username || name || t('together.someone') }) });
+    setBusy(false);
+  };
+  const invite = FRIENDS_ONLY && user ? `${location.origin}/add/${encodeURIComponent(user.username)}` : null;
+  const shareInvite = async () => {
+    if (!invite) return;
+    const text = t('together.inviteText', { name: user?.username });
+    if (navigator.share) await navigator.share({ title: 'Lumo', text, url: invite }).catch(() => {});
+    else copy(invite);
   };
 
   const addTyped = async (e: FormEvent) => {
@@ -171,7 +195,46 @@ export function LocalFriends() {
             {msg.text}
           </p>
         )}
+        {invite && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+            <span className="min-w-0 flex-1 text-sm text-muted">{t('together.inviteBody')}</span>
+            <button type="button" onClick={() => void shareInvite()} className="btn-gold rounded-xl px-4 py-2 text-sm font-black">
+              🔗 {t('together.inviteButton')}
+            </button>
+          </div>
+        )}
       </section>
+
+      {pending.length > 0 && (
+        <section aria-labelledby="requests-title" className="space-y-2">
+          <h2 id="requests-title" className="font-black">
+            🔔 {t('together.requests', { count: pending.length })}
+          </h2>
+          <ul className="space-y-1.5">
+            {pending.map((r) => (
+              <li key={r.id} className="panel flex items-center gap-3 p-2.5">
+                {avatars[r.id]?.avatarUrl ? (
+                  <img src={avatars[r.id]!.avatarUrl} alt="" className="size-10 rounded-full bg-surface-2" />
+                ) : (
+                  <span aria-hidden className="grid size-10 place-items-center rounded-full bg-surface-2 font-black">
+                    {(r.name || '?')[0]!.toUpperCase()}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-black">{byId.get(r.id)?.username || r.name || t('together.someone')}</span>
+                  <span className="text-xs font-bold text-muted">{t('together.addedYou')}</span>
+                </span>
+                <button disabled={busy} onClick={() => void answer(r.id, true, r.name)} className="rounded-xl bg-brand px-3.5 py-1.5 text-sm font-black text-brand-ink disabled:opacity-50">
+                  {t('together.accept')}
+                </button>
+                <button disabled={busy} onClick={() => void answer(r.id, false, r.name)} aria-label={t('together.decline', { name: r.name })} className="px-1.5 text-muted hover:text-bad">
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="space-y-2">
         <h2 className="flex items-center gap-2 font-black">
@@ -234,7 +297,69 @@ export function LocalFriends() {
           </ul>
         </section>
       )}
+      {FRIENDS_ONLY && <SharedDecks />}
       <p className="text-xs text-muted">{t(FRIENDS_ONLY ? 'together.howToInviteSite' : 'together.howToInvite')}</p>
+    </div>
+  );
+}
+
+/** An invite link (/add/<name>): add that friend right away, and send them a request back. */
+export function LocalAddFriend() {
+  const { t } = useTranslation();
+  const { code } = useParams();
+  const name = decodeURIComponent(code ?? '').trim();
+  const { user } = useAuth();
+  const together = useTogether();
+  const friends = useFriends();
+  const [state, setState] = useState<'working' | 'done' | 'self' | 'missing' | 'error'>('working');
+  const ran = useRef(false);
+  useEffect(() => {
+    if (!together || friends === null || ran.current) return;
+    ran.current = true;
+    void (async () => {
+      let found: PublicProfile | undefined;
+      // Someone who just joined may take a moment to show up.
+      for (let i = 0; !found && i < 4; i++) {
+        if (i) await new Promise((r) => setTimeout(r, 1200));
+        found = (await findProfiles()).find((p) => p.username?.toLowerCase() === name.toLowerCase());
+      }
+      if (!found) return setState('missing');
+      if (found.id === together.me) return setState('self');
+      if (!friends.includes(found.id)) {
+        await setFriends([...friends, found.id]);
+        void sendFriendRequest(found.id, user?.username ?? '');
+      }
+      setState('done');
+    })().catch(() => setState('error'));
+  }, [together, friends, name, user]);
+
+  const guest = together === null;
+  const text = guest
+    ? t('home.guestBody')
+    : state === 'working'
+      ? t('together.inviteTitle')
+      : state === 'done'
+        ? t('together.inviteDone', { name })
+        : state === 'self'
+          ? t('together.inviteSelf')
+          : state === 'missing'
+            ? t('together.inviteNotFound', { name })
+            : t('together.cantAdd');
+  return (
+    <div className="panel mx-auto mt-6 flex max-w-md flex-col items-center gap-4 p-8 text-center" role="status">
+      <Lumo size={96} mood={state === 'done' ? 'cheer' : state === 'working' && !guest ? 'thinking' : 'happy'} />
+      <p className="text-lg font-black">{text}</p>
+      {guest ? (
+        <button type="button" onClick={() => void import('../netlify/Gate').then((m) => m.signOut())} className="btn-gold rounded-2xl px-5 py-3 font-black">
+          {t('gate.makeAccount')}
+        </button>
+      ) : (
+        state !== 'working' && (
+          <Link to="/friends" className="btn-gold rounded-2xl px-5 py-3 font-black">
+            {t('friends.title')}
+          </Link>
+        )
+      )}
     </div>
   );
 }

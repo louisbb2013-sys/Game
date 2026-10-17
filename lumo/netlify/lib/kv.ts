@@ -51,24 +51,54 @@ export interface BlobStoreLike {
   list(o: { prefix: string }): Promise<{ blobs: { key: string; etag: string }[] }>;
 }
 
+/** One quick retry for a store call that failed (a blip shouldn't sign anyone out or lose a save). */
+async function retry<T>(what: string, f: () => Promise<T>): Promise<T> {
+  try {
+    return await f();
+  } catch (first) {
+    await new Promise((r) => setTimeout(r, 150));
+    try {
+      return await f();
+    } catch (e) {
+      console.error(`lumo: store ${what} failed twice`, first, e);
+      throw e;
+    }
+  }
+}
+
 export function blobsKV(store: BlobStoreLike): KV {
   return {
     async get(key) {
-      const r = await store.getWithMetadata(key, { type: 'text' });
+      const r = await retry(`get ${key}`, () => store.getWithMetadata(key, { type: 'text' }));
       return r ? { value: r.data, etag: r.etag ?? '' } : null;
     },
     async etag(key) {
-      return (await store.getMetadata(key))?.etag ?? null;
+      return (await retry(`meta ${key}`, () => store.getMetadata(key)))?.etag ?? null;
     },
     async set(key, value, cond) {
-      const r = await store.set(key, value, cond?.ifMatch ? { onlyIfMatch: cond.ifMatch } : cond?.ifNew ? { onlyIfNew: true } : undefined);
+      const r = await retry(`set ${key}`, () => store.set(key, value, cond?.ifMatch ? { onlyIfMatch: cond.ifMatch } : cond?.ifNew ? { onlyIfNew: true } : undefined));
       return r ? r.modified !== false : true;
     },
     async del(key) {
-      await store.delete(key);
+      await retry(`delete ${key}`, () => store.delete(key));
     },
     async list(prefix) {
-      return (await store.list({ prefix })).blobs.map((b) => ({ key: b.key, etag: b.etag }));
+      return (await retry(`list ${prefix}`, () => store.list({ prefix }))).blobs.map((b) => ({ key: b.key, etag: b.etag }));
     },
+  };
+}
+
+/**
+ * A store opened fresh for every call. Netlify hands each request its own short-lived access to the
+ * store, so a store kept from an earlier request stops working after a while (warm functions live on
+ * between requests): always open it again.
+ */
+export function freshKV(open: () => KV): KV {
+  return {
+    get: (k) => open().get(k),
+    etag: (k) => open().etag(k),
+    set: (k, v, c) => open().set(k, v, c),
+    del: (k) => open().del(k),
+    list: (p) => open().list(p),
   };
 }

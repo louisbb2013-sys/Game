@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { SearchIcon, TextIcon, UploadIcon } from '../components/icons';
+import { CameraIcon, SearchIcon, TextIcon, UploadIcon } from '../components/icons';
+import { shrinkPhoto } from '../lib/files';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError, NETLIFY } from '../lib/api';
 import { claudeProblem, loadSession } from '../netlify/cloud';
@@ -22,12 +23,12 @@ export function NewDeck() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const incoming = useRef((location.state as { text?: string; source?: Source | 'file' } | null) ?? null);
+  const incoming = useRef((location.state as { text?: string; source?: Source | 'file'; files?: File[] } | null) ?? null);
   const [language, setLanguage] = useState<'en' | 'fr'>(i18n.language === 'fr' ? 'fr' : 'en');
   const [title, setTitle] = useState('');
   const [ai, setAi] = useState<boolean | null>(null);
   const [caps, setCaps] = useState<Awaited<ReturnType<typeof photoLimits>>>(null);
-  const [source, setSource] = useState<Source>('topic');
+  const [source, setSource] = useState<Source>('upload');
   const [topic, setTopic] = useState('');
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -45,9 +46,10 @@ export function NewDeck() {
       const asTopic = text && text.length < 160 && !text.includes('\n');
       // Trying the site without an account: stay on the topic tab, which says what an account adds.
       const fallback = ok || (NETLIFY && !loadSession()) ? null : 'notes';
-      if (inc?.source === 'file') setSource(fallback ?? 'upload');
+      if (inc?.source === 'file' || inc?.files?.length) setSource(fallback ?? 'upload');
       else if (inc?.source === 'notes' || (text && !asTopic)) setSource('notes');
       else if (fallback) setSource(fallback);
+      else if (text && asTopic) setSource('topic');
       if (text && asTopic) setTopic(text);
       else if (text) setNotes(text);
     });
@@ -61,8 +63,14 @@ export function NewDeck() {
     if (ai === null || started.current) return;
     started.current = true;
     const text = incoming.current?.text?.trim() ?? '';
+    const photos = incoming.current?.files ?? [];
     navigate(location.pathname, { replace: true, state: null }); // coming back here doesn't start again
-    if (ai && text && text.length < 160 && !text.includes('\n')) void run('topic', text);
+    if (ai && photos.length)
+      void addFiles(photos).then((ready) => {
+        if (ready.length) void run('upload', '', ready);
+      });
+    else if (photos.length) void addFiles(photos);
+    else if (ai && text && text.length < 160 && !text.includes('\n')) void run('topic', text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ai]);
 
@@ -83,7 +91,7 @@ export function NewDeck() {
     else setError(t(`local.photoErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
   };
 
-  const run = async (kind: Source, topicText = topic) => {
+  const run = async (kind: Source, topicText = topic, chosen = files) => {
     if (busy) return;
     setError(null);
     setBusy(kind);
@@ -95,8 +103,8 @@ export function NewDeck() {
         await finish(await deckFromTopic(topicText.trim(), language, signal));
       } else if (kind === 'upload') {
         // Text files are notes; PDFs and photos are read by Claude.
-        const text = (await Promise.all(files.filter((f) => TEXT_FILE.test(f.name)).map((f) => f.text()))).join('\n\n').trim();
-        const media = files.filter((f) => !TEXT_FILE.test(f.name));
+        const text = (await Promise.all(chosen.filter((f) => TEXT_FILE.test(f.name)).map((f) => f.text()))).join('\n\n').trim();
+        const media = chosen.filter((f) => !TEXT_FILE.test(f.name));
         if (media.length) await finish(await readPhotos(media, language, [focus, text.slice(0, 1500)].filter(Boolean).join('\n'), signal));
         else if (text) await finish(await deckFromNotes(text, language, signal));
         else throw new ReaderError('nothing_found');
@@ -122,23 +130,41 @@ export function NewDeck() {
   };
 
   const accept = [...(caps?.mediaTypes ?? []), '.txt', '.md', 'text/plain'].join(',');
-  const addFiles = (list: FileList | File[] | null) => {
-    if (!list) return;
-    const max = caps?.maxCount ?? 5;
-    const next = [...files, ...Array.from(list)].filter((f) => TEXT_FILE.test(f.name) || f.type.startsWith('text/') || (caps?.mediaTypes ?? []).includes(f.type)).slice(0, max);
-    const tooBig = next.find((f) => f.size > (caps?.maxInputBytes ?? 4_000_000) && !TEXT_FILE.test(f.name));
-    if (tooBig) setError(t('create.tooBig', { name: tooBig.name }));
-    else setError(null);
-    setFiles(next.filter((f) => f !== tooBig));
-    if (!title && next[0]) setTitle(next[0].name.replace(/\.[^.]+$/, '').slice(0, 120));
+  /** Add photos / files (photos are shrunk first); returns the new list. */
+  const filesRef = useRef<File[]>([]);
+  const addFiles = async (list: FileList | File[] | null): Promise<File[]> => {
+    if (!list) return filesRef.current;
+    const limits = caps ?? (await photoLimits());
+    const max = limits?.maxCount ?? 5;
+    const types = limits?.mediaTypes ?? [];
+    const picked = Array.from(list).filter((f) => TEXT_FILE.test(f.name) || f.type.startsWith('text/') || f.type.startsWith('image/') || types.includes(f.type));
+    const ready = await Promise.all(picked.map(shrinkPhoto));
+    const tooBig = ready.find((f) => f.size > (limits?.maxInputBytes ?? 4_000_000) && !TEXT_FILE.test(f.name));
+    setError(tooBig ? t('create.tooBig', { name: tooBig.name }) : null);
+    // Photos taken one after another all stay (each one is added to the latest list).
+    const next = [...filesRef.current, ...ready.filter((f) => f !== tooBig)].slice(0, max);
+    filesRef.current = next;
+    setFiles(next);
+    if (!title && next[0] && !next[0].type.startsWith('image/')) setTitle(next[0].name.replace(/\.[^.]+$/, '').slice(0, 120));
+    return next;
   };
+  const removeFile = (i: number) => {
+    filesRef.current = filesRef.current.filter((_, j) => j !== i);
+    setFiles(filesRef.current);
+  };
+  const [previews, setPreviews] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = files.map((f) => (f.type.startsWith('image/') ? URL.createObjectURL(f) : ''));
+    setPreviews(urls);
+    return () => urls.forEach((u) => u && URL.revokeObjectURL(u));
+  }, [files]);
 
   const example = language === 'fr' ? t('local.exampleFr') : t('local.exampleEn');
   const guest = NETLIFY && !loadSession();
 
   const tabs: { id: Source; icon: ReactNode; label: string }[] = [
+    { id: 'upload', icon: <CameraIcon size={18} />, label: t('create.tabs.upload') },
     { id: 'topic', icon: <SearchIcon size={18} />, label: t('create.tabs.topic') },
-    { id: 'upload', icon: <UploadIcon size={18} />, label: t('create.tabs.upload') },
     { id: 'notes', icon: <TextIcon size={18} />, label: t('create.tabs.notes') },
   ];
 
@@ -240,7 +266,7 @@ export function NewDeck() {
               onDrop={(e: DragEvent) => {
                 e.preventDefault();
                 e.currentTarget.removeAttribute('data-over');
-                addFiles(e.dataTransfer.files);
+                void addFiles(e.dataTransfer.files);
               }}
             >
               <span className="btn-gold grid size-14 place-items-center rounded-2xl">
@@ -248,18 +274,28 @@ export function NewDeck() {
               </span>
               <span className="font-display text-xl font-black">{t('create.dropTitle')}</span>
               <span className="text-sm text-muted">{t(caps?.mediaTypes?.includes('application/pdf') ? 'create.dropBodyPdf' : 'create.dropBody', { count: caps?.maxCount ?? 5 })}</span>
-              <input id="deck-photos" type="file" multiple accept={accept} className="sr-only" onChange={(e) => addFiles(e.target.files)} />
+              <input id="deck-photos" type="file" multiple accept={accept} className="sr-only" onChange={(e) => void addFiles(e.target.files).then(() => (e.target.value = ''))} />
+            </label>
+            <label className="btn-gold flex cursor-pointer items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-black">
+              <CameraIcon size={22} />
+              {files.length ? t('create.anotherPhoto') : t('create.takePhoto')}
+              <input id="deck-camera" type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => void addFiles(e.target.files).then(() => (e.target.value = ''))} />
             </label>
             {files.length > 0 && (
-              <ul className="space-y-2">
+              <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {files.map((f, i) => (
-                  <li key={`${f.name}-${i}`} className="panel flex items-center gap-3 px-4 py-2.5">
-                    <span className="text-xl" aria-hidden>
-                      {f.type === 'application/pdf' ? '📕' : f.type.startsWith('image/') ? '🖼️' : '📄'}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-bold">{f.name}</span>
-                    <span className="text-xs text-muted">{Math.max(1, Math.round(f.size / 1024))} KB</span>
-                    <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label={t('create.remove', { name: f.name })} className="rounded-lg px-2 py-1 text-muted hover:text-bad">
+                  <li key={`${f.name}-${i}`} className="panel relative aspect-[3/4] overflow-hidden p-0">
+                    {previews[i] ? (
+                      <img src={previews[i]} alt={t('local.photoAlt', { n: i + 1 })} className="size-full object-cover" />
+                    ) : (
+                      <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center">
+                        <span className="text-3xl" aria-hidden>
+                          {f.type === 'application/pdf' ? '📕' : '📄'}
+                        </span>
+                        <span className="line-clamp-2 text-xs font-bold break-all">{f.name}</span>
+                      </span>
+                    )}
+                    <button type="button" onClick={() => removeFile(i)} aria-label={t('create.remove', { name: f.name })} className="absolute top-1.5 right-1.5 grid size-7 place-items-center rounded-full bg-black/60 text-sm font-black text-white">
                       ✕
                     </button>
                   </li>

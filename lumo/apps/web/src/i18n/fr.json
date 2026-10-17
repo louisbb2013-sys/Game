@@ -35,7 +35,7 @@
       "invalid_code": "Entre les 6 chiffres du courriel.",
       "google": "La connexion Google n'a pas marché. Réessaie.",
       "state": "La connexion a expiré. Réessaie.",
-      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+      "network": "Un problème est survenu. Vérifie ta connexion et réessaie."
     },
     "guest": "Essayer Lumo — sans compte",
     "guestHint": "Pas d’e-mail, pas de nom. Reviens sur cet appareil pour garder tes progrès."
@@ -85,7 +85,8 @@
     "friendsTitle": "Amis",
     "friendsBody": "Ajoute tes amis avec leur nom Lumo et vois qui étudie.",
     "guestTitle": "Tu essaies Lumo sans compte.",
-    "guestBody": "Ta progression reste sur cet appareil. Crée un compte gratuit pour utiliser l’IA, jouer avec tes amis et tout retrouver sur n’importe quel appareil."
+    "guestBody": "Ta progression reste sur cet appareil. Crée un compte gratuit pour utiliser l’IA, jouer avec tes amis et tout retrouver sur n’importe quel appareil.",
+    "takePhoto": "Prendre une photo"
   },
   "stats": {
     "streak": "Jours de suite",
@@ -1100,7 +1101,7 @@
     "sharedBy_one": "par {{name}} · {{count}} notion",
     "sharedBy_other": "par {{name}} · {{count}} notions",
     "playLiveWith": "Jouer {{deck}} en Live",
-    "addToMine": "Ajouter",
+    "addToMine": "Ajouter à mes paquets",
     "shareDeck": "Partager avec mes amis",
     "shareDeckBody": "Tous ceux avec qui tu as partagé cette page Lumo peuvent le copier et y jouer en Live.",
     "nowPublic": "Tes amis voient ce paquet maintenant.",
@@ -1129,7 +1130,19 @@
     "readOnlyBody": "Tu as ouvert un lien partagé depuis le compte Claude de quelqu’un d’autre : Claude n’enregistre donc pas tes amis ni ton profil ici. Demande au propriétaire de t’inviter par courriel comme Éditeur (menu Partager, lien public désactivé), ou utilise le site Web de Lumo : les amis y fonctionnent pour tout le monde.",
     "noFriendsOnline": "Aucun de tes amis n’est sur Lumo en ce moment.",
     "howToInviteSite": "Seuls les amis que tu ajoutes peuvent te voir, voir tes paquets et tes parties. Donne ton nom Lumo à tes camarades pour qu’ils t’ajoutent.",
-    "shareDeckBodySite": "Tes amis peuvent le copier et y jouer en Live avec toi."
+    "shareDeckBodySite": "Tes amis peuvent le copier et y jouer en Live avec toi.",
+    "requests": "Demandes d’amis ({{count}})",
+    "addedYou": "t’a ajouté comme ami",
+    "accept": "Ajouter aussi",
+    "decline": "Ignorer {{name}}",
+    "addedSite": "{{name}} est maintenant ton ami! Il recevra une demande pour t’ajouter aussi.",
+    "inviteBody": "Envoie ton lien d’invitation : les amis qui l’ouvrent sont ajoutés tout de suite.",
+    "inviteButton": "Inviter des amis",
+    "inviteText": "Étudie avec moi sur Lumo! Mon nom Lumo est {{name}}.",
+    "inviteTitle": "J’ajoute ton ami…",
+    "inviteDone": "{{name}} est maintenant ton ami!",
+    "inviteSelf": "C’est ton propre lien d’invitation. Envoie-le à un ami!",
+    "inviteNotFound": "Personne ne s’appelle « {{name}} » sur Lumo. Vérifie le nom et réessaie."
   },
   "egg": {
     "title": "Œuf {{rarity}}",
@@ -1386,7 +1399,7 @@
     "from": "À partir de",
     "tabs": {
       "topic": "Sujet",
-      "upload": "Téléverser",
+      "upload": "Photo / PDF",
       "notes": "Coller des notes"
     },
     "examples": [
@@ -1438,6 +1451,9 @@
       "budget": "L’IA de Lumo a utilisé toute l’allocation gratuite du mois sur ce site. Colle tes notes à la place, ou demande au propriétaire du site d’ajouter une clé Anthropic.",
       "not_configured": "Claude n’est pas encore configuré sur ce site. Colle tes notes à la place."
     },
-    "readFiles": "Lire mes fichiers"
+    "readFiles": "Lire mes fichiers",
+    "takePhoto": "Prends une photo de tes notes",
+    "anotherPhoto": "Ajouter une autre page",
+    "photoTab": "Photo"
   }
 }

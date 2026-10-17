@@ -55,13 +55,27 @@ export function onSignedOut(f: () => void) {
   signedOutHandler = f;
 }
 
-async function post<T>(path: string, body: unknown, token?: string): Promise<T> {
-  let res: Response;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function once(path: string, body: unknown, token?: string): Promise<Response | null> {
   try {
-    res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
+    return await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
   } catch {
-    throw new CloudError('network');
+    return null; // offline or the connection dropped
   }
+}
+
+/**
+ * One call to the site. A blip (no connection, the site busy for a moment, a sign-in it couldn't check
+ * just then) is tried again before giving up; only a sign-in the site refuses twice signs you out.
+ */
+async function post<T>(path: string, body: unknown, token?: string): Promise<T> {
+  let res = await once(path, body, token);
+  for (let attempt = 1; attempt <= 2 && (!res || res.status === 503 || res.status === 502 || (res.status === 401 && token)); attempt++) {
+    await wait(attempt * 900);
+    res = await once(path, body, token);
+  }
+  if (!res) throw new CloudError('network');
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
     if (res.status === 401 && token) signedOutHandler?.();
@@ -390,8 +404,9 @@ function makeSample(s: SessionInfo) {
     }
     if (res.status === 429) throw Object.assign(new Error('rate_limited'), { code: 'rate_limited' });
     if (res.status === 402 || res.status === 503) {
-      aiProblem = res.status === 402 ? 'budget' : 'not_configured';
-      throw Object.assign(new Error(aiProblem), { code: 'unavailable' });
+      const why = String(((await res.json().catch(() => ({}))) as { error?: string }).error ?? '');
+      aiProblem = res.status === 402 ? 'budget' : why === 'not_configured' ? 'not_configured' : null;
+      throw Object.assign(new Error(why || 'unavailable'), { code: aiProblem ? 'unavailable' : 'upstream_error' });
     }
     if (!res.ok || !res.body) throw Object.assign(new Error('upstream'), { code: 'upstream_error' });
     let read: { text: string; stopReason: string | null };

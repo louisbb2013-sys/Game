@@ -28,46 +28,75 @@ const b64url = (bytes: Uint8Array) => {
 };
 const fromB64url = (s: string) => {
   const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4));
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0)) as Uint8Array<ArrayBuffer>;
 };
 export const randomId = (bytes = 9) => b64url(crypto.getRandomValues(new Uint8Array(bytes)));
 
-let cached: { secret: string; key: CryptoKey } | null = null;
-
-async function hmacKey(kv: KV, env: (k: string) => string | undefined): Promise<CryptoKey> {
-  let secret = env('LUMO_SECRET') ?? '';
-  if (secret.length < 16) {
-    let stored = await kv.get(SECRET_KEY);
-    if (!stored) {
-      await kv.set(SECRET_KEY, JSON.stringify({ s: randomId(48) }), { ifNew: true });
-      stored = await kv.get(SECRET_KEY);
-    }
-    secret = (JSON.parse(stored!.value) as { s: string }).s;
+const keys = new Map<string, CryptoKey>();
+async function keyFor(secret: string): Promise<CryptoKey> {
+  let k = keys.get(secret);
+  if (!k) {
+    k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+    keys.set(secret, k);
   }
-  if (cached?.secret === secret) return cached.key;
-  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
-  cached = { secret, key };
-  return key;
+  return k;
 }
 
-export async function signSession(kv: KV, env: (k: string) => string | undefined, s: Omit<Session, 'exp'>, now = Date.now()): Promise<string> {
+type Env = (k: string) => string | undefined;
+const envSecret = (env: Env) => {
+  const s = env('LUMO_SECRET') ?? '';
+  return s.length >= 16 ? s : null;
+};
+
+/** The secret kept in the site's store (made the first time it's needed). Throws if the store can't be reached. */
+let stored: string | null = null;
+async function storedSecret(kv: KV): Promise<string> {
+  if (stored) return stored;
+  let v = await kv.get(SECRET_KEY);
+  if (!v) {
+    await kv.set(SECRET_KEY, JSON.stringify({ s: randomId(48) }), { ifNew: true });
+    v = await kv.get(SECRET_KEY);
+  }
+  if (!v) throw new Error('secret_unavailable');
+  stored = (JSON.parse(v.value) as { s: string }).s;
+  return stored;
+}
+
+export async function signSession(kv: KV, env: Env, s: Omit<Session, 'exp'>, now = Date.now()): Promise<string> {
   const body = b64url(enc.encode(JSON.stringify({ ...s, exp: now + SESSION_DAYS * DAY })));
-  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', await hmacKey(kv, env), enc.encode(body)));
+  const secret = envSecret(env) ?? (await storedSecret(kv));
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', await keyFor(secret), enc.encode(body)));
   return `${body}.${b64url(sig)}`;
 }
 
-export async function verifySession(kv: KV, env: (k: string) => string | undefined, token: string | null | undefined, now = Date.now()): Promise<Session | null> {
+/**
+ * Who this token belongs to; null when it isn't a valid sign-in; 'unavailable' when it can't be
+ * checked right now (the store didn't answer), so the page retries instead of signing the learner out.
+ */
+export async function verifySession(kv: KV, env: Env, token: string | null | undefined, now = Date.now()): Promise<Session | null | 'unavailable'> {
   if (!token || token.length > 2000) return null;
   const [body, sig] = token.split('.');
   if (!body || !sig) return null;
+  let s: Session;
+  let mac: Uint8Array<ArrayBuffer>;
   try {
-    const ok = await crypto.subtle.verify('HMAC', await hmacKey(kv, env), fromB64url(sig), enc.encode(body));
-    if (!ok) return null;
-    const s = JSON.parse(new TextDecoder().decode(fromB64url(body))) as Session;
-    if (typeof s.u !== 'string' || typeof s.exp !== 'number' || s.exp < now) return null;
-    return s;
+    s = JSON.parse(new TextDecoder().decode(fromB64url(body))) as Session;
+    mac = fromB64url(sig);
   } catch {
     return null;
+  }
+  if (typeof s.u !== 'string' || typeof s.exp !== 'number' || s.exp < now) return null;
+  const data = enc.encode(body);
+  const fromEnv = envSecret(env);
+  if (fromEnv && (await crypto.subtle.verify('HMAC', await keyFor(fromEnv), mac, data))) return s;
+  // Signed with the store's own secret (sign-ins from before LUMO_SECRET was set, or none is set).
+  try {
+    const st = await storedSecret(kv);
+    if (st !== fromEnv && (await crypto.subtle.verify('HMAC', await keyFor(st), mac, data))) return s;
+    return null;
+  } catch (e) {
+    console.error('lumo: sign-in check could not read the store', e);
+    return 'unavailable';
   }
 }
 

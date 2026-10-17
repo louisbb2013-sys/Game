@@ -103,10 +103,13 @@ export function makeAuthHandler(deps: AuthDeps) {
     const key = `a/g/${id}`;
     let got = await kv.get(key);
     if (!got) {
-      await kv.set(key, JSON.stringify({ uid: `u${randomId(12)}`, created: now() }), { ifNew: true });
+      const fresh = { uid: `u${randomId(12)}`, created: now() };
+      // Someone else (another tab) may have made it a moment ago: then use theirs.
+      if (await kv.set(key, JSON.stringify(fresh), { ifNew: true })) return issue({ u: fresh.uid, n: '', k: 'g' });
       got = await kv.get(key);
+      if (!got) throw new Error('google account record missing after create');
     }
-    const rec = JSON.parse(got!.value) as { uid: string };
+    const rec = JSON.parse(got.value) as { uid: string };
     return issue({ u: rec.uid, n: '', k: 'g' });
   }
 
@@ -125,7 +128,8 @@ export function makeAuthHandler(deps: AuthDeps) {
       if (url.pathname.endsWith('/login')) return await login(b, ip);
       if (url.pathname.endsWith('/google')) return await google(b, url.origin);
       return json(404, { error: 'not_found' });
-    } catch {
+    } catch (e) {
+      console.error('lumo: sign-in failed', url.pathname, e);
       return json(503, { error: 'unavailable' });
     }
   };

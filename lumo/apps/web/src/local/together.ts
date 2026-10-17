@@ -1,4 +1,4 @@
-import type { Concept, Locale } from '@lumo/core';
+import type { Concept, Locale, Question } from '@lumo/core';
 import { useEffect, useState } from 'react';
 
 /**
@@ -250,6 +250,52 @@ export async function setFriends(ids: string[]) {
     });
 }
 
+// ------------------------------------------------------------------ friend requests (website)
+
+export interface FriendRequest {
+  id: string;
+  name: string;
+  at: number;
+}
+
+/** Tell someone I added them, so they can add me back with one tap (website only). */
+export async function sendFriendRequest(to: string, myName: string) {
+  if (!FRIENDS_ONLY) return;
+  const t = await together();
+  if (!t || to === t.me) return;
+  await t.db.doc(`inbox/${to}/req/${t.me}`).set({ name: myName.slice(0, 40), at: Date.now() }).catch(() => {});
+}
+
+/** People who added me (website only), live. */
+export function useFriendRequests() {
+  const [list, setList] = useState<FriendRequest[]>([]);
+  useEffect(() => {
+    if (!FRIENDS_ONLY) return;
+    let unsub: (() => void) | null = null;
+    let alive = true;
+    void together().then((t) => {
+      if (!t || !alive) return;
+      unsub = t.db.collection(`inbox/${t.me}/req`).onSnapshot(
+        (snap: Any) => setList(snap.docs.map((d: Any) => ({ id: d.id, name: String(plain(d.data())?.name ?? ''), at: Number(plain(d.data())?.at ?? 0) }))),
+        () => {},
+      );
+    });
+    return () => {
+      alive = false;
+      unsub?.();
+    };
+  }, []);
+  return list;
+}
+
+/** Accept (add them back) or decline a friend request; either way it's cleared. */
+export async function answerFriendRequest(from: string, accept: boolean, friends: string[]) {
+  const t = await together();
+  if (!t) return;
+  if (accept && !friends.includes(from)) await setFriends([...friends, from]);
+  await t.db.doc(`inbox/${t.me}/req/${from}`).delete().catch(() => {});
+}
+
 // ------------------------------------------------------------------ public decks
 
 export interface PublicDeck {
@@ -258,15 +304,23 @@ export interface PublicDeck {
   subject: string;
   language: Locale;
   concepts: Concept[];
+  /** The deck's test questions, so a friend's copy plays right away. */
+  bank?: Question[];
   updatedAt: number;
 }
 
 export async function setPublicDecks(decks: PublicDeck[]) {
   const t = await together();
   if (!t?.canWrite) throw new Error('read_only');
-  // One document per learner, kept under the store's size limit.
+  // One document per learner, kept under the store's size limit: older decks lose their questions
+  // first (friends' copies then get new ones written), then the oldest decks go.
   let list = decks.slice(0, 20);
-  while (list.length > 1 && JSON.stringify(list).length > 230_000) list = list.slice(0, -1);
+  while (JSON.stringify(list).length > 230_000) {
+    const i = list.map((d) => !!d.bank?.length).lastIndexOf(true);
+    if (i >= 0) list = list.map((d, j) => (j === i ? { ...d, bank: undefined } : d));
+    else if (list.length > 1) list = list.slice(0, -1);
+    else break;
+  }
   await t.db
     .doc(`decks/${t.me}`)
     .set({ decks: list, updatedAt: Date.now() })

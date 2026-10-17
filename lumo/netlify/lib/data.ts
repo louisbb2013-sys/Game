@@ -8,6 +8,7 @@ import { bearer, json, limiter, verifySession, type Session } from './session.ts
  *
  *   profiles/<id>, decks/<id>, games/<id>   everyone signed in reads; only <id> writes
  *   data/users/<id>/<doc>                    only <id> reads or writes (their progress, decks, friends)
+ *   inbox/<id>/req/<from>                    a friend request: <from> sends it, <id> reads it; either removes it
  *   rooms                                    everyone signed in; each learner writes only their own presence
  *
  * Pages ask "has this changed?" with the version they last saw, so a check that finds nothing new
@@ -36,14 +37,19 @@ const segsOf = (path: unknown): string[] | null => {
   return s.every((x) => SEG.test(x) && x !== '.' && x !== '..') ? s : null;
 };
 
-/** Who may read/write this document. */
-function docAccess(s: string[], me: string): { read: boolean; write: boolean } {
-  if (s.length === 2 && PUBLIC.has(s[0]!)) return { read: true, write: s[1] === me };
-  if (s.length === 4 && s[0] === 'data' && s[1] === 'users') return { read: s[2] === me, write: s[2] === me };
-  return { read: false, write: false };
+/** Who may read, write or remove this document. */
+function docAccess(s: string[], me: string): { read: boolean; write: boolean; remove: boolean } {
+  if (s.length === 2 && PUBLIC.has(s[0]!)) return { read: true, write: s[1] === me, remove: s[1] === me };
+  if (s.length === 4 && s[0] === 'data' && s[1] === 'users') return { read: s[2] === me, write: s[2] === me, remove: s[2] === me };
+  if (s.length === 4 && s[0] === 'inbox' && s[2] === 'req') {
+    const [, to, , from] = s;
+    return { read: to === me || from === me, write: from === me && to !== me, remove: to === me || from === me };
+  }
+  return { read: false, write: false, remove: false };
 }
 function collAccess(s: string[], me: string): boolean {
   if (s.length === 1) return PUBLIC.has(s[0]!);
+  if (s.length === 3 && s[0] === 'inbox' && s[2] === 'req') return s[1] === me;
   return s.length === 3 && s[0] === 'data' && s[1] === 'users' && s[2] === me;
 }
 
@@ -146,11 +152,12 @@ export function makeDataHandler(deps: DataDeps) {
       const v = await kv.get(key);
       return json(200, v ? { exists: true, data: parse(v.value) ?? {}, etag: v.etag } : { exists: false, etag: '' });
     }
-    if (!access.write) return json(403, { error: 'denied' });
     if (op === 'delete') {
+      if (!access.remove) return json(403, { error: 'denied' });
       await kv.del(key);
       return json(200, { ok: true });
     }
+    if (!access.write) return json(403, { error: 'denied' });
     const data = body.data;
     if (!data || typeof data !== 'object' || Array.isArray(data)) return json(400, { error: 'bad_request' });
     if (op === 'set') {
@@ -210,11 +217,13 @@ export function makeDataHandler(deps: DataDeps) {
     }
     // A page closing sends its goodbye with the token in the body (it can't set headers then).
     const me = await verifySession(kv, env, bearer(req) ?? (typeof body.token === 'string' ? body.token : null), now());
+    if (me === 'unavailable') return json(503, { error: 'unavailable' });
     if (!me) return json(401, { error: 'signed_out' });
     if (!allow(me.u, now())) return json(429, { error: 'rate_limited' });
     try {
       return new URL(req.url).pathname.endsWith('/room') ? await room(body, me) : await db(body, me);
-    } catch {
+    } catch (e) {
+      console.error('lumo: data request failed', body.op, body.path ?? body.coll ?? body.room, e);
       return json(503, { error: 'unavailable' });
     }
   };

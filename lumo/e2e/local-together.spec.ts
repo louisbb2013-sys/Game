@@ -42,7 +42,7 @@ test('friends, a shared deck and a two-player Live game on the website', async (
   await b.screenshot({ path: 'e2e/screens/web-friends.png', fullPage: true });
   await b.getByRole('link', { name: 'Learn', exact: true }).click();
   await expect(b.getByText('Cells — the basics').first()).toBeVisible();
-  await b.getByRole('button', { name: 'Add' }).first().click();
+  await b.getByRole('button', { name: 'Add to my decks' }).first().click();
   await expect(b.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
 
   // Alice hosts a Live game; Bruno joins from "Games now".
@@ -309,6 +309,7 @@ test('website: a deck from just a topic (Claude researches it)', async ({ browse
   await a.goto(`${process.env.MULTI_URL}?uid=u_h&sample=ok`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('tab', { name: 'Topic' }).click();
   await a.getByLabel('Just type a topic').fill('récit psychologique français secondaire 2');
   await a.getByLabel('Just type a topic').press('Enter');
   await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });
@@ -333,6 +334,7 @@ test('website: Claude writes real test questions for a new deck, line by line, a
   await a.goto(url);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('tab', { name: 'Topic' }).click();
   await a.getByLabel('Just type a topic').fill('récit psychologique secondaire 2');
   await a.getByLabel('Just type a topic').press('Enter');
   await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });

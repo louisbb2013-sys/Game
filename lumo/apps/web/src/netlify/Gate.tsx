@@ -86,8 +86,8 @@ export function Gate({ children }: { children: ReactNode }) {
       setBusy(true);
       googleSignIn(back.token)
         .then((s) => enter(s, true))
-        .catch(() => {
-          setError(t('gate.errors.google'));
+        .catch((e: unknown) => {
+          setError(`${t('gate.errors.google')} (${e instanceof CloudError ? e.code : 'network'})`);
           setBusy(false);
         });
     } else if (back) setError(t('gate.errors.google'));
@@ -123,7 +123,8 @@ export function Gate({ children }: { children: ReactNode }) {
       enter(s, mode === 'signup');
     } catch (e) {
       const code = e instanceof CloudError ? e.code : 'network';
-      setError(t(`gate.errors.${code}`, { defaultValue: t('gate.errors.network') }));
+      // The short code helps when someone reports a problem.
+      setError(`${t(`gate.errors.${code}`, { defaultValue: t('gate.errors.network') })} (${code})`);
       setBusy(false);
     }
   };

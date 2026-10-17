@@ -4,7 +4,7 @@ Your Lumo website: **https://lumo-study-qwd6.netlify.app**
 
 It works the moment it's deployed, with nothing else to set up:
 - **Accounts:** a Lumo name + password, so progress, decks and pets follow you to any phone or computer. People can also try it without an account (saved on that device only).
-- **Friends:** add each other by Lumo name, share decks, see who's online, play Live. On the website you only ever see the friends you added: no list of strangers.
+- **Friends:** add each other by Lumo name or with an invite link (`/add/<name>`); the other person gets a friend request to add you back. Share decks (their questions come along, so a friend's copy plays right away), see who's online, play Live. On the website you only ever see the friends you added: no list of strangers.
 - **AI:** Claude makes decks from a topic, a PDF, photos or notes, and writes the questions. With nothing set up it goes through Netlify's AI Gateway, paid from the site's free monthly credits (see below).
 
 Everything is kept in the site's own Netlify storage (Netlify Blobs). No Firebase or other account needed.
@@ -19,9 +19,9 @@ Everything is kept in the site's own Netlify storage (Netlify Blobs). No Firebas
 
 ## AI: free allowance or your own key
 
-- **Free (default):** Claude runs through Netlify's AI Gateway and uses the site's credits. A free Netlify site has **300 credits a month** and **pauses if they run out**, so Lumo stops using AI for the month after **$0.75** of AI (about 135 credits). Change that with the `LUMO_AI_MONTHLY_USD` environment variable.
+- **Free (default):** Claude runs through Netlify's AI Gateway and uses the site's credits. A free Netlify site has **300 credits a month** and **pauses if they run out**, so Lumo stops using AI for the month once `LUMO_AI_MONTHLY_USD` has been spent (default $0.75; this site is set to **$1.10**, about 200 credits).
 - **Unlimited:** an adult creates a key at <https://console.anthropic.com> (pay as you go) and adds it in Netlify: **Project configuration → Environment variables → Add a variable**, key `ANTHROPIC_API_KEY`, marked **secret**. Lumo then uses that key and the monthly cap no longer applies. Never paste the key in a chat.
-- **Model:** `CLAUDE_MODEL` (default `claude-opus-5-5`, the best questions). `claude-haiku-5-5` costs about 40 times less, so the free allowance makes many more decks.
+- **Model:** `CLAUDE_MODEL`. This site uses **`claude-haiku-5-5`** (about 40 times cheaper: roughly 150 decks a month on the free allowance). Without the variable it's `claude-opus-5-5` (the best questions, but only a few decks a month for free).
 
 ## Credits and deploys
 

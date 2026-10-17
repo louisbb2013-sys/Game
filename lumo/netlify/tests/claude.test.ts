@@ -55,7 +55,7 @@ describe('/api/claude edge function', () => {
 
   it('refuses anyone not signed in to this site', async () => {
     const { post, sent } = await setup();
-    const other = await setup();
+    const other = await setup({ ANTHROPIC_API_KEY: 'sk-test', LUMO_SECRET: 'another-site-secret-0123456789' });
     expect((await post('nope', { input: 'hi' })).status).toBe(401);
     expect((await post(await other.token('u3'), { input: 'hi' })).status).toBe(401); // signed by another site
     expect(sent).toHaveLength(0);
@@ -87,6 +87,33 @@ describe('/api/claude edge function', () => {
     expect(over.status).toBe(402);
     expect(await over.json()).toEqual({ error: 'budget' });
     expect(sent).toHaveLength(3);
+  });
+
+  it('with Haiku: the basic web search, no refusal fallback, and no research if the search is refused', async () => {
+    const { token, post, sent } = await setup({ ANTHROPIC_API_KEY: 'sk-test', CLAUDE_MODEL: 'claude-haiku-5-5' });
+    await (await post(await token('u6'), { input: 'volcanoes', research: true })).text();
+    expect(sent[0]!.body.model).toBe('claude-haiku-5-5');
+    expect(sent[0]!.body.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }]);
+    expect(sent[0]!.body.fallbacks).toBeUndefined();
+    expect(sent[0]!.beta).toBeNull();
+  });
+
+  it('builds the deck without research when the web search is refused', async () => {
+    const kv = memoryKV();
+    const env = (k: string) => ({ ANTHROPIC_API_KEY: 'sk-test', CLAUDE_MODEL: 'claude-haiku-5-5' })[k];
+    const bodies: Record<string, unknown>[] = [];
+    const fetchMock = (async (_url: unknown, init?: RequestInit) => {
+      const b = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      bodies.push(b);
+      if (b.tools) return Response.json({ type: 'error', error: { type: 'invalid_request_error', message: 'tool not supported' } }, { status: 400 });
+      return new Response(sse(), { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    }) as typeof fetch;
+    const handler = makeHandler({ env, kv, fetch: fetchMock });
+    const token = await signSession(kv, env, { u: 'u7', n: 'x', k: 'pw' });
+    const res = await handler(new Request('https://lumo.example/api/claude', { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ input: 'volcanoes', research: true }) }));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('text_delta');
+    expect(bodies.map((b) => !!b.tools)).toEqual([true, false]);
   });
 
   it('limits how fast one account can call it', async () => {

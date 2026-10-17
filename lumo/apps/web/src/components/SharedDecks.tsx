@@ -1,4 +1,4 @@
-import type { Concept, Locale } from '@lumo/core';
+import type { Concept, Locale, Question } from '@lumo/core';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -19,7 +19,8 @@ export function SharedDecks() {
   const copy = async (d: (typeof others)[number], thenLive: boolean) => {
     setBusy(d.id);
     try {
-      const { id } = await api<{ id: string }>('/api/local/decks', { method: 'POST', body: { title: d.title, subject: d.subject, language: d.language, concepts: d.concepts.map(({ id: _id, ...c }) => c) } });
+      // The copy keeps the friend's questions, so it plays right away.
+      const { id } = await api<{ id: string }>('/api/local/decks/import', { method: 'POST', body: { title: d.title, subject: d.subject, language: d.language, concepts: d.concepts, bank: d.bank ?? [] } });
       navigate(thenLive ? `/live?deck=${id}` : `/decks/${id}`);
     } finally {
       setBusy(null);
@@ -69,8 +70,8 @@ export function ShareDeckToggle({ deckId }: { deckId: string }) {
     try {
       const list = (await myPublicDecks()).filter((d) => d.id !== deckId);
       if (!shared) {
-        const d = await api<{ deck: { id: string; title: string; subject: string; language: Locale }; concepts: Concept[] }>(`/api/decks/${deckId}/offline`);
-        list.unshift({ ...d.deck, concepts: d.concepts, updatedAt: Date.now() });
+        const d = await api<{ deck: { id: string; title: string; subject: string; language: Locale }; concepts: Concept[]; bank?: Question[] }>(`/api/decks/${deckId}/offline`);
+        list.unshift({ ...d.deck, concepts: d.concepts, bank: d.bank ?? [], updatedAt: Date.now() });
       }
       await setPublicDecks(list);
       setShared(!shared);

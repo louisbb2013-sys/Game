@@ -41,6 +41,7 @@ const Progress = lazy(() => import('./pages/Progress').then((m) => ({ default: m
 const Router = LOCAL && !NETLIFY ? MemoryRouter : BrowserRouter;
 const NewDeck = lazy(() => import('./pages/NewDeck').then((m) => ({ default: m.NewDeck })));
 const LocalFriends = lazy(() => import('./pages/LocalFriends').then((m) => ({ default: m.LocalFriends })));
+const LocalAddFriend = lazy(() => import('./pages/LocalFriends').then((m) => ({ default: m.LocalAddFriend })));
 
 export function App() {
   return (
@@ -99,7 +100,7 @@ function AppRoutes() {
             <Route path="sandbox/play/:id" element={<SandboxPlay />} />
             <Route path="live" element={<LiveHome />} />
             <Route path="friends" element={LOCAL ? <LocalFriends /> : <Friends />} />
-            <Route path="add/:code" element={<AddFriend />} />
+            <Route path="add/:code" element={LOCAL ? <LocalAddFriend /> : <AddFriend />} />
             <Route path="groups" element={<Groups />} />
             <Route path="groups/join/:code" element={<JoinGroup />} />
             <Route path="groups/:id" element={<Group />} />

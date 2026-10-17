@@ -1406,6 +1406,33 @@ const routes: [string, RegExp, Handler][] = [
   ],
   [
     'POST',
+    /^\/api\/local\/decks\/import$/,
+    (_m, b) => {
+      // A friend's shared deck: its ideas and its questions, so it plays right away (no Claude needed).
+      const src = Array.isArray(b.concepts) ? (b.concepts as Concept[]) : [];
+      if (src.length === 0) throw new LocalError(422, 'nothing_found');
+      const made = createDeck({
+        title: String(b.title || 'Shared deck').slice(0, 120),
+        subject: String(b.subject ?? ''),
+        language: b.language === 'fr' ? 'fr' : 'en',
+        summary: String(b.summary ?? ''),
+        concepts: src.map(({ id: _id, ...c }) => c),
+      });
+      const dk = deck(made.id);
+      const ids = new Map(src.map((c, i) => [c.id, dk.concepts[i]!.id]));
+      const bank = (Array.isArray(b.bank) ? (b.bank as Question[]) : []).flatMap((q) => {
+        const id = q && typeof q === 'object' ? ids.get(q.conceptId) : undefined;
+        return id && typeof q.prompt === 'string' && typeof q.variantKey === 'string' ? [{ ...q, conceptId: id }] : [];
+      });
+      if (bank.length) {
+        dk.bank = bank;
+        dk.bankAt = now();
+      }
+      return made;
+    },
+  ],
+  [
+    'POST',
     /^\/api\/local\/decks$/,
     (_m, b) => {
       // A draft already cleaned by the photo reader.

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { TodayPlans } from '../components/TodayPlans';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
-import { CoinIcon, FlameIcon, HeartIcon, TextIcon, UploadIcon } from '../components/icons';
+import { CameraIcon, CoinIcon, FlameIcon, HeartIcon, TextIcon, UploadIcon } from '../components/icons';
 import { DeckCard } from '../components/DeckCard';
 import { loadSession } from '../netlify/cloud';
 import { Lumo, type LumoMood } from '../components/Lumo';
@@ -91,7 +91,7 @@ function QuickCreate() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [text, setText] = useState('');
-  const go = (state: { text?: string; source?: 'file' | 'notes' | 'topic' }) => navigate('/chat', { state });
+  const go = (state: { text?: string; source?: 'file' | 'notes' | 'topic'; files?: File[] }) => navigate('/chat', { state });
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (text.trim()) go({ text: text.trim() });
@@ -121,10 +121,17 @@ function QuickCreate() {
         </button>
       </form>
       <div className="relative mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => go({ source: 'file' })} className={chip}>
+        {/* Straight to the camera (on a phone) or the file picker: the deck starts building as soon as a photo is chosen. */}
+        <label className="btn-gold flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-black">
+          <CameraIcon size={17} />
+          {t('home.takePhoto')}
+          <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => e.target.files?.length && go({ files: Array.from(e.target.files) })} />
+        </label>
+        <label className={`${chip} cursor-pointer`}>
           <UploadIcon size={17} />
           {t('home.fromFile')}
-        </button>
+          <input type="file" multiple accept="image/*,application/pdf,.txt,.md,text/plain" className="sr-only" onChange={(e) => e.target.files?.length && go({ files: Array.from(e.target.files) })} />
+        </label>
         <button type="button" onClick={() => go({ source: 'notes' })} className={chip}>
           <TextIcon size={17} />
           {t('home.fromNotes')}

@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getStore } from '@netlify/blobs';
-import { blobsKV, type KV } from '../lib/kv.ts';
+import { blobsKV, freshKV, type KV } from '../lib/kv.ts';
 import { bearer, json, limiter, verifySession } from '../lib/session.ts';
 
 /**
@@ -98,6 +98,7 @@ export function makeHandler(deps: Deps) {
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
     const now = (deps.now ?? Date.now)();
     const me = await verifySession(deps.kv, deps.env, bearer(req), now);
+    if (me === 'unavailable') return json(503, { error: 'unavailable' });
     if (!me) return json(401, { error: 'signed_out' });
     const apiKey = deps.env('ANTHROPIC_API_KEY');
     if (!apiKey) return json(503, { error: 'not_configured' });
@@ -111,7 +112,7 @@ export function makeHandler(deps: Deps) {
     }
     const gateway = !!baseURL && !/(^|\.)anthropic\.com$/.test(host);
     const budget = Number(deps.env('LUMO_AI_MONTHLY_USD') ?? (gateway ? '0.75' : 'Infinity'));
-    if (Number.isFinite(budget) && (await spent(deps.kv, now)) >= budget) return json(402, { error: 'budget' });
+    if (Number.isFinite(budget) && (await spent(deps.kv, now).catch(() => 0)) >= budget) return json(402, { error: 'budget' });
     if (!allow(me.u, now)) return json(429, { error: 'rate_limited' });
 
     let body: { input?: unknown; images?: unknown; tier?: unknown; research?: unknown };
@@ -132,6 +133,8 @@ export function makeHandler(deps: Deps) {
     const model = deps.env('CLAUDE_MODEL') || 'claude-opus-5-5';
 
     const client = new Anthropic({ apiKey, baseURL, maxRetries: 1, ...(deps.fetch ? { fetch: deps.fetch } : {}) });
+    // Haiku has the basic web search and no server-side refusal fallback; the newer models have both.
+    const haiku = /haiku/.test(model);
     const params = {
       model,
       max_tokens: 16000,
@@ -139,13 +142,27 @@ export function makeHandler(deps: Deps) {
       system: SYSTEM,
       messages: [{ role: 'user' as const, content: [...images, { type: 'text' as const, text: input }] }],
       output_config: { effort: body.tier === 'quick' ? ('low' as const) : ('medium' as const) },
-      ...(research ? { tools: [{ type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: gateway ? 3 : 4 }] } : {}),
+    };
+    const search = haiku
+      ? { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: gateway ? 3 : 4 }
+      : { type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: gateway ? 3 : 4 };
+    // The gateway passes no beta headers, so the refusal fallback is only asked for on a direct key.
+    const send = (withSearch: boolean) => {
+      const p = { ...params, ...(withSearch ? { tools: [search] } : {}) };
+      return gateway || haiku
+        ? client.messages.create(p).asResponse()
+        : client.beta.messages.create({ ...p, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }).asResponse();
     };
     try {
-      // The gateway passes no beta headers, so the refusal fallback is only asked for on a direct key.
-      const upstream = gateway
-        ? await client.messages.create(params).asResponse()
-        : await client.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }).asResponse();
+      let upstream: Response;
+      try {
+        upstream = await send(research);
+      } catch (e) {
+        // Research is a bonus: if this model or route won't search, build the deck from what Claude knows.
+        if (!research || !(e instanceof Anthropic.BadRequestError)) throw e;
+        console.error('lumo: web search refused, answering without it', e);
+        upstream = await send(false);
+      }
       const [inUsd, outUsd] = PRICES[model] ?? [4, 20];
       const out = Number.isFinite(budget)
         ? metered(upstream.body!, (u) => addSpend(deps.kv, now, (u.input * inUsd + u.output * outUsd) / 1e6 + u.searches * SEARCH_USD))
@@ -153,6 +170,7 @@ export function makeHandler(deps: Deps) {
       // Pass Claude's event stream straight through: the page reads the text as it arrives.
       return new Response(out, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' } });
     } catch (e) {
+      console.error('lumo: Claude call failed', e);
       if (e instanceof Anthropic.RateLimitError) return json(429, { error: 'rate_limited' });
       if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) return json(503, { error: 'not_configured' });
       return json(502, { error: 'upstream_error' });
@@ -164,7 +182,7 @@ const netlifyEnv: Env = (name) => (globalThis as { Netlify?: { env: { get(k: str
 
 let handler: ((req: Request) => Promise<Response>) | null = null;
 export default (req: Request) => {
-  handler ??= makeHandler({ env: netlifyEnv, kv: blobsKV(getStore({ name: 'lumo', consistency: 'strong' }) as never) });
+  handler ??= makeHandler({ env: netlifyEnv, kv: freshKV(() => blobsKV(getStore({ name: 'lumo', consistency: 'strong' }) as never)) });
   return handler(req);
 };
 
