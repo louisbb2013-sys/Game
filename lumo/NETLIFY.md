@@ -19,7 +19,7 @@ Everything is kept in the site's own Netlify storage (Netlify Blobs). No Firebas
 
 ## AI: free allowance or your own key
 
-- **Free (default):** Claude runs through Netlify's AI Gateway and uses the site's credits. A free Netlify site has **300 credits a month** and **pauses if they run out**, so Lumo stops using AI for the month once `LUMO_AI_MONTHLY_USD` has been spent (default $0.75; this site is set to **$1.10**, about 200 credits).
+- **Netlify credits (default):** Claude runs through Netlify's AI Gateway and uses the team's credits (Free: 300 a month; Personal: 1000). Netlify **pauses the site if they run out**, so Lumo stops using AI for the month once `LUMO_AI_MONTHLY_USD` has been spent (default $0.75; this site is set to **$2.50**, about 450 credits). The month starts on `LUMO_AI_RESET_DAY`, the day the team's credits renew (this site: **17**); without it, on the 1st.
 - **Unlimited:** an adult creates a key at <https://console.anthropic.com> (pay as you go) and adds it in Netlify: **Project configuration → Environment variables → Add a variable**, key `ANTHROPIC_API_KEY`, marked **secret**. Lumo then uses that key and the monthly cap no longer applies. Never paste the key in a chat.
 - **Model:** `CLAUDE_MODEL`. This site uses **`claude-haiku-5-5`** (about 40 times cheaper: roughly 150 decks a month on the free allowance). Without the variable it's `claude-opus-5-5` (the best questions, but only a few decks a month for free).
 

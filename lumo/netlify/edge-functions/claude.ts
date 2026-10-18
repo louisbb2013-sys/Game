@@ -9,11 +9,13 @@ import { bearer, json, limiter, verifySession } from '../lib/session.ts';
  * Only learners signed in to the site can use it. Claude is reached either with the site's own
  * Anthropic key (ANTHROPIC_API_KEY set by the owner), or, with nothing set up, through Netlify's AI
  * Gateway, which Netlify switches on for every site and bills to the site's monthly credits. Those
- * credits are shared with the site itself (a free site pauses when they run out), so through the
- * gateway Claude stops for the month once LUMO_AI_MONTHLY_USD (default $0.75) has been spent.
+ * credits are shared with the site itself (a site pauses when they run out), so through the
+ * gateway Claude stops for the month once LUMO_AI_MONTHLY_USD (default $0.75) has been spent. The
+ * month starts on LUMO_AI_RESET_DAY (the day Netlify's credits renew), or on the 1st without it.
  *
  * The answer is streamed back as it is written, so long jobs don't hit a time limit.
- * Environment variables (all optional): ANTHROPIC_API_KEY, CLAUDE_MODEL, LUMO_AI_MONTHLY_USD.
+ * Environment variables (all optional): ANTHROPIC_API_KEY, CLAUDE_MODEL, LUMO_AI_MONTHLY_USD,
+ * LUMO_AI_RESET_DAY.
  */
 
 const MEDIA = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -35,15 +37,21 @@ interface Deps {
   now?: () => number;
 }
 
-const month = (t: number) => new Date(t).toISOString().slice(0, 7);
+/** Where this budget month's spend is kept: `ai/2026-10` for calendar months, `ai/2026-10-17` when months start on the 17th. */
+export function budgetKey(t: number, resetDay?: string): string {
+  const d = new Date(t);
+  const day = Number(resetDay);
+  if (!Number.isInteger(day) || day < 2 || day > 28) return `ai/${d.toISOString().slice(0, 7)}`;
+  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - (d.getUTCDate() < day ? 1 : 0), day));
+  return `ai/${start.toISOString().slice(0, 10)}`;
+}
 
 /** Spend through the gateway this month (approximate: two answers finishing together may count once). */
-async function spent(kv: KV, t: number): Promise<number> {
-  const v = await kv.get(`ai/${month(t)}`);
+async function spent(kv: KV, key: string): Promise<number> {
+  const v = await kv.get(key);
   return v ? Number((JSON.parse(v.value) as { usd?: number }).usd) || 0 : 0;
 }
-async function addSpend(kv: KV, t: number, usd: number) {
-  const key = `ai/${month(t)}`;
+async function addSpend(kv: KV, key: string, usd: number) {
   for (let i = 0; i < 4; i++) {
     const cur = await kv.get(key);
     const before = cur ? Number((JSON.parse(cur.value) as { usd?: number }).usd) || 0 : 0;
@@ -112,7 +120,8 @@ export function makeHandler(deps: Deps) {
     }
     const gateway = !!baseURL && !/(^|\.)anthropic\.com$/.test(host);
     const budget = Number(deps.env('LUMO_AI_MONTHLY_USD') ?? (gateway ? '0.75' : 'Infinity'));
-    if (Number.isFinite(budget) && (await spent(deps.kv, now).catch(() => 0)) >= budget) return json(402, { error: 'budget' });
+    const spendKey = budgetKey(now, deps.env('LUMO_AI_RESET_DAY'));
+    if (Number.isFinite(budget) && (await spent(deps.kv, spendKey).catch(() => 0)) >= budget) return json(402, { error: 'budget' });
     if (!allow(me.u, now)) return json(429, { error: 'rate_limited' });
 
     let body: { input?: unknown; images?: unknown; tier?: unknown; research?: unknown };
@@ -165,7 +174,7 @@ export function makeHandler(deps: Deps) {
       }
       const [inUsd, outUsd] = PRICES[model] ?? [4, 20];
       const out = Number.isFinite(budget)
-        ? metered(upstream.body!, (u) => addSpend(deps.kv, now, (u.input * inUsd + u.output * outUsd) / 1e6 + u.searches * SEARCH_USD))
+        ? metered(upstream.body!, (u) => addSpend(deps.kv, spendKey, (u.input * inUsd + u.output * outUsd) / 1e6 + u.searches * SEARCH_USD))
         : upstream.body;
       // Pass Claude's event stream straight through: the page reads the text as it arrives.
       return new Response(out, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' } });

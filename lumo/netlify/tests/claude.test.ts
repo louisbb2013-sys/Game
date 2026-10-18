@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeHandler } from '../edge-functions/claude';
+import { budgetKey, makeHandler } from '../edge-functions/claude';
 import { memoryKV } from '../lib/kv';
 import { signSession } from '../lib/session';
 
@@ -87,6 +87,30 @@ describe('/api/claude edge function', () => {
     expect(over.status).toBe(402);
     expect(await over.json()).toEqual({ error: 'budget' });
     expect(sent).toHaveLength(3);
+  });
+
+  it('starts the budget month on the day Netlify credits renew', async () => {
+    const at = (iso: string) => Date.parse(iso);
+    expect(budgetKey(at('2026-10-18T12:00:00Z'))).toBe('ai/2026-10');
+    expect(budgetKey(at('2026-10-18T12:00:00Z'), '17')).toBe('ai/2026-10-17');
+    expect(budgetKey(at('2026-11-16T23:59:00Z'), '17')).toBe('ai/2026-10-17');
+    expect(budgetKey(at('2026-11-17T00:00:00Z'), '17')).toBe('ai/2026-11-17');
+    expect(budgetKey(at('2027-01-05T00:00:00Z'), '17')).toBe('ai/2026-12-17');
+    expect(budgetKey(at('2026-10-18T12:00:00Z'), 'nonsense')).toBe('ai/2026-10');
+
+    // Spend from before the reset day no longer counts.
+    const kv = memoryKV();
+    await kv.set('ai/2026-10', JSON.stringify({ usd: 5 }));
+    const vars: Record<string, string> = { ANTHROPIC_API_KEY: 'gw-key', ANTHROPIC_BASE_URL: 'https://lumo.example/.netlify/ai/anthropic', LUMO_AI_MONTHLY_USD: '1', LUMO_AI_RESET_DAY: '17' };
+    const env = (k: string) => vars[k];
+    const now = () => at('2026-10-18T12:00:00Z');
+    const fetchMock = (async () => new Response(sse(), { status: 200, headers: { 'content-type': 'text/event-stream' } })) as typeof fetch;
+    const handler = makeHandler({ env, kv, fetch: fetchMock, now });
+    const token = await signSession(kv, env, { u: 'u8', n: 'x', k: 'pw' }, now());
+    const res = await handler(new Request('https://lumo.example/api/claude', { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ input: 'volcanoes' }) }));
+    expect(res.status).toBe(200);
+    await res.text();
+    expect(JSON.parse((await kv.get('ai/2026-10-17'))!.value).usd).toBeGreaterThan(0);
   });
 
   it('with Haiku: the basic web search, no refusal fallback, and no research if the search is refused', async () => {
