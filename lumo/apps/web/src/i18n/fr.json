@@ -1095,26 +1095,26 @@
     "exampleFr": "# Le cycle de l’eau\n\nL’évaporation est le passage de l’eau à l’état de vapeur grâce à la chaleur du soleil.\nLa condensation désigne le refroidissement de la vapeur d’eau qui forme des gouttelettes et des nuages.\nPrécipitations : eau qui tombe des nuages sous forme de pluie, neige ou grêle.\nPar exemple, la rosée du matin sur l’herbe est de la condensation.\n\nÉtapes du cycle de l’eau :\n1. L’eau des océans s’évapore\n2. La vapeur monte et se refroidit\n3. Les nuages se forment par condensation\n4. La pluie retombe au sol\n\nTranspiration - eau rejetée par les feuilles des plantes\nRuissellement - eau qui coule sur le sol jusqu’aux rivières",
     "createBody": "Écris un sujet, colle tes notes ou envoie-les en photo : Lumo en fait un jeu avec de vraies questions d’examen.",
     "photosTitle": "À partir de photos de tes notes",
-    "photosBody": "Prends ou choisis des photos de tes notes ou de ton manuel. Claude les lit et Lumo crée le paquet.",
+    "photosBody": "Prends ou choisis des photos de tes notes ou de ton manuel. Lumo les lit et crée le paquet.",
     "choosePhotos": "Choisir des photos",
     "photosChosen_one": "{{count}} photo choisie — touche pour changer",
     "photosChosen_other": "{{count}} photos choisies — touche pour changer",
     "photoAlt": "Photo {{n}}",
     "readPhotos": "Lire mes photos",
-    "reading": "Claude lit tes notes… ça peut prendre jusqu’à une minute.",
+    "reading": "Lumo lit tes notes… ça peut prendre jusqu’à une minute.",
     "stop": "Arrêter",
     "photosPrivacy": "Tes photos sont envoyées à Claude seulement quand tu touches « Lire mes photos ». Ça utilise ton propre compte Claude, et Claude te demande d’abord.",
     "orNotes": "Ou colle tes notes",
     "photoErrors": {
-      "nothing_found": "Claude n’a pas trouvé de notes de cours sur ces photos. Essaie des photos plus nettes et plus proches.",
+      "nothing_found": "Lumo n’a pas trouvé de notes de cours sur ces photos. Essaie des photos plus nettes et plus proches.",
       "not_granted": "La lecture des photos a besoin de ton accord pour utiliser Claude. Tu peux l’autoriser dans les permissions de la page.",
       "sampling_disabled": "Claude n’est pas disponible sur ce compte, donc les photos ne peuvent pas être lues ici.",
       "rate_limited": "Trop de demandes en ce moment. Attends une minute et réessaie.",
       "image_rejected": "Une des photos n’a pas pu être utilisée. Essaie des photos JPG ou PNG.",
       "images_unavailable": "La lecture de photos n’est pas disponible ici.",
       "unavailable": "La lecture de photos n’est pas disponible ici.",
-      "invalid_json": "La réponse de Claude est arrivée incomplète. Réessaie avec moins de photos.",
-      "refused": "Claude n’a pas pu lire ces photos. Essaies-en d’autres.",
+      "invalid_json": "La réponse de Lumo est arrivée incomplète. Réessaie avec moins de photos.",
+      "refused": "Lumo n’a pas pu lire ces photos. Essaies-en d’autres.",
       "session_expired": "Reconnecte-toi à Claude.",
       "upstream_error": "Un problème est survenu pendant la lecture. Réessaie."
     },
@@ -1125,11 +1125,11 @@
     "researching": "Lumo fait des recherches sur ton sujet… (20 à 40 secondes)",
     "topicErrors": {
       "nothing_found": "Lumo n’a pas pu créer un paquet avec ça. Précise la matière et ton niveau.",
-      "unavailable": "La recherche d’un sujet a besoin de Claude, qui n’est pas disponible ici.",
+      "unavailable": "La recherche d’un sujet a besoin de l’IA de Lumo, qui n’est pas disponible ici.",
       "not_granted": "Autorise Lumo à utiliser Claude pour chercher des sujets.",
       "rate_limited": "Trop de demandes en ce moment. Réessaie dans une minute."
     },
-    "readingNotes": "Claude lit tes notes…"
+    "readingNotes": "Lumo lit tes notes…"
   },
   "together": {
     "helpTitle": "Jouer ensemble",
@@ -1284,7 +1284,7 @@
     "redo": "Nouvelles",
     "errors": {
       "upstream_error": "Impossible d’écrire les questions pour l’instant. Réessaie.",
-      "unavailable": "Il faut Claude, qui n’est pas disponible ici.",
+      "unavailable": "Il faut l’IA de Lumo, qui n’est pas disponible ici.",
       "not_granted": "Autorise Lumo à utiliser Claude pour écrire les questions.",
       "rate_limited": "Trop de demandes. Réessaie dans une minute.",
       "nothing_found": "Impossible d’écrire des questions pour ce paquet. Réessaie."
@@ -1400,7 +1400,7 @@
     }
   },
   "write": {
-    "title": "Claude écrit ton examen",
+    "title": "Lumo écrit ton examen",
     "readyTitle": "Ton examen est prêt !",
     "failedTitle": "Impossible d’écrire les questions",
     "lines": [
@@ -1414,7 +1414,7 @@
     "count_other": "{{count}} questions prêtes",
     "playNow": "Jouer maintenant",
     "almost": "Presque… (encore {{n}})",
-    "keepsWriting": "Claude continue d’en écrire pendant que tu joues.",
+    "keepsWriting": "Lumo continue d’en écrire pendant que tu joues.",
     "why": "De vraies questions d’examen, ça prend environ une minute. Ça vaut la peine !",
     "warmup": "Échauffe-toi avec les cartes",
     "allow": "Autoriser Claude",
@@ -1422,9 +1422,9 @@
     "basic": "Jouer avec des questions simples",
     "errors": {
       "not_granted": "Lumo a besoin de ton accord pour utiliser Claude. Touche « Autoriser Claude », puis accepte dans la fenêtre.",
-      "rate_limited": "Claude est occupé en ce moment. Réessaie dans une minute.",
-      "unavailable": "Claude n’est pas disponible ici.",
-      "nothing_found": "Claude n’a pas réussi cette fois. Réessaie.",
+      "rate_limited": "Lumo est occupé en ce moment. Réessaie dans une minute.",
+      "unavailable": "L’IA de Lumo n’est pas disponible ici.",
+      "nothing_found": "Lumo n’a pas réussi cette fois. Réessaie.",
       "session_expired": "Reconnecte-toi à Claude, puis réessaie.",
       "sampling_disabled": "Claude est désactivé pour ce compte.",
       "cancelled": "Arrêté.",
@@ -1436,11 +1436,11 @@
     "ideas_other": "{{count}} notions",
     "questions_one": "{{count}} question d’examen",
     "questions_other": "{{count}} questions d’examen",
-    "writing": "Claude écrit… {{count}}",
+    "writing": "Lumo écrit… {{count}}",
     "noClaude": "Ouvre Lumo dans Claude pour obtenir de vraies questions d’examen écrites à partir de tes notes. D’ici là, tu as des questions simples.",
     "play": "Jouer",
     "playBody": "10 questions · apprends et gagne",
-    "playWrite": "Claude écrit d’abord ton examen",
+    "playWrite": "Lumo écrit d’abord ton examen",
     "modes": "Modes de jeu",
     "speedBody": "60 s · bats ton record",
     "bossBody": "Questions difficiles · 3 boucliers",
@@ -1448,7 +1448,7 @@
     "bossWins_other": "{{count}} victoires",
     "cardsBody": "Retourne · retiens · répète",
     "more": "Nouvelles questions",
-    "moreBody": "Claude en écrit d’autres"
+    "moreBody": "Lumo en écrit d’autres"
   },
   "cards": {
     "done": "Paquet terminé !",
@@ -1515,11 +1515,11 @@
     },
     "ai": {
       "guestTitle": "L’IA demande un compte gratuit",
-      "guestBody": "Les sujets, PDF et photos sont lus par Claude, réservé aux comptes (c’est gratuit et ça prend 20 secondes). Sans compte, tu peux quand même coller tes notes.",
-      "offTitle": "Claude n’est pas disponible ici",
+      "guestBody": "L’IA de Lumo lit les sujets, PDF et photos pour ceux qui ont un compte (c’est gratuit et ça prend 20 secondes). Sans compte, tu peux quand même coller tes notes.",
+      "offTitle": "L’IA de Lumo n’est pas disponible ici",
       "offBody": "Tu peux quand même créer un paquet à partir de tes notes.",
       "budget": "L’IA de Lumo a utilisé toute l’allocation gratuite du mois sur ce site. Colle tes notes à la place, ou demande au propriétaire du site d’ajouter une clé Anthropic.",
-      "not_configured": "Claude n’est pas encore configuré sur ce site. Colle tes notes à la place."
+      "not_configured": "L’IA de Lumo n’est pas encore configurée sur ce site. Colle tes notes à la place."
     },
     "readFiles": "Lire mes fichiers",
     "takePhoto": "Prends une photo de tes notes",

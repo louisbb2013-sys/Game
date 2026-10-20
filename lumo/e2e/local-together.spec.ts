@@ -316,7 +316,7 @@ test('website: a deck from just a topic (Claude researches it)', async ({ browse
   await a.getByRole('button', { name: /^Play\b/ }).click();
   // Claude may still be writing: the writing screen lets you start as soon as a few are ready.
   const section = a.locator('section[data-format]');
-  const writing = a.getByRole('dialog', { name: 'Claude is writing your test' });
+  const writing = a.getByRole('dialog', { name: 'Lumo is writing your test' });
   await expect(section.or(writing).first()).toBeVisible({ timeout: 10_000 });
   if (await writing.count()) await writing.getByRole('button', { name: /Play now/ }).click({ timeout: 20_000 });
   await expect(section).toBeVisible();
@@ -411,7 +411,7 @@ test('website: an older deck without questions gets them written the first time 
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByText('The Water Cycle').click();
   await a.getByRole('button', { name: /^Play\b/ }).click();
-  const writing = a.getByRole('dialog', { name: 'Claude is writing your test' });
+  const writing = a.getByRole('dialog', { name: 'Lumo is writing your test' });
   await expect(writing).toBeVisible();
   await expect(writing.getByRole('button', { name: /Almost there/ })).toBeDisabled();
   await writing.getByRole('button', { name: /Play now/ }).click({ timeout: 20_000 });
@@ -437,7 +437,7 @@ test('website: saying no to Claude explains how to allow it, and basic questions
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByText('The Water Cycle').click();
   await a.getByRole('button', { name: /^Play\b/ }).click();
-  const writing = a.getByRole('dialog', { name: 'Claude is writing your test' });
+  const writing = a.getByRole('dialog', { name: 'Lumo is writing your test' });
   await expect(writing.getByText(/needs your OK to use Claude/)).toBeVisible({ timeout: 10_000 });
   await expect(writing.getByRole('button', { name: 'Allow Claude' })).toBeVisible();
   await writing.getByRole('button', { name: /basic questions/ }).click();
