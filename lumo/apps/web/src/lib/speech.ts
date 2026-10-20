@@ -9,6 +9,36 @@ export const speechAvailable = () => typeof window !== 'undefined' && 'speechSyn
 
 type Lang = 'en' | 'fr';
 
+// iPhone and iPad only let a page talk once speech has started from a tap. Videos and podcasts start
+// speaking a moment after the tap (and between scenes), so the very first tap anywhere unlocks it.
+let unlocked = false;
+function unlock() {
+  if (unlocked || !speechAvailable()) return;
+  unlocked = true;
+  try {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+  } catch {
+    /* nothing to unlock */
+  }
+}
+if (typeof document !== 'undefined') for (const ev of ['pointerdown', 'touchend', 'keydown']) document.addEventListener(ev, unlock, { once: true, capture: true, passive: true });
+
+/** Which language a text is in (for content made before activities said so): French or English. */
+export function guessLanguage(text: string): Lang {
+  const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
+  const fr = new Set(['le', 'la', 'les', 'des', 'du', 'une', 'est', 'et', 'que', 'qui', 'dans', 'pour', 'pas', 'sur', 'avec', 'ce', 'cette', 'sont', 'au', 'aux']);
+  const en = new Set(['the', 'is', 'and', 'of', 'to', 'in', 'that', 'it', 'with', 'for', 'are', 'on', 'this', 'what', 'which', 'an', 'be', 'by']);
+  let f = 0;
+  let e = 0;
+  for (const w of words) {
+    if (fr.has(w)) f++;
+    else if (en.has(w)) e++;
+  }
+  return f > e ? 'fr' : 'en';
+}
+
 const NATURAL = /natural|neural|premium|enhanced|wavenet|studio/i;
 const ONLINE = /online|google|siri|cloud/i;
 /** Voices that sound good across platforms (Apple, Microsoft, Google, Samsung). */
@@ -86,6 +116,8 @@ export function chunks(text: string, max = 180): string[] {
 }
 
 let token = 0;
+// Some browsers drop an utterance (and never say it ended) once nothing refers to it any more.
+const speaking = new Set<SpeechSynthesisUtterance>();
 
 function sayOne(text: string, voice: SpeechSynthesisVoice | undefined, lang: Lang, rate: number, my: number): Promise<void> {
   return new Promise((resolve) => {
@@ -96,15 +128,24 @@ function sayOne(text: string, voice: SpeechSynthesisVoice | undefined, lang: Lan
     u.rate = rate;
     u.pitch = 1;
     let finished = false;
+    const started = Date.now();
     const done = () => {
       if (finished) return;
       finished = true;
+      speaking.delete(u);
       resolve();
     };
     u.onend = done;
     u.onerror = done;
-    // Some browsers never fire onend: fall back to a generous timer.
-    setTimeout(done, 1500 + (text.length * 85) / rate);
+    // Some browsers never fire onend: after a generous wait, move on once the voice has gone quiet
+    // (never in the middle of a sentence, so the picture doesn't run ahead of the voice).
+    const fallback = () => {
+      if (finished) return;
+      if (my === token && window.speechSynthesis.speaking && Date.now() - started < 40_000) setTimeout(fallback, 400);
+      else done();
+    };
+    setTimeout(fallback, 1500 + (text.length * 85) / rate);
+    speaking.add(u);
     window.speechSynthesis.speak(u);
   });
 }

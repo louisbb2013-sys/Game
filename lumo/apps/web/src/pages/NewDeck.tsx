@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MemoryLink } from './Memory';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { CameraIcon, SearchIcon, TextIcon, UploadIcon } from '../components/icons';
 import { shrinkPhoto } from '../lib/files';
@@ -362,6 +363,8 @@ export function NewDeck() {
             {error}
           </p>
         )}
+
+        <MemoryLink />
 
         <details className="panel group p-4">
           <summary className="cursor-pointer text-sm font-black">{t('create.more')}</summary>

@@ -1,4 +1,8 @@
 import {
+  BLOOM_LEVELS,
+  bloomIndex,
+  PASS,
+  shuffle,
   addFreeze,
   addPetXp,
   advanceQuest,
@@ -140,6 +144,8 @@ interface StoredSession {
   id: string;
   deckId: string;
   mode: SessionMode;
+  /** When the round started (for when-you-study patterns). */
+  createdAt?: number;
   state: SessionState & {
     language: Locale;
     formats?: Format[];
@@ -176,6 +182,7 @@ interface Activity {
   xp: number;
   completedAt: number | null;
   createdAt: number;
+  language?: Locale;
 }
 interface DB {
   v: 1;
@@ -210,6 +217,8 @@ interface DB {
   game?: GameData;
   /** When each bank question (by variant key) was last asked, so they come back spaced out. */
   seen?: Record<string, number>;
+  /** What the learner told Lumo about themselves, and how they like to study. */
+  memory?: Memory;
   /** Personal bests per deck. */
   bests?: Record<string, { speed?: number; bossWins?: number }>;
 }
@@ -655,6 +664,118 @@ function warmEgg(answers: number): Hatched | undefined {
   return { species, emoji: s.emoji, rarity: s.rarity, duplicate };
 }
 
+// ------------------------------------------------------------------ memory: what Lumo knows about you
+
+interface MemoryNote {
+  id: string;
+  text: string;
+  at: number;
+}
+export interface StudyPrefs {
+  /** How long explanations should be. */
+  explain: 'short' | 'normal' | 'detailed';
+  /** auto = Lumo picks the depth from how you're doing. */
+  level: 'auto' | 'easier' | 'harder';
+  /** Lumo adapts questions to you (weak spots, depth). */
+  adapt: boolean;
+}
+interface Memory {
+  notes: MemoryNote[];
+  prefs: StudyPrefs;
+  /** Suggestions the learner said no to. */
+  dismissed?: string[];
+}
+const DEFAULT_PREFS: StudyPrefs = { explain: 'normal', level: 'auto', adapt: true };
+
+function memory(): Memory {
+  const d = load();
+  d.memory ??= { notes: [], prefs: { ...DEFAULT_PREFS } };
+  d.memory.prefs = { ...DEFAULT_PREFS, ...d.memory.prefs };
+  return d.memory;
+}
+
+/** Answers from the latest rounds, oldest first. */
+function recentAnswers(limit: number) {
+  return Object.values(load().sessions)
+    .sort((a, b) => (a.createdAt ?? a.state.startedAt ?? 0) - (b.createdAt ?? b.state.startedAt ?? 0))
+    .flatMap((s) => s.state.history.map((h) => ({ ...h, at: s.createdAt ?? s.state.startedAt ?? 0 })))
+    .slice(-limit);
+}
+
+/** What Lumo noticed from how you play (only from this account's own answers). */
+function noticed() {
+  const d = load();
+  const answers = recentAnswers(400);
+  const byFormat = new Map<Format, { n: number; ok: number }>();
+  for (const h of answers) {
+    const v = byFormat.get(h.format) ?? { n: 0, ok: 0 };
+    v.n++;
+    if (h.score >= PASS) v.ok++;
+    byFormat.set(h.format, v);
+  }
+  const formats = [...byFormat].filter(([, v]) => v.n >= 4).map(([format, v]) => ({ format, accuracy: v.ok / v.n, n: v.n }));
+  const last = answers.slice(-40);
+  const hours = Object.values(d.sessions).flatMap((s) => (s.createdAt ? [new Date(s.createdAt).getHours()] : []));
+  const parts = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+  for (const h of hours) parts[h >= 5 && h < 12 ? 'morning' : h < 17 && h >= 12 ? 'afternoon' : h >= 17 && h < 22 ? 'evening' : 'night']++;
+  const timeOfDay = hours.length >= 3 ? (Object.entries(parts).sort((a, b) => b[1] - a[1])[0]![0] as keyof typeof parts) : null;
+  const subjects = new Map<string, number>();
+  for (const dk of d.decks) if (dk.subject) subjects.set(dk.subject, (subjects.get(dk.subject) ?? 0) + 1);
+  const weakIdeas = d.decks.flatMap((dk) => dk.concepts.filter((c) => d.states[c.id] && masteryBand(d.states[c.id]!.progress) === 'learning').map((c) => c.term)).slice(0, 5);
+  return {
+    answered: answers.length,
+    accuracy: last.length >= 8 ? last.filter((h) => h.score >= PASS).length / last.length : null,
+    weakFormats: formats.filter((f) => f.accuracy < 0.6).sort((a, b) => a.accuracy - b.accuracy).slice(0, 3),
+    strongFormats: formats.filter((f) => f.accuracy >= 0.8).sort((a, b) => b.accuracy - a.accuracy).slice(0, 3),
+    timeOfDay,
+    subjects: [...subjects].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s]) => s),
+    weakIdeas,
+  };
+}
+
+/** Things Lumo could remember, spotted in what you made (a grade, your subjects): one tap to keep. */
+function suggestions(): string[] {
+  const d = load();
+  const m = memory();
+  const fr = d.user.locale === 'fr';
+  const out: string[] = [];
+  const text = d.decks.map((dk) => `${dk.title} ${dk.subject}`).join(' \n ');
+  const grade = text.match(/\b(?:grade|gr\.?)\s*(\d{1,2})\b/i)?.[1];
+  const sec = text.match(/\bsec(?:ondaire)?\.?\s*(\d)\b/i)?.[1];
+  if (sec) out.push(fr ? `Je suis en secondaire ${sec}.` : `I'm in secondaire ${sec} (Québec).`);
+  else if (grade) out.push(fr ? `Je suis en ${grade}e année.` : `I'm in grade ${grade}.`);
+  const subjects = noticed().subjects;
+  if (subjects.length) out.push(fr ? `J'étudie surtout : ${subjects.join(', ')}.` : `I mostly study: ${subjects.join(', ')}.`);
+  const have = m.notes.map((n) => n.text.toLowerCase());
+  return out.filter((x) => !have.some((h) => h.includes(x.toLowerCase().slice(0, 18))) && !(m.dismissed ?? []).includes(x));
+}
+
+/**
+ * How Lumo adapts a round to you: which question depth to aim for and which formats to give a bit
+ * more of (your weak spots), from your settings and your latest answers.
+ */
+function adaptation(): { shift: number; boost: Partial<Record<Format, number>> } {
+  const m = memory();
+  if (!m.prefs.adapt) return { shift: 0, boost: {} };
+  let shift = m.prefs.level === 'easier' ? -1 : m.prefs.level === 'harder' ? 1 : 0;
+  if (m.prefs.level === 'auto') {
+    const last = recentAnswers(30);
+    if (last.length >= 12) {
+      const acc = last.filter((h) => h.score >= PASS).length / last.length;
+      shift = acc >= 0.85 ? 1 : acc < 0.5 ? -1 : 0;
+    }
+  }
+  const boost: Partial<Record<Format, number>> = {};
+  for (const f of noticed().weakFormats) boost[f.format] = 1.8;
+  return { shift, boost };
+}
+
+/** Choices shown in a new order each time (lists of numbers stay in order, as on a real test). */
+function freshOrder(q: Question, rng: () => number): Question {
+  if ((q.format === 'multiple_choice' || q.format === 'cause_effect' || q.format === 'multiple_select') && !q.options.every((o) => /^[\d\s.,%$€+\-/×x^]+[a-zA-Z%°]{0,4}$/.test(o.text.trim()))) return { ...q, options: shuffle(q.options, rng) };
+  return q;
+}
+
 const gameRoutes: [string, RegExp, Handler][] = [
   ['GET', /^\/api\/game\/overview$/, () => {
     const g = game();
@@ -847,9 +968,12 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]):
     // Claude's real test questions only: once a deck has them, the built-in templates never come back.
     const d = load();
     // A boss asks for application and analysis, not recall.
-    const target: ConceptProgress = s.mode === 'boss' && (progress.bloom === 'remember' || progress.bloom === 'understand') ? { ...progress, bloom: 'apply' } : progress;
+    const base: ConceptProgress = s.mode === 'boss' && (progress.bloom === 'remember' || progress.bloom === 'understand') ? { ...progress, bloom: 'apply' } : progress;
+    // Fitted to you: a step deeper when you're flying, a step back when it's hard, more of your weak formats.
+    const fit = s.mode === 'exam' ? { shift: 0, boost: {} } : adaptation();
+    const target: ConceptProgress = fit.shift ? { ...base, bloom: BLOOM_LEVELS[Math.max(0, Math.min(BLOOM_LEVELS.length - 1, bloomIndex(base.bloom) + fit.shift))]! } : base;
     const used = new Set(s.state.history.map((h) => h.variantKey));
-    const opts = { allowed: modeFormats(s), usedThisSession: used, lastSeen: d.seen ?? {}, now: now() };
+    const opts = { allowed: modeFormats(s), usedThisSession: used, lastSeen: d.seen ?? {}, now: now(), formatBoost: fit.boost };
     // A missed idea comes back even when its other questions were all asked: another one if there is
     // one, else the same one again (asking again after a gap still helps it stick).
     const lastHere = [...s.state.history].reverse().find((h) => h.conceptId === conceptId)?.variantKey;
@@ -860,7 +984,7 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]):
     d.seen = { ...(d.seen ?? {}), [picked.variantKey]: now() };
     const keys = Object.keys(d.seen);
     if (keys.length > 3000) for (const k of keys.slice(0, keys.length - 3000)) delete d.seen[k];
-    return { ...structuredClone(picked), id: uid() };
+    return { ...freshOrder(structuredClone(picked), rng), id: uid() };
   }
   // No questions from Claude (it isn't available here): basic ones built from the notes.
   const tried: Format[] = [];
@@ -952,6 +1076,7 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
     id: uid(),
     deckId,
     mode,
+    createdAt: now(),
     state: {
       ...newSession(mode, ids),
       language: dk.language,
@@ -1307,7 +1432,7 @@ function plan(deckId: string) {
 
 // ------------------------------------------------------------------ sandbox
 
-const pubActivity = (a: Activity) => ({ id: a.id, deckId: a.deckId, kind: a.kind, title: a.title, data: a.data, score: a.score, xp: a.xp, completed: !!a.completedAt });
+const pubActivity = (a: Activity) => ({ id: a.id, deckId: a.deckId, kind: a.kind, title: a.title, data: a.data, score: a.score, xp: a.xp, completed: !!a.completedAt, language: a.language ?? load().decks.find((d) => d.id === a.deckId)?.language });
 
 function createActivity(deckId: string, kind: SandboxKind, focus: string[] = []) {
   const dk = deck(deckId);
@@ -1321,7 +1446,7 @@ function createActivity(deckId: string, kind: SandboxKind, focus: string[] = [])
   const title = focus.length && chosen.length < dk.concepts.length ? chosen.map((c) => c.term).slice(0, 3).join(', ') : dk.title;
   const data = generateSandbox(kind, { deck: chosen, title, language: dk.language, rng: seededRng(hashString(`${kind}:${now()}`)) })?.data;
   if (!data) throw new LocalError(422, 'format_not_possible');
-  const a: Activity = { id: uid(), deckId, kind, title, data, score: null, xp: 0, completedAt: null, createdAt: now() };
+  const a: Activity = { id: uid(), deckId, kind, title, data, score: null, xp: 0, completedAt: null, createdAt: now(), language: dk.language };
   load().sandbox.unshift(a);
   load().sandbox = load().sandbox.slice(0, 40);
   return pubActivity(a);
@@ -1667,6 +1792,42 @@ const routes: [string, RegExp, Handler][] = [
   ],
   ['POST', /^\/api\/sandbox\/([\w-]+)\/complete$/, (m, b) => completeActivity(m[1]!, Number(b.score) || 0)],
 
+  ['GET', /^\/api\/local\/memory$/, () => {
+    const m = memory();
+    return { notes: m.notes, prefs: m.prefs, noticed: noticed(), suggestions: suggestions() };
+  }],
+  ['POST', /^\/api\/local\/memory\/notes$/, (_m, b) => {
+    const m = memory();
+    const text = String(b.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    if (!text) throw new LocalError(422, 'empty');
+    if (m.notes.length >= 40) throw new LocalError(409, 'too_many');
+    m.notes.push({ id: uid(), text, at: now() });
+    return { notes: m.notes };
+  }],
+  ['DELETE', /^\/api\/local\/memory\/notes\/([\w-]+)$/, (mm) => {
+    const m = memory();
+    m.notes = m.notes.filter((n) => n.id !== mm[1]);
+    return { notes: m.notes };
+  }],
+  ['PATCH', /^\/api\/local\/memory\/prefs$/, (_m, b) => {
+    const p = memory().prefs;
+    if (['short', 'normal', 'detailed'].includes(String(b.explain))) p.explain = b.explain as StudyPrefs['explain'];
+    if (['auto', 'easier', 'harder'].includes(String(b.level))) p.level = b.level as StudyPrefs['level'];
+    if (typeof b.adapt === 'boolean') p.adapt = b.adapt;
+    return { prefs: p };
+  }],
+  ['POST', /^\/api\/local\/memory\/dismiss$/, (_m, b) => {
+    const m = memory();
+    m.dismissed = [...(m.dismissed ?? []), String(b.text ?? '').slice(0, 300)].slice(-30);
+    return { ok: true };
+  }],
+  ['GET', /^\/api\/local\/decks\/([\w-]+)\/fresh$/, (m) => {
+    // How many of the deck's questions this learner has never met (to write new ones before they run out).
+    const dk = deck(m[1]!);
+    const seen = load().seen ?? {};
+    const bank = dk.bank ?? [];
+    return { total: bank.length, unseen: bank.filter((q) => seen[q.variantKey] === undefined).length, concepts: dk.concepts.length };
+  }],
   [
     'POST',
     /^\/api\/local\/live-reward$/,

@@ -14,8 +14,10 @@ vi.mock('../../apps/web/src/lib/api', () => ({
       bank = bank.filter((q) => !remove.has(q.variantKey)).concat(init.body?.add ?? []);
       return { count: bank.length, removed: before - (bank.length - (init.body?.add?.length ?? 0)) };
     }
+    if (path === '/api/local/memory') return { notes: [{ id: 'n1', text: 'We use the book Zénith 2', at: 0 }], prefs: { explain: 'normal', level: 'auto', adapt: true }, noticed: { answered: 0, accuracy: null, weakFormats: [], strongFormats: [], timeOfDay: null, subjects: [], weakIdeas: [] }, suggestions: [] };
     throw new Error(`unexpected ${path}`);
   }),
+  NETLIFY: false,
 }));
 
 const concepts: Concept[] = [
@@ -96,6 +98,9 @@ describe('Claude writes the deck’s questions', () => {
     expect(Object.values(mcq.optionNotes ?? {})).toContain('Ça, c’est le poids qui diminue.');
     // Fresh answers every time (a regenerate must not replay a cached reply).
     expect(calls[0]!.opts.cache).toBe(false);
+    // What the student told Lumo goes into the writing prompt; the first small batch is quick.
+    expect(calls[0]!.input).toContain('We use the book Zénith 2');
+    expect(calls[0]!.opts.modelTier).toBe('quick');
   });
 
   it('stops and says why when the viewer said no to Claude', async () => {

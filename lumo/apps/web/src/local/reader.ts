@@ -1,4 +1,5 @@
 import { CONCEPT_KINDS, type ConceptInput, type ConceptKind, type Locale } from '@lumo/core';
+import { aboutLearner } from './memory';
 
 /**
  * Browser-only build: read photos of notes with Claude through the page's `sample` capability
@@ -100,7 +101,7 @@ export async function readPhotos(files: File[], language: Locale, extra: string,
   if (!s) throw new ReaderError('unavailable');
   let raw: { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
   try {
-    raw = await s.json(PROMPT(language, extra), { images: files, signal, modelTier: 'default' });
+    raw = await s.json(PROMPT(language, extra) + (await aboutLearner()), { images: files, signal, modelTier: 'default' });
   } catch (e) {
     throw new ReaderError(String((e as { code?: string })?.code ?? 'upstream_error'));
   }
@@ -144,7 +145,7 @@ export async function deckFromNotes(notes: string, language: Locale, signal?: Ab
   if (!s) throw new ReaderError('unavailable');
   let raw: { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
   try {
-    raw = await s.json(NOTES_PROMPT(notes, language), { signal, modelTier: 'default' });
+    raw = await s.json(NOTES_PROMPT(notes, language) + (await aboutLearner()), { signal, modelTier: 'default' });
   } catch (e) {
     throw new ReaderError(String((e as { code?: string })?.code ?? 'upstream_error'));
   }
@@ -166,7 +167,7 @@ export async function deckFromTopic(topic: string, language: Locale, signal?: Ab
   const research = (s as unknown as { canResearch?: boolean }).canResearch === true;
   let raw: { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
   try {
-    raw = await s.json(TOPIC_PROMPT(topic, language, research), { signal, modelTier: 'default', ...(research ? { research: true } : {}) });
+    raw = await s.json(TOPIC_PROMPT(topic, language, research) + (await aboutLearner()), { signal, modelTier: 'default', ...(research ? { research: true } : {}) });
   } catch (e) {
     throw new ReaderError(String((e as { code?: string })?.code ?? 'upstream_error'));
   }

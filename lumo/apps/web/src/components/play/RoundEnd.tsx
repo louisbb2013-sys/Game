@@ -54,6 +54,15 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
   return (
     <div className="arena relative" data-mode={mode} data-theme="dark">
       <div className="arena-stars" aria-hidden />
+      {/* Always a way out, at the top, like closing a game. */}
+      <Link
+        to={`/decks/${deckId}`}
+        aria-label={t('play.end.close')}
+        className="fixed top-[max(env(safe-area-inset-top),0.75rem)] right-3 z-30 grid size-11 place-items-center rounded-full bg-white/15 text-2xl font-black text-white ring-1 ring-white/25 backdrop-blur"
+        data-testid="round-close"
+      >
+        ✕
+      </Link>
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col items-center px-4 pt-8 pb-10 text-center lg:max-w-2xl">
         <div className="pop-in">
           <Lumo size={110} mood={won ? 'cheer' : 'sad'} glow={1} />
@@ -147,6 +156,9 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
               {mode === 'speed' ? `✨ ${t('play.modes.learn')}` : `⚡ ${t('play.modes.speed')}`}
             </button>
           </div>
+          <Link to={`/decks/${deckId}`} className="rounded-2xl bg-white py-3.5 text-lg font-black text-night shadow-lg">
+            ✓ {t('play.end.finish')}
+          </Link>
         </div>
 
         {missed.length > 0 && (

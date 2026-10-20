@@ -10,6 +10,7 @@ import { CheatSheetPlayer, FlashcardsPlayer, MindMapPlayer, MnemonicsPlayer, Tim
 import { BigButton } from '../components/sandbox/shared';
 import { PodcastPlayer, StoryPlayer, VideoPlayer } from '../components/sandbox/watch';
 import { api } from '../lib/api';
+import { guessLanguage } from '../lib/speech';
 import { useAuth } from '../lib/auth';
 import { play, setSoundEnabled } from '../lib/sound';
 import { useRewards, type Rewards } from '../lib/rewards';
@@ -21,6 +22,7 @@ interface Activity {
   title: string;
   data: SandboxData;
   completed: boolean;
+  language?: 'en' | 'fr';
 }
 
 export function SandboxPlay() {
@@ -64,7 +66,8 @@ export function SandboxPlay() {
       </div>
     );
   }
-  const lang = i18n.language === 'fr' ? 'fr' : 'en';
+  // The voice reads in the activity's own language (an English deck in a French Lumo stays English).
+  const lang = a.language ?? guessLanguage(JSON.stringify(a.data));
   const props = { language: lang as 'en' | 'fr', onComplete: (s: number) => void complete(s) };
 
   return (

@@ -620,6 +620,7 @@ function RevealView({ s, me, isHost, send, picked }: { s: LivePublic; me: string
         </div>
       )}
       {r.explanation && <p className="rounded-2xl bg-surface p-3 text-sm ring-1 ring-line">💡 {r.explanation}</p>}
+      <WhoGotIt s={s} me={me} />
       {myBet && (
         <p className={`rounded-2xl px-3 py-2 font-black ${myBet.won ? 'bg-good/15 text-good' : 'bg-bad/10 text-bad'}`} role="status">
           🎲 {t(myBet.won ? 'live.betWon' : 'live.betLost', { xp: Math.abs(myBet.delta), name: s.players.find((p) => p.id === myBet.on)?.name ?? '?' })}
@@ -645,6 +646,37 @@ function RevealView({ s, me, isHost, send, picked }: { s: LivePublic; me: string
           <p className="py-3 text-center font-black text-muted">{t('live.waitingNext')}</p>
         )}
       </div>
+    </section>
+  );
+}
+
+/** Everyone's result on this question: who got it (and their points), who missed, who didn't answer. */
+function WhoGotIt({ s, me }: { s: LivePublic; me: string }) {
+  const { t } = useTranslation();
+  const results = s.reveal!.results;
+  const list = s.players
+    .map((p) => ({ p, r: results[p.id], none: !p.answered }))
+    .sort((a, b) => Number(!!b.r?.correct) - Number(!!a.r?.correct) || (b.r?.points ?? 0) - (a.r?.points ?? 0) || Number(a.none) - Number(b.none));
+  const right = list.filter((x) => x.r?.correct).length;
+  return (
+    <section className="rounded-2xl bg-surface p-3 ring-1 ring-line" aria-labelledby="who-title" data-testid="who-got-it">
+      <h2 id="who-title" className="mb-2 text-sm font-black">
+        {t('live.whoGotIt', { n: right, total: list.length })}
+      </h2>
+      <ul className="flex flex-wrap gap-1.5">
+        {list.map(({ p, r, none }) => (
+          <li
+            key={p.id}
+            className={`rounded-full px-3 py-1 text-sm font-black ring-1 ${r?.correct ? 'bg-good/20 text-good ring-good/50' : none ? 'bg-surface-2 text-muted ring-line' : 'bg-bad/15 text-bad ring-bad/40'}`}
+            data-result={r?.correct ? 'right' : none ? 'none' : 'wrong'}
+          >
+            <span aria-hidden>{r?.correct ? '✓' : none ? '–' : '✗'}</span> {p.name}
+            {p.id === me ? ` (${t('live.you')})` : ''}
+            {r?.correct && r.points > 0 ? ` +${r.points}` : ''}
+            <span className="sr-only">{r?.correct ? t('live.correct') : none ? t('live.noAnswer') : t('live.wrong')}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -714,9 +746,14 @@ function Podium({ s, me, reward }: { s: LivePublic; me: string; reward: ReturnTy
         <p className="text-center font-bold text-muted">{t('common.loading')}</p>
       )}
       <Board players={ranked} me={me} />
-      <Link to="/live" className="block w-full rounded-2xl bg-brand py-4 text-center text-lg font-black text-brand-ink">
-        {t('live.playAgain')}
-      </Link>
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/" className="block rounded-2xl bg-surface py-4 text-center text-lg font-black ring-1 ring-line">
+          ✓ {t('play.end.finish')}
+        </Link>
+        <Link to="/live" className="block rounded-2xl bg-brand py-4 text-center text-lg font-black text-brand-ink">
+          {t('live.playAgain')}
+        </Link>
+      </div>
     </section>
   );
 }

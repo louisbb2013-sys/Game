@@ -873,7 +873,9 @@
     "betsOnYou_one": "🎲 Quelqu'un a parié sur toi !",
     "betsOnYou_other": "🎲 {{count}} personnes ont parié sur toi !",
     "betWon": "Bien vu ! Tu gagnes {{xp}} XP grâce à {{name}}.",
-    "betLost": "Raté : tu perds {{xp}} XP sur {{name}}."
+    "betLost": "Raté : tu perds {{xp}} XP sur {{name}}.",
+    "whoGotIt": "{{n}} sur {{total}} ont eu la bonne réponse",
+    "you": "toi"
   },
   "friends": {
     "title": "Amis",
@@ -1334,7 +1336,9 @@
       "rematch": "Revanche",
       "fix_one": "Corriger {{count}} erreur",
       "fix_other": "Corriger {{count}} erreurs",
-      "review": "À revoir"
+      "review": "À revoir",
+      "close": "Fermer",
+      "finish": "Terminé"
     },
     "points": "{{n}} points",
     "pts": "pts",
@@ -1529,5 +1533,77 @@
   "langs": {
     "en": "anglais",
     "fr": "français"
+  },
+  "memory": {
+    "title": "La mémoire de Lumo",
+    "subtitle": "Parle à Lumo de ta classe, de tes livres et de ce que tu aimes. Lumo s'en sert pour créer tes paquets, écrire tes examens et expliquer les réponses.",
+    "tellTitle": "Dis quelque chose à Lumo",
+    "placeholder": "ex. : En français, on utilise le livre « Zénith 2 », chapitre 4.",
+    "add": "Retenir",
+    "ideas": {
+      "book": "Mon livre de classe",
+      "grade": "Mon année",
+      "hard": "Ce que je trouve difficile",
+      "like": "Ce que j'aime",
+      "tests": "Les examens de mon prof"
+    },
+    "ideaText": {
+      "book": "En français, on utilise le livre ",
+      "grade": "Je suis en ",
+      "hard": "Je trouve difficile : ",
+      "like": "J'aime ",
+      "tests": "Les examens de mon prof sont souvent "
+    },
+    "saved": "Compris ! Lumo va s'en souvenir.",
+    "privacy": "Toi seul vois ceci. N'écris pas d'infos privées comme ton adresse, ton numéro de téléphone ou tes mots de passe.",
+    "suggestTitle": "Lumo a remarqué",
+    "keep": "Retenir",
+    "no": "Non",
+    "notesTitle_one": "Ce que Lumo retient ({{count}})",
+    "notesTitle_other": "Ce que Lumo retient ({{count}})",
+    "empty": "Rien pour l'instant. Parle à Lumo de ta classe, de tes livres ou de ce que tu aimes.",
+    "forgetLabel": "Oublier : {{text}}",
+    "noticedTitle": "Ce que Lumo a remarqué",
+    "noticedEmpty": "Joue quelques parties et Lumo va apprendre comment tu étudies.",
+    "answered_one": "Tu as répondu à {{count}} question.",
+    "answered_other": "Tu as répondu à {{count}} questions.",
+    "accuracy": "Ces temps-ci, tu as {{pct}} % de bonnes réponses.",
+    "strong": "Tu es le plus fort en : {{list}}.",
+    "weak": "Plus difficile pour toi : {{list}}. Lumo t'en donne un peu plus pour pratiquer.",
+    "time": {
+      "morning": "Tu étudies surtout le matin.",
+      "afternoon": "Tu étudies surtout l'après-midi.",
+      "evening": "Tu étudies surtout le soir.",
+      "night": "Tu étudies surtout tard le soir."
+    },
+    "subjects": "Tes matières : {{list}}.",
+    "weakIdeas": "Notions à retravailler : {{list}}.",
+    "adaptTitle": "Comment Lumo s'adapte",
+    "adapt": "S'adapter à moi",
+    "adaptBody": "Tes points faibles reviennent plus souvent, et les questions deviennent plus poussées quand tu es en feu.",
+    "level": "Questions",
+    "levels": {
+      "auto": "Auto",
+      "easier": "Plus faciles",
+      "harder": "Plus difficiles"
+    },
+    "explain": "Explications",
+    "explains": {
+      "short": "Courtes",
+      "normal": "Normales",
+      "detailed": "Détaillées"
+    },
+    "homeTitle": "Parle de toi à Lumo",
+    "homeCount_one": "Lumo retient {{count}} chose sur toi",
+    "homeCount_other": "Lumo retient {{count}} choses sur toi",
+    "homeBody": "Ta classe, tes livres, ce que tu trouves difficile : Lumo adapte tes paquets et tes examens à toi.",
+    "createHint_one": "Lumo retient {{count}} chose sur toi et s'en sert ici.",
+    "createHint_other": "Lumo retient {{count}} choses sur toi et s'en sert ici.",
+    "createHintEmpty": "Parle à Lumo de ta classe et de tes livres, et tes paquets seront faits pour toi.",
+    "edit": "Modifier",
+    "errors": {
+      "too_many": "C'est beaucoup ! Oublie quelques choses d'abord.",
+      "empty": "Écris quelque chose d'abord."
+    }
   }
 }

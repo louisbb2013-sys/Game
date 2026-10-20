@@ -18,7 +18,7 @@ import { useRewards, type Rewards } from '../lib/rewards';
 import { play, setMusicEnabled, setSoundEnabled, startMusic, stopMusic } from '../lib/sound';
 import type { Handle } from '../three/stage';
 import { canAskClaude } from '../local/reader';
-import { explainAgain } from '../local/writer';
+import { explainAgain, topUpIfLow } from '../local/writer';
 
 /**
  * The play screen: one question at a time, full screen, like a game. Multiple choice and true/false
@@ -134,6 +134,12 @@ export function Play() {
   useEffect(() => {
     if (LOCAL) void canAskClaude().then(setAi);
   }, []);
+
+  // When a round ends and this deck is running out of questions you haven't met, new ones get written.
+  const deckOfSession = data?.session.deckId;
+  useEffect(() => {
+    if (LOCAL && ai && summary && deckOfSession) void topUpIfLow(deckOfSession);
+  }, [ai, summary, deckOfSession]);
 
   // Your pet comes along (learning rounds).
   useEffect(() => {

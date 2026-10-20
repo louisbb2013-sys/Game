@@ -484,3 +484,67 @@ test('website: a friend who can only view the page in Claude is told why friends
   await a.getByLabel("Type a friend's username, press Enter").press('Enter');
   await expect(a.getByRole('status')).toContainText('use the Lumo website together', { timeout: 10_000 });
 });
+
+test("website: Lumo's memory: tell Lumo about your class book, and it uses it to make the deck and write the test", async ({ browser }) => {
+  test.setTimeout(90_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(`${process.env.MULTI_URL}?uid=u_mem&sample=ok`);
+  await a.evaluate(() => localStorage.clear());
+  await a.goto(`${process.env.MULTI_URL}?uid=u_mem&sample=ok`);
+  await a.getByTestId('memory-card').click();
+  await expect(a.getByRole('heading', { name: "Lumo's memory", level: 1 })).toBeVisible();
+  await a.getByRole('button', { name: /My class book/ }).click();
+  await expect(a.locator('#memory-text')).toHaveValue('In French class we use the book ');
+  await a.locator('#memory-text').pressSequentially('« Zénith 2 », chapter 4');
+  await a.getByRole('button', { name: 'Remember this' }).click();
+  await expect(a.getByTestId('memory-notes')).toContainText('Zénith 2');
+  await a.getByRole('radio', { name: 'Short' }).click();
+  await expect(a.getByRole('radio', { name: 'Short' })).toHaveAttribute('aria-checked', 'true');
+
+  // Making a deck: Lumo says it remembers, and the note goes into what Claude is asked.
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await expect(a.getByTestId('memory-link')).toContainText('Lumo remembers 1 thing about you');
+  await a.getByRole('tab', { name: 'Topic' }).click();
+  await a.getByLabel('Just type a topic').fill('récit psychologique secondaire 2');
+  await a.getByLabel('Just type a topic').press('Enter');
+  await expect(a.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });
+  await expect.poll(() => a.evaluate(() => (window as unknown as { __prompts: string[] }).__prompts.filter((p) => p.includes('Zénith 2')).length), { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+  const writing = await a.evaluate(() => (window as unknown as { __prompts: string[] }).__prompts.find((p) => p.includes('writing a real test'))!);
+  expect(writing).toContain('About this student');
+  expect(writing).toContain('Keep explanations very short and simple.');
+
+  // Forgetting works too.
+  await a.goto(`${process.env.MULTI_URL}?uid=u_mem&sample=ok`);
+  await a.getByTestId('memory-card').click();
+  await a.getByRole('button', { name: /Forget: In French class/ }).click();
+  await expect(a.getByText('Nothing yet. Tell Lumo about your class')).toBeVisible();
+  await ctx.close();
+});
+
+test('website: after a round there is always a way out (close, or Done)', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(`${process.env.MULTI_URL}?uid=u_exit`);
+  await a.evaluate(() => localStorage.clear());
+  await a.goto(`${process.env.MULTI_URL}?uid=u_exit`);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await a.getByRole('button', { name: /^Play\b/ }).click();
+  for (let i = 0; i < 40; i++) {
+    const section = a.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    await answerAndCheck(a, (await section.getAttribute('data-format'))!);
+    await closeHatch(a);
+    const last = await continueRound(a);
+    await closeHatch(a);
+    if (last) break;
+  }
+  await expect(a.getByRole('heading', { name: ROUND_DONE })).toBeVisible();
+  await expect(a.getByTestId('round-close')).toBeVisible();
+  await a.getByRole('link', { name: '✓ Done' }).click();
+  await expect(a.getByRole('button', { name: /^Play\b/ })).toBeVisible();
+  await ctx.close();
+});

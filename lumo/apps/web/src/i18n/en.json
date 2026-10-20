@@ -873,7 +873,9 @@
     "betsOnYou_one": "🎲 Someone bet on you!",
     "betsOnYou_other": "🎲 {{count}} people bet on you!",
     "betWon": "Good call! You won {{xp}} XP on {{name}}.",
-    "betLost": "Bad call: you lost {{xp}} XP on {{name}}."
+    "betLost": "Bad call: you lost {{xp}} XP on {{name}}.",
+    "whoGotIt": "{{n}} of {{total}} got it right",
+    "you": "you"
   },
   "friends": {
     "title": "Friends",
@@ -1334,7 +1336,9 @@
       "rematch": "Rematch",
       "fix_one": "Fix {{count}} mistake",
       "fix_other": "Fix {{count}} mistakes",
-      "review": "To review"
+      "review": "To review",
+      "close": "Close",
+      "finish": "Done"
     },
     "points": "{{n}} points",
     "pts": "pts",
@@ -1529,5 +1533,77 @@
   "langs": {
     "en": "English",
     "fr": "French"
+  },
+  "memory": {
+    "title": "Lumo's memory",
+    "subtitle": "Tell Lumo about your class, your books and what you like. Lumo uses it when it makes your decks, writes your tests and explains answers.",
+    "tellTitle": "Tell Lumo something",
+    "placeholder": "e.g. In French class we use the book « Zénith 2 », chapter 4.",
+    "add": "Remember this",
+    "ideas": {
+      "book": "My class book",
+      "grade": "My grade",
+      "hard": "What I find hard",
+      "like": "What I like",
+      "tests": "My teacher's tests"
+    },
+    "ideaText": {
+      "book": "In French class we use the book ",
+      "grade": "I'm in grade ",
+      "hard": "I find this hard: ",
+      "like": "I like ",
+      "tests": "My teacher's tests usually "
+    },
+    "saved": "Got it! Lumo will remember that.",
+    "privacy": "Only you see this. Don't write private things like your address, phone number or passwords.",
+    "suggestTitle": "Lumo noticed",
+    "keep": "Remember",
+    "no": "No",
+    "notesTitle_one": "What Lumo remembers ({{count}})",
+    "notesTitle_other": "What Lumo remembers ({{count}})",
+    "empty": "Nothing yet. Tell Lumo about your class, your books or what you like.",
+    "forgetLabel": "Forget: {{text}}",
+    "noticedTitle": "What Lumo noticed",
+    "noticedEmpty": "Play a few rounds and Lumo will learn how you study.",
+    "answered_one": "You've answered {{count}} question.",
+    "answered_other": "You've answered {{count}} questions.",
+    "accuracy": "Lately you get {{pct}}% right.",
+    "strong": "You're strongest at: {{list}}.",
+    "weak": "Harder for you: {{list}}. Lumo gives you a bit more practice there.",
+    "time": {
+      "morning": "You usually study in the morning.",
+      "afternoon": "You usually study in the afternoon.",
+      "evening": "You usually study in the evening.",
+      "night": "You usually study late at night."
+    },
+    "subjects": "Your subjects: {{list}}.",
+    "weakIdeas": "Ideas to work on: {{list}}.",
+    "adaptTitle": "How Lumo adapts",
+    "adapt": "Adapt to me",
+    "adaptBody": "Your weak spots come back more often, and questions get deeper when you're on a roll.",
+    "level": "Questions",
+    "levels": {
+      "auto": "Auto",
+      "easier": "Easier",
+      "harder": "Harder"
+    },
+    "explain": "Explanations",
+    "explains": {
+      "short": "Short",
+      "normal": "Normal",
+      "detailed": "Detailed"
+    },
+    "homeTitle": "Tell Lumo about you",
+    "homeCount_one": "Lumo remembers {{count}} thing about you",
+    "homeCount_other": "Lumo remembers {{count}} things about you",
+    "homeBody": "Your class, your books, what you find hard: Lumo fits your decks and tests to you.",
+    "createHint_one": "Lumo remembers {{count}} thing about you and uses it here.",
+    "createHint_other": "Lumo remembers {{count}} things about you and uses them here.",
+    "createHintEmpty": "Tell Lumo about your class and your books, and your decks fit you better.",
+    "edit": "Edit",
+    "errors": {
+      "too_many": "That's a lot! Forget a few things first.",
+      "empty": "Write something first."
+    }
   }
 }

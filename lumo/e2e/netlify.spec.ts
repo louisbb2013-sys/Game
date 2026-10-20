@@ -235,7 +235,7 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   const { a, b, bName } = await friends(browser);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('button', { name: 'Try a sample deck' }).first().click();
-  await expect(a.getByRole('button', { name: /^Play\b/ })).toBeVisible({ timeout: 15_000 });
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible({ timeout: 15_000 });
   await a.getByRole('link', { name: 'Live', exact: true }).click();
   await a.getByRole('button', { name: '5', exact: true }).click();
   await a.getByRole('button', { name: /Create game/ }).click();
@@ -272,6 +272,10 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
     await expect(p.getByText('✓ Right answer')).toBeVisible();
   }
   await expect(b.getByText(/Good call! You won 25 XP|Bad call: you lost 25 XP/)).toBeVisible();
+  // Everyone sees who got it right.
+  await expect(b.getByTestId('who-got-it').locator('li')).toHaveCount(2);
+  await expect(b.getByTestId('who-got-it')).toContainText(/\d of 2 got it right/);
+  await expect(b.getByTestId('who-got-it')).toContainText(bName);
   await b.screenshot({ path: 'e2e/screens/netlify-live-reveal.png', fullPage: true });
   await a.getByRole('button', { name: 'End game' }).click();
   await a.getByRole('button', { name: 'Tap to end' }).click();

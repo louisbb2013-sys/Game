@@ -15,6 +15,7 @@ import { play } from '../lib/sound';
 import { lastDeckId, type DeckListItem } from '../lib/quiz';
 import { PetAvatar, type PetView } from './Pets';
 import { ChestArt } from '../components/Art';
+import { MemoryCard } from './Memory';
 
 interface Quest {
   id: string;
@@ -329,6 +330,7 @@ export function Home() {
         )}
 
         {ov?.egg && <EggCard egg={ov.egg} />}
+        {LOCAL && <MemoryCard />}
 
         {ov && (
           <section className="panel space-y-2 p-4" aria-labelledby="quests-title">

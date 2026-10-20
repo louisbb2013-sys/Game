@@ -96,7 +96,10 @@
     { c: i + 1, type: 'tf', level: 'understand', q: 'Bank statement ' + (i + 1) + ': this idea describes something real.', answer: true, why: 'It is a real idea from the course.' },
     { c: i + 1, type: 'written', level: 'analyze', q: 'Bank question ' + (i + 1) + ': explain why this idea matters in a new situation.', points: ['names the idea', 'gives a reason'], model: 'A model answer.', why: 'A full answer names the idea and gives a reason.' },
   ].map((o) => JSON.stringify(o)));
+  // Every prompt sent to Claude, so tests can check what Lumo told it (e.g. the learner's memory).
+  window.__prompts = [];
   const writeBank = async (p, o = {}) => {
+    window.__prompts.push(String(p));
     if (sMode === 'hang') return new Promise(() => {});
     if (sMode === 'deny') throw { code: 'not_granted', message: 'declined' };
     if (String(p).includes('Explain it again')) return { text: 'Think of it like a crowded hallway: people spread out to where there is more room.', truncated: false };
@@ -111,7 +114,7 @@
   };
   const sample = sMode ? Object.assign(writeBank, {
     limits: async () => ({ images: { maxCount: 5, maxBytes: 5000000 } }),
-    json: (p, o) => sMode === 'hang' ? new Promise(() => {}) : sMode === 'deny' ? Promise.reject({ code: 'not_granted', message: 'declined' }) : new Promise((r) => setTimeout(() => r(
+    json: (p, o) => (window.__prompts.push(String(p)), sMode === 'hang') ? new Promise(() => {}) : sMode === 'deny' ? Promise.reject({ code: 'not_granted', message: 'declined' }) : new Promise((r) => setTimeout(() => r(
       String(p).includes('You are checking a school quiz')
         ? [] // no second opinion this time: every question is kept
         : String(p).includes('You grade a student')

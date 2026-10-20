@@ -37,6 +37,15 @@ export function Profile() {
           {t('profile.settings')}
         </Link>
       </div>
+      {LOCAL && (
+        <Link to="/memory" className="flex items-center gap-3 rounded-3xl bg-surface p-4 font-black ring-1 ring-line hover:ring-brand">
+          <span className="text-2xl" aria-hidden>
+            🧠
+          </span>
+          <span className="flex-1">{t('memory.title')}</span>
+          <span aria-hidden>›</span>
+        </Link>
+      )}
 
       <section className="flex flex-col items-center rounded-3xl bg-surface p-5 text-center ring-1 ring-line">
         <div className="grid size-28 place-items-center rounded-full bg-night">

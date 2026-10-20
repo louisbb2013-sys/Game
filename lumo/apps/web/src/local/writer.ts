@@ -1,5 +1,6 @@
 import { dedupeQuestions, hashString, readDraftLines, readDraftWhole, type Concept, type Locale, type Question } from '@lumo/core';
-import { api } from '../lib/api';
+import { api, NETLIFY } from '../lib/api';
+import { aboutLearner, explainStyle } from './memory';
 import { getSample } from './reader';
 
 /**
@@ -57,7 +58,10 @@ export function stopWriting(deckId: string) {
 const FATAL = new Set(['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed', 'rate_limited', 'session_expired', 'cancelled', 'unavailable']);
 
 const GROUP = 4; // concepts per call
+const FIRST_GROUP = 2; // the first call is small (and quick) so the first questions arrive fast
 const PER_CONCEPT = 3; // questions per concept per call
+// Inside Claude a viewer runs a couple of calls at once; the website's own endpoint takes more.
+const PARALLEL = NETLIFY ? 4 : 2;
 
 /**
  * Write (or, with `more`, add new) test questions for a deck. Safe to call again while it runs:
@@ -103,7 +107,12 @@ async function go(deckId: string, opts: { more?: boolean }, run: Run, emit: () =
   const s = await getSample();
   if (!s) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
   const groups: Concept[][] = [];
-  for (let i = 0; i < d.concepts.length; i += GROUP) groups.push(d.concepts.slice(i, i + GROUP));
+  for (let i = 0; i < d.concepts.length; ) {
+    const size = i === 0 ? FIRST_GROUP : GROUP;
+    groups.push(d.concepts.slice(i, i + size));
+    i += size;
+  }
+  const about = await aboutLearner();
   run.state.groups = groups.length;
   run.state.expected = d.concepts.length * PER_CONCEPT;
   emit();
@@ -147,9 +156,10 @@ async function go(deckId: string, opts: { more?: boolean }, run: Run, emit: () =
       save(got.questions);
     };
     try {
-      const res = await (s as unknown as (input: string, o: object) => Promise<{ text: string }>)(writingPrompt(d.deck, concepts, already), {
+      const res = await (s as unknown as (input: string, o: object) => Promise<{ text: string }>)(writingPrompt(d.deck, concepts, already, about), {
         signal: run.ctl.signal,
-        modelTier: 'default',
+        // The first small batch is quick, so there's something to play within seconds.
+        modelTier: gi === 0 ? 'quick' : 'default',
         cache: false,
         onText: ({ text }: { text: string }) => take(text, false),
       });
@@ -159,9 +169,9 @@ async function go(deckId: string, opts: { more?: boolean }, run: Run, emit: () =
         mine.push(...whole);
         save(whole);
       }
-      // A second, independent look: drop any question whose key it disputes.
-      const bad = await checkAnswers(mine, concepts, d.deck.language, run.ctl.signal);
-      if (bad.size) drop(bad);
+      // A second, independent look (alongside the next batch, not holding it up): drop any question
+      // whose key it disputes.
+      checks.push(checkAnswers(mine, concepts, d.deck.language, run.ctl.signal).then((bad) => bad.size && drop(bad)));
     } catch (e) {
       const err = e as { code?: string; text?: string };
       const code = err?.code ?? 'upstream_error';
@@ -177,7 +187,8 @@ async function go(deckId: string, opts: { more?: boolean }, run: Run, emit: () =
     }
   };
 
-  // Two calls at once: a viewer runs a couple together, more just wait their turn.
+  const checks: Promise<unknown>[] = [];
+  // A few calls at once: more just wait their turn.
   let next = 0;
   const worker = async () => {
     while (next < groups.length && !fatal) {
@@ -185,7 +196,8 @@ async function go(deckId: string, opts: { more?: boolean }, run: Run, emit: () =
       await writeGroup(groups[gi]!, gi);
     }
   };
-  await Promise.all([worker(), worker()]);
+  await Promise.all(Array.from({ length: PARALLEL }, worker));
+  await Promise.all(checks);
   await saving;
   if (run.state.saved === 0 && (fatal || lastError || existing.length === 0)) {
     throw Object.assign(new Error('failed'), { code: fatal ?? lastError ?? 'nothing_found' });
@@ -209,7 +221,7 @@ const EXAMPLES: Record<Locale, string> = {
 };
 
 /** What Claude is asked for. Built on item-writing research and what real school tests look like. */
-export function writingPrompt(deck: { title: string; subject: string; language: Locale }, concepts: Concept[], already: string[] = []): string {
+export function writingPrompt(deck: { title: string; subject: string; language: Locale }, concepts: Concept[], already: string[] = [], about = ''): string {
   const fr = deck.language === 'fr';
   const list = concepts
     .map((c, i) => {
@@ -228,7 +240,7 @@ Write everything in ${fr ? 'French, with the vocabulary Québec schools use (PFE
 
 What the student studied (from their notes):
 ${list}
-
+${about}
 Write ${n} questions for EACH concept above (${n * concepts.length} lines in all). They must feel like a good teacher's test or a ministry exam at this level: they check that the student UNDERSTANDS and can USE each idea, never that they remember the notes' wording.
 
 For each concept:
@@ -298,6 +310,7 @@ export async function checkAnswers(questions: Question[], concepts: Concept[], l
 export async function explainAgain(x: { language: Locale; context?: string; prompt: string; options?: string[]; correct: string; given?: string; correctNow: boolean; explanation: string }): Promise<string> {
   const s = await getSample();
   if (!s) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+  const [style, about] = await Promise.all([explainStyle(), aboutLearner()]);
   const prompt = [
     `You are Lumo, a friendly tutor for a student aged 12-18. Write in ${x.language === 'fr' ? 'French (Québec school vocabulary)' : 'English'}.`,
     'The student just answered this test question:',
@@ -307,10 +320,35 @@ export async function explainAgain(x: { language: Locale; context?: string; prom
     `Correct answer: ${x.correct.slice(0, 600)}`,
     x.given ? `The student answered: ${x.given.slice(0, 600)} (${x.correctNow ? 'right' : 'wrong'})` : '',
     `The short explanation they already saw: ${x.explanation.slice(0, 600)}`,
-    `Explain it again, differently and more simply, in 3-4 short sentences: why the correct answer is right${x.correctNow ? '' : ", what made the student's answer tempting and why it doesn't work"}. Use one everyday example or comparison a teenager knows. No greeting, no preamble, no markdown.`,
+    `Explain it again, differently and more simply, in ${style === 'short' ? '2 very short sentences' : style === 'detailed' ? '4-6 sentences' : '3-4 short sentences'}: why the correct answer is right${x.correctNow ? '' : ", what made the student's answer tempting and why it doesn't work"}. Use one everyday example or comparison a teenager knows${about ? ' (from what they like, if it fits)' : ''}. No greeting, no preamble, no markdown.`,
+    about,
   ]
     .filter(Boolean)
     .join('\n');
   const r = await (s as unknown as (i: string, o: object) => Promise<{ text: string }>)(prompt, { modelTier: 'quick' });
   return r.text.trim().slice(0, 900);
+}
+
+const TOPUP_EVERY = 12 * 3_600_000;
+
+/**
+ * Questions always feel new: when a learner has met almost all of a deck's questions, Lumo quietly
+ * writes different ones in the background (at most twice a day per deck).
+ */
+export async function topUpIfLow(deckId: string) {
+  if (runs.get(deckId)?.state.status === 'writing') return;
+  const key = `lumo.topup.${deckId}`;
+  try {
+    if (Date.now() - Number(localStorage.getItem(key) ?? 0) < TOPUP_EVERY) return;
+  } catch {
+    /* no storage: still fine to check */
+  }
+  const f = await api<{ total: number; unseen: number; concepts: number }>(`/api/local/decks/${deckId}/fresh`).catch(() => null);
+  if (!f || f.total === 0 || f.unseen >= Math.max(6, f.concepts)) return;
+  try {
+    localStorage.setItem(key, String(Date.now()));
+  } catch {
+    /* fine */
+  }
+  void writeQuestions(deckId, { more: true });
 }
