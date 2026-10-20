@@ -7,6 +7,8 @@ export interface LiveReward {
   rank: number;
   xp: number;
   coins: number;
+  /** XP won (+) or lost (-) betting, website/Claude page only. */
+  betXp?: number;
   rewards: Rewards;
 }
 

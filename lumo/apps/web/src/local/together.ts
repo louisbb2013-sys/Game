@@ -185,12 +185,63 @@ export function useProfiles() {
 // ------------------------------------------------------------------ who's online
 
 let onlineSet = false;
+let onlineName = '';
 /** Show up as online to everyone with this Lumo open (presence in the page's lobby room). */
 export async function goOnline(username: string) {
   const t = await together();
   if (!t?.room) return;
   onlineSet = true;
-  await t.room.presence({ online: true, username: username.slice(0, 40) }).catch(() => {});
+  onlineName = username.slice(0, 40);
+  await t.room.presence({ online: true, username: onlineName }).catch(() => {});
+}
+
+// ------------------------------------------------------------------ Live invites
+
+/** A Live game I'm hosting and the friends I invited to it, shown to them wherever they are in Lumo. */
+export interface LiveInvite {
+  code: string;
+  title: string;
+  to: string[];
+  at: number;
+}
+
+/**
+ * Invites travel in the host's presence in the lobby room, which every open Lumo already follows
+ * (for "who's online"), so they cost nothing extra and vanish when the host leaves.
+ */
+export async function setLiveInvite(invite: LiveInvite | null) {
+  const t = await together();
+  if (!t?.room) return;
+  await t.room.presence({ online: true, username: onlineName, invite: invite ? { ...invite, title: invite.title.slice(0, 80), to: invite.to.slice(0, 40) } : null }).catch(() => {});
+}
+
+/** Live games I've been invited to right now (newest first), with who invited me. */
+export function useLiveInvites() {
+  const friends = useFriends();
+  const [list, setList] = useState<(LiveInvite & { from: string })[]>([]);
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    let alive = true;
+    void together().then((t) => {
+      if (!t?.room || !alive) return;
+      unsub = t.room.onPeers((c: Any) => {
+        const out = new Map<string, LiveInvite & { from: string }>();
+        for (const p of c.peers) {
+          const inv = plain(p.presence?.invite) as LiveInvite | null | undefined;
+          if (!p.by || p.by === t.me || !inv || typeof inv.code !== 'string' || !Array.isArray(inv.to) || !inv.to.includes(t.me)) continue;
+          if (Date.now() - Number(inv.at) > 30 * 60_000) continue;
+          out.set(inv.code, { code: inv.code, title: String(inv.title ?? ''), to: inv.to, at: Number(inv.at), from: p.by });
+        }
+        setList([...out.values()].sort((a, b) => b.at - a.at));
+      });
+    });
+    return () => {
+      alive = false;
+      unsub?.();
+    };
+  }, []);
+  // On the website, only friends can invite me.
+  return FRIENDS_ONLY ? list.filter((i) => (friends ?? []).includes(i.from)) : list;
 }
 
 /** Ids of people who have this Lumo open right now (not me). */
@@ -306,7 +357,18 @@ export interface PublicDeck {
   concepts: Concept[];
   /** The deck's test questions, so a friend's copy plays right away. */
   bank?: Question[];
+  /** Website: 'friends' (only people I added) or 'public' (anyone on Lumo, and a link). */
+  visibility?: 'friends' | 'public';
   updatedAt: number;
+}
+
+/** One person's shared deck (for a deck link), or null if it isn't shared any more. */
+export async function sharedDeck(ownerId: string, deckId: string): Promise<PublicDeck | null> {
+  const t = await together();
+  if (!t) return null;
+  const snap = await t.db.doc(`decks/${ownerId}`).get().catch(() => null);
+  const list = (snap?.exists ? (plain(snap.data()?.decks) as PublicDeck[]) : []) ?? [];
+  return list.find((d) => d.id === deckId) ?? null;
 }
 
 export async function setPublicDecks(decks: PublicDeck[]) {
@@ -338,7 +400,7 @@ export async function myPublicDecks(): Promise<PublicDeck[]> {
   return (snap?.exists ? (plain(snap.data()?.decks) as PublicDeck[]) : []) ?? [];
 }
 
-/** Everyone's public decks (on the website: my friends'), live, with the owner's id. */
+/** Shared decks, live, with the owner's id: inside Claude everyone's; on the website my friends' and anyone's public ones. */
 export function useSharedDecks() {
   const friends = useFriends();
   const [decks, setDecks] = useState<(PublicDeck & { ownerId: string })[] | null>(null);
@@ -360,7 +422,9 @@ export function useSharedDecks() {
       unsub?.();
     };
   }, []);
-  if (!FRIENDS_ONLY || !decks) return decks;
+  if (!decks) return decks;
   const circle = new Set(friends ?? []);
-  return decks.filter((d) => circle.has(d.ownerId) || d.ownerId === myId);
+  return decks
+    .filter((d) => !FRIENDS_ONLY || circle.has(d.ownerId) || d.ownerId === myId || d.visibility === 'public')
+    .map((d) => ({ ...d, fromFriend: !FRIENDS_ONLY || circle.has(d.ownerId) }));
 }

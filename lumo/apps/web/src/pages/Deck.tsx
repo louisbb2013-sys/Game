@@ -6,6 +6,7 @@ import { Lumo } from '../components/Lumo';
 import { Creature3D } from '../components/Pet3D';
 import { READY_TO_PLAY, useWriting, WritingScreen } from '../components/play/Writing';
 import { ShareDeckToggle } from '../components/SharedDecks';
+import { translateDeck } from '../local/translate';
 import { StudyPlan } from '../components/StudyPlan';
 import { api, ApiError, LOCAL } from '../lib/api';
 import { offlineDeck, saveDeckOffline } from '../lib/offline';
@@ -36,6 +37,40 @@ async function claudeAllowed(): Promise<boolean> {
   const p = await use('permissions').catch(() => null);
   if (!p?.state) return true;
   return (await p.state('sample').catch(() => 'prompt')) === 'granted';
+}
+
+/** A deck written in the other language: one tap turns it (ideas and questions) into the app's language. */
+function TranslateDeck({ deckId, from, onDone }: { deckId: string; from: string; onDone: () => void }) {
+  const { t, i18n } = useTranslation();
+  const to = i18n.language === 'fr' ? 'fr' : 'en';
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (from === to) return null;
+  const go = async () => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await translateDeck(deckId, to);
+      onDone();
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-surface p-3 ring-1 ring-brand/40" data-testid="translate-deck">
+      <span className="text-2xl" aria-hidden>
+        🌐
+      </span>
+      <p className="min-w-0 flex-1 text-sm font-bold" role="status">
+        {failed ? t('deck.translateFailed') : busy ? t('deck.translatingBody') : t('deck.otherLanguage', { lang: t(`langs.${from === 'fr' ? 'fr' : 'en'}`) })}
+      </p>
+      <button type="button" disabled={busy} onClick={() => void go()} className="shrink-0 rounded-xl bg-brand px-3 py-2 text-sm font-black text-brand-ink disabled:opacity-60">
+        {busy ? t('deck.translating') : t('deck.translate', { lang: t(`langs.${to}`) })}
+      </button>
+    </div>
+  );
 }
 
 /** A deck is a game hub: one big Play button, game modes, and the map of what you master. */
@@ -181,6 +216,8 @@ export function Deck() {
           <span className="rounded-full bg-black/20 px-2.5 py-1">⭐ {t('learn.mastered', { done: mastered, total: data.concepts.length })}</span>
         </div>
       </header>
+
+      {LOCAL && ai && data.deck.mine && !isWriting && <TranslateDeck deckId={data.deck.id} from={data.deck.language} onDone={() => void load()} />}
 
       {LOCAL && !ai && bank === 0 && (
         <p className="rounded-2xl bg-amber-glow/15 px-3 py-2 text-sm font-bold ring-1 ring-amber-glow/40">{t('hub.noClaude')}</p>

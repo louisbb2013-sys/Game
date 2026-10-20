@@ -87,7 +87,7 @@ test('Google sign-in and a name/password friend: add a friend, share a deck, pla
 
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('button', { name: 'Try a sample deck' }).first().click();
-  await a.getByRole('switch', { name: /Share with friends/ }).click();
+  await a.getByRole('radio', { name: 'Friends', exact: true }).click();
   await expect(a.getByText('Your friends can see this deck now.')).toBeVisible({ timeout: 10_000 });
   await a.getByRole('link', { name: 'Me', exact: true }).click();
   await a.getByRole('link', { name: /Friends/ }).first().click();
@@ -172,7 +172,7 @@ test('invite link adds a friend, the friend gets a request to add back, and a sh
   // A shares the sample deck (with its questions).
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('button', { name: 'Try a sample deck' }).first().click();
-  await a.getByRole('switch', { name: /Share with friends/ }).click();
+  await a.getByRole('radio', { name: 'Friends', exact: true }).click();
   await expect(a.getByText('Your friends can see this deck now.')).toBeVisible({ timeout: 10_000 });
 
   // B opens A's invite link.
@@ -213,4 +213,104 @@ test('make a deck straight from a photo: from Home, and from the create page', a
   await p.getByRole('button', { name: /Read my files/ }).click();
   await expect(p.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 20_000 });
   await p.context().close();
+});
+
+/** Two learners who are friends both ways (by the invite link, then "Add back"). */
+async function friends(browser: Browser) {
+  const aName = `Lea_${tag()}`;
+  const a = await signUp(browser, aName);
+  const b = await signUp(browser, `Tom_${tag()}`);
+  const bName = (await b.getByRole('heading', { level: 1 }).textContent())!.match(/(Tom_\w+)/)![1]!;
+  await b.goto(`${process.env.NETLIFY_URL}add/${aName}`);
+  await expect(b.getByText(`${aName} is now your friend!`)).toBeVisible({ timeout: 20_000 });
+  await a.getByRole('link', { name: 'Me', exact: true }).click();
+  await a.getByRole('link', { name: /Friends/ }).first().click();
+  await a.getByRole('button', { name: 'Add back' }).click({ timeout: 20_000 });
+  await expect(a.getByRole('list').getByText(bName).first()).toBeVisible({ timeout: 10_000 });
+  return { a, b, aName, bName };
+}
+
+test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a clear right or wrong', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const { a, b, bName } = await friends(browser);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).first().click();
+  await expect(a.getByRole('button', { name: /^Play\b/ })).toBeVisible({ timeout: 15_000 });
+  await a.getByRole('link', { name: 'Live', exact: true }).click();
+  await a.getByRole('button', { name: '5', exact: true }).click();
+  await a.getByRole('button', { name: /Create game/ }).click();
+  await expect(a.getByTestId('live-code')).toBeVisible({ timeout: 15_000 });
+
+  // The host invites the friend: the friend gets a pop-up (wherever they are) and joins with one tap.
+  await b.getByRole('link', { name: 'Home', exact: true }).click();
+  await a.getByRole('button', { name: 'Invite', exact: true }).click({ timeout: 20_000 });
+  await expect(a.getByRole('button', { name: /Invited/ })).toBeDisabled();
+  await expect(b.getByTestId('live-invite')).toBeVisible({ timeout: 25_000 });
+  await expect(b.getByTestId('live-invite')).toContainText('invites you to play Live!');
+  await b.getByTestId('live-invite').getByRole('button', { name: 'Join', exact: true }).click();
+  await expect(b.getByText('Waiting for the host to start…')).toBeVisible({ timeout: 15_000 });
+  await expect(b.getByTestId('live-invite')).toHaveCount(0);
+  await a.getByRole('button', { name: 'Start with 2 players' }).click({ timeout: 15_000 });
+
+  // Every question: four answers, A to D.
+  await expect(b.getByText('Question 1 of 5')).toBeVisible({ timeout: 15_000 });
+  for (const p of [a, b]) {
+    await expect(p.locator('section[data-format="multiple_choice"] .tile')).toHaveCount(4);
+    await expect(p.locator('.tile-letter')).toHaveText(['A', 'B', 'C', 'D']);
+  }
+  // The friend bets 25 XP that the host gets it right; the host sees someone bet on them.
+  await b.getByTestId('bet-panel').getByRole('radio', { name: '25 XP' }).click();
+  await b.getByTestId('bet-panel').getByRole('button', { name: /Right/ }).click();
+  await expect(b.getByTestId('bet-panel')).toContainText('You bet 25 XP that');
+  await expect(a.getByText('Someone bet on you!')).toBeVisible({ timeout: 15_000 });
+  for (const p of [a, b]) await p.locator('section[data-format] .tile').first().click();
+  // The answer screen says it plainly, in green or red, and shows the right answer on the tiles.
+  for (const p of [a, b]) {
+    await expect(p.getByTestId('live-verdict')).toBeVisible({ timeout: 15_000 });
+    expect(['right', 'wrong']).toContain(await p.getByTestId('live-verdict').getAttribute('data-verdict'));
+    await expect(p.locator('.tile[data-state="right"]')).toHaveCount(1);
+    await expect(p.getByText('✓ Right answer')).toBeVisible();
+  }
+  await expect(b.getByText(/Good call! You won 25 XP|Bad call: you lost 25 XP/)).toBeVisible();
+  await b.screenshot({ path: 'e2e/screens/netlify-live-reveal.png', fullPage: true });
+  await a.getByRole('button', { name: 'End game' }).click();
+  await a.getByRole('button', { name: 'Tap to end' }).click();
+  await expect(b.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 15_000 });
+  await expect(b.getByRole('status').filter({ hasText: /🎲 [+−]25 XP/ })).toBeVisible({ timeout: 15_000 });
+  expect(bName).toBeTruthy();
+  for (const p of [a, b]) await p.context().close();
+});
+
+test('a public deck: anyone on Lumo finds it, its link opens it; and a deck turns into French in one tap', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const a = await signUp(browser, `Pub_${tag()}`);
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).first().click();
+  await expect(a.getByRole('radio', { name: 'Only me' })).toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+  await a.getByRole('radio', { name: 'Public', exact: true }).click();
+  await expect(a.getByText('Your deck is public now.')).toBeVisible({ timeout: 10_000 });
+  const deckUrl = a.url();
+
+  // Someone who isn't a friend finds it under Public decks.
+  const s = await signUp(browser, `New_${tag()}`);
+  await s.getByRole('link', { name: 'Learn', exact: true }).click();
+  await expect(s.getByRole('heading', { name: /Public decks/ })).toBeVisible({ timeout: 20_000 });
+  await expect(s.getByText('Cells — the basics').first()).toBeVisible();
+  // ...and its link opens it too.
+  const owner = await a.evaluate(() => JSON.parse(localStorage.getItem('lumo_session') ?? '{}').uid as string);
+  await s.goto(`${process.env.NETLIFY_URL}shared/${owner}/${deckUrl.split('/decks/')[1]}`);
+  await expect(s.getByRole('heading', { name: 'Cells — the basics', level: 1 })).toBeVisible({ timeout: 15_000 });
+  await s.getByRole('button', { name: 'Add to my decks' }).click();
+  await expect(s.getByRole('button', { name: /^Play\b/ })).toBeVisible({ timeout: 15_000 });
+
+  // Switch Lumo to French: the English deck offers to turn itself into French.
+  const myDeck = s.url();
+  await s.goto(`${process.env.NETLIFY_URL}settings`);
+  await s.getByRole('button', { name: 'fr', exact: true }).click();
+  await s.goto(myDeck);
+  await expect(s.getByTestId('translate-deck')).toContainText('Ce paquet est en anglais.', { timeout: 15_000 });
+  await s.getByRole('button', { name: 'Traduire en français' }).click();
+  await expect(s.getByRole('heading', { level: 1 })).toContainText('FR Cells', { timeout: 20_000 });
+  await expect(s.getByTestId('translate-deck')).toHaveCount(0);
+  for (const p of [a, s]) await p.context().close();
 });

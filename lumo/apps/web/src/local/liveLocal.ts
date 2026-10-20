@@ -1,5 +1,6 @@
 import {
   allAnswered,
+  betLive,
   chooseFormat,
   createLive,
   generateLocal,
@@ -20,7 +21,10 @@ import {
   shuffle,
   startLive,
   submitLive,
+  toLiveChoices,
   type Answer,
+  type Format,
+  type LiveBet,
   type Concept,
   type ConceptProgress,
   type LiveState,
@@ -31,7 +35,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import type { LivePublic, LiveReward, RoomStatus } from '../lib/live';
 import { judgeShort } from './reader';
-import { FRIENDS_ONLY, namesFor, plain, together, useFriends } from './together';
+import { FRIENDS_ONLY, namesFor, plain, setLiveInvite, together, useFriends } from './together';
 
 /**
  * Live games in the browser-only build. The HOST's page runs the game (the same core state machine the
@@ -67,6 +71,8 @@ class HostGame {
   private writing = false;
   private unsubPeers: (() => void) | null = null;
   private seenAnswer = new Map<string, string>(); // player -> question id already taken
+  private seenBet = new Map<string, string>(); // player -> question id they already bet on
+  invited = new Set<string>();
 
   constructor(
     public code: string,
@@ -143,6 +149,15 @@ class HostGame {
       if (!this.state.players.some((x) => x.id === id) && this.state.phase === 'lobby') fresh.push(id);
       const a = pr.answer as { qid?: string; a?: Answer } | undefined;
       const q = this.state.questions[this.state.index];
+      const b = pr.bet as ({ qid?: string } & Partial<LiveBet>) | undefined;
+      if (b?.qid && q && b.qid === q.id && this.seenBet.get(id) !== q.id && this.state.phase === 'question' && !this.revealing) {
+        this.seenBet.set(id, q.id);
+        try {
+          this.state = betLive(this.state, id, q.id, { on: String(b.on), right: b.right === true, stake: Number(b.stake) });
+        } catch {
+          /* a bet that breaks the rules is ignored */
+        }
+      }
       if (a?.qid && q && a.qid === q.id && this.seenAnswer.get(id) !== q.id && this.state.phase === 'question' && !this.revealing && a.a && typeof a.a === 'object') {
         this.seenAnswer.set(id, q.id);
         try {
@@ -171,6 +186,19 @@ class HostGame {
 
   start() {
     this.state = startLive(this.state, this.t.me, Date.now());
+    this.changed();
+    void setLiveInvite(null); // the game has begun: invites close
+  }
+
+  /** Invite friends: they get a "Join" pop-up wherever they are in Lumo. */
+  invite(ids: string[]) {
+    for (const id of ids) this.invited.add(id);
+    void setLiveInvite({ code: this.code, title: this.state.title, to: [...this.invited], at: Date.now() });
+  }
+
+  bet(questionId: string, bet: LiveBet) {
+    if (this.revealing) throw new LiveError('wrong_phase');
+    this.state = betLive(this.state, this.t.me, questionId, bet);
     this.changed();
   }
 
@@ -221,6 +249,7 @@ class HostGame {
     if (this.timer) clearTimeout(this.timer);
     clearInterval(this.heartbeat);
     window.removeEventListener('pagehide', this.onLeave);
+    if (this.invited.size) void setLiveInvite(null);
     this.unsubPeers?.();
     this.listeners.clear();
     await this.named.leave().catch(() => {});
@@ -231,21 +260,24 @@ class HostGame {
 
 let host: HostGame | null = null;
 
-function makeQuestions(concepts: Concept[], language: Locale, count: number, bank: Question[] = []): Question[] {
+/** Formats that can be asked as "pick one of four" (A, B, C, D), like Gizmo Live. */
+const CHOICE_SOURCES: Format[] = ['multiple_choice', 'cause_effect', 'type_answer', 'fill_blank'];
+
+export function makeQuestions(concepts: Concept[], language: Locale, count: number, bank: Question[] = []): Question[] {
   const rng = seededRng(hashString(`${Date.now()}:${Math.random()}`));
-  // The deck's real test questions (the formats that work in a timed game). A long game goes round
-  // them again in a new order rather than falling back to basic questions built from the notes.
-  // Written answers take too long in a timed group game.
-  const usable = bank.filter((q) => LIVE_FORMATS.includes(q.format) && !OPEN_FORMATS.includes(q.format));
-  if (usable.length >= 3) {
-    const out: Question[] = [];
-    while (out.length < count) out.push(...shuffle(usable, rng).slice(0, count - out.length).map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` })));
-    return out;
-  }
-  return makeGenerated(concepts, language, count, rng);
+  // The deck's real test questions, each asked as four choices. A long game goes round them again in
+  // a new order rather than falling back to basic questions built from the notes.
+  let usable: Question[] = toLiveChoices(bank.filter((q) => LIVE_FORMATS.includes(q.format) && !OPEN_FORMATS.includes(q.format)), rng);
+  // No questions written yet: basic ones from the notes, as four choices too (three for a tiny deck).
+  if (usable.length < 3) usable = toLiveChoices(makeGenerated(concepts, language, Math.max(count, 12), rng, CHOICE_SOURCES), rng);
+  if (usable.length < 3) usable = toLiveChoices(makeGenerated(concepts, language, Math.max(count, 12), rng, CHOICE_SOURCES), rng, 3);
+  if (usable.length < 3) return [];
+  const out: Question[] = [];
+  while (out.length < count) out.push(...shuffle(usable, rng).slice(0, count - out.length).map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` })));
+  return out;
 }
 
-function makeGenerated(concepts: Concept[], language: Locale, count: number, rng: ReturnType<typeof seededRng>): Question[] {
+function makeGenerated(concepts: Concept[], language: Locale, count: number, rng: ReturnType<typeof seededRng>, allowed: Format[] = LIVE_FORMATS): Question[] {
   const order = shuffle(concepts, rng);
   const progress = new Map<string, ConceptProgress>();
   const out: Question[] = [];
@@ -254,7 +286,7 @@ function makeGenerated(concepts: Concept[], language: Locale, count: number, rng
   for (let i = 0; out.length < count && i < count * 5; i++) {
     const c = order[i % order.length]!;
     const p = progress.get(c.id) ?? newProgress();
-    const choice = chooseFormat(c, concepts, p, rng, { allowed: LIVE_FORMATS });
+    const choice = chooseFormat(c, concepts, p, rng, { allowed });
     if (!choice) continue;
     const q = generateLocal(c, choice.format, choice.bloom, { deck: concepts, language, rng });
     progress.set(c.id, { ...p, recentFormats: [choice.format, ...p.recentFormats].slice(0, 4) });
@@ -384,7 +416,7 @@ export function useLocalLiveRoom(code: string) {
               const p = doc.view.players.find((x) => x.id === t.me);
               if (p) {
                 rewarded.current = true;
-                void api<LiveReward>('/api/local/live-reward', { method: 'POST', body: { code, rank: p.rank, players: doc.view.players.length, correct: doc.correct?.[t.me] ?? 0 } }).then(setReward, () => {});
+                void api<LiveReward>('/api/local/live-reward', { method: 'POST', body: { code, rank: p.rank, players: doc.view.players.length, correct: doc.correct?.[t.me] ?? 0, betXp: p.betXp ?? 0 } }).then(setReward, () => {});
               }
             }
           },
@@ -418,7 +450,7 @@ export function useLocalLiveRoom(code: string) {
     if (!p) return;
     rewarded.current = true;
     const correct = host.state.players.find((x) => x.id === me)?.correctCount ?? 0;
-    void api<LiveReward>('/api/local/live-reward', { method: 'POST', body: { code, rank: p.rank, players: state.players.length, correct } }).then(setReward, () => {});
+    void api<LiveReward>('/api/local/live-reward', { method: 'POST', body: { code, rank: p.rank, players: state.players.length, correct, betXp: p.betXp ?? 0 } }).then(setReward, () => {});
   }, [state, code, me]);
 
   const send = useCallback(
@@ -429,6 +461,7 @@ export function useLocalLiveRoom(code: string) {
         else if (event === 'live:next') host.next();
         else if (event === 'live:end') host.end();
         else if (event === 'live:kick') host.kick(String((body as { playerId?: string }).playerId));
+        else if (event === 'live:invite') host.invite(((body as { ids?: string[] }).ids ?? []).map(String));
         return { ok: true as const };
       } catch (e) {
         return { ok: false as const, error: e instanceof LiveError ? e.code : 'server_error' };
@@ -453,7 +486,23 @@ export function useLocalLiveRoom(code: string) {
     [code],
   );
 
-  return { state, me, status, error, reward, connected: true, send, answer };
+  const bet = useCallback(
+    async (questionId: string, b: LiveBet): Promise<{ ok: true } | { ok: false; error: string }> => {
+      try {
+        if (host?.code === code) host.bet(questionId, b);
+        else {
+          if (!named.current) return { ok: false as const, error: 'network' };
+          await named.current.presence({ bet: { qid: questionId, ...b } });
+        }
+        return { ok: true as const };
+      } catch (e) {
+        return { ok: false as const, error: e instanceof LiveError ? e.code : 'invalid' };
+      }
+    },
+    [code],
+  );
+
+  return { state, me, status, error, reward, connected: true, send, answer, bet };
 }
 
 /** Leaving the host page for good ends the game for everyone. */

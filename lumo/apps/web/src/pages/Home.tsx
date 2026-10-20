@@ -14,6 +14,7 @@ import { useAuth } from '../lib/auth';
 import { play } from '../lib/sound';
 import { lastDeckId, type DeckListItem } from '../lib/quiz';
 import { PetAvatar, type PetView } from './Pets';
+import { ChestArt } from '../components/Art';
 
 interface Quest {
   id: string;
@@ -321,7 +322,7 @@ export function Home() {
 
         {ov && ov.chests > 0 && (
           <Link to="/shop?tab=mine" className="flex items-center gap-3 rounded-3xl bg-gradient-to-r from-amber-glow/30 to-amber-glow/10 p-4 ring-1 ring-amber-glow">
-            <span className="lumo-bounce text-4xl">🎁</span>
+            <ChestArt kind="common" size={56} />
             <span className="flex-1 font-black">{t('home.chestsWaiting', { count: ov.chests })}</span>
             <span className="text-2xl">›</span>
           </Link>

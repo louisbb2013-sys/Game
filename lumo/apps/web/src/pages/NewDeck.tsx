@@ -36,6 +36,8 @@ export function NewDeck() {
   const [busy, setBusy] = useState<Source | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ctl = useRef<AbortController | null>(null);
+  // New decks are written in the app's language (switching language here switches the deck too).
+  useEffect(() => setLanguage(i18n.language === 'fr' ? 'fr' : 'en'), [i18n.language]);
 
   useEffect(() => {
     void Promise.all([canAskClaude(), photoLimits()]).then(([ok, limits]) => {

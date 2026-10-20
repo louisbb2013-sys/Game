@@ -61,7 +61,7 @@ test('shop, chest opening, pets, quests and badges', async ({ page }) => {
   await page.getByRole('button', { name: /Feed \(\d+ snacks?\)/ }).click();
   await expect(page.getByText(/15 \//)).toBeVisible();
   await page.getByRole('button', { name: /Mystery egg/ }).click();
-  await expect(page.getByText(/Collection \(2 of 16 species\)|Collection \(1 of 16 species\)/)).toBeVisible();
+  await expect(page.getByText(/Collection \(2 of 18 species\)|Collection \(1 of 18 species\)/)).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/game-pets.png', fullPage: true });
 
   // Home: quests, pet card; Profile: badges

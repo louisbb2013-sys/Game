@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { durationFor, type Answer } from '@lumo/core';
+import { BET_STAKES, durationFor, type Answer, type LiveBet } from '@lumo/core';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -14,7 +14,7 @@ import { hostLocalGame, useLocalLiveRoom, useOpenGames } from '../local/liveLoca
 import { canAskClaude } from '../local/reader';
 import { writeQuestions } from '../local/writer';
 import { READY_TO_PLAY, WritingScreen } from '../components/play/Writing';
-import { useNames, useTogether } from '../local/together';
+import { FRIENDS_ONLY, useFriends, useNames, useOnlineNow, useTogether } from '../local/together';
 import { useAuth } from '../lib/auth';
 import { useConfetti } from '../lib/confetti';
 import { liveCall, useLiveRoom, type LivePublic } from '../lib/live';
@@ -239,6 +239,9 @@ export function LiveRoom() {
   const room = useRoom(code.toUpperCase());
   const showRewards = useRewards();
   const shown = useRef(false);
+  // What I tapped on each question, to show it on the answer screen.
+  const picks = useRef<Record<string, string>>({});
+  const bet = (room as { bet?: BetFn }).bet; // the server version has no bets
 
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
   useEffect(() => {
@@ -268,8 +271,8 @@ export function LiveRoom() {
     <div className="space-y-4">
       {!room.connected && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">{t('live.reconnecting')}</p>}
       {s.phase === 'lobby' && <Lobby s={s} isHost={isHost} send={room.send} />}
-      {s.phase === 'question' && <QuestionView s={s} me={room.me} answer={room.answer} />}
-      {s.phase === 'reveal' && <RevealView s={s} me={room.me} isHost={isHost} send={room.send} />}
+      {s.phase === 'question' && <QuestionView s={s} me={room.me} answer={room.answer} bet={bet} onPick={(qid, id) => (picks.current[qid] = id)} />}
+      {s.phase === 'reveal' && <RevealView s={s} me={room.me} isHost={isHost} send={room.send} picked={s.question ? picks.current[s.question.id] : undefined} />}
       {s.phase === 'podium' && <Podium s={s} me={room.me} reward={room.reward} />}
     </div>
   );
@@ -330,6 +333,7 @@ function Lobby({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send
           ))}
         </ul>
       </section>
+      {isHost && LOCAL && <InviteFriends s={s} send={send} />}
       {msg && <p role="status" className="text-center font-bold text-muted">{msg}</p>}
       {isHost ? (
         <button onClick={() => void start()} disabled={online.length < 2} className="w-full rounded-2xl bg-brand py-4 text-lg font-black text-brand-ink disabled:opacity-40">
@@ -342,6 +346,65 @@ function Lobby({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send
         </div>
       )}
     </>
+  );
+}
+
+/** Host, website/Claude page: invite friends in one tap; they get a pop-up and join without a code. */
+function InviteFriends({ s, send }: { s: LivePublic; send: Send }) {
+  const { t } = useTranslation();
+  const friends = useFriends();
+  const online = new Set(useOnlineNow());
+  const ids = (friends ?? []).filter((id) => !s.players.some((p) => p.id === id));
+  const names = useNames(ids);
+  const [invited, setInvited] = useState<Set<string>>(new Set());
+  if (!FRIENDS_ONLY && ids.length === 0) return null;
+  const sorted = ids.slice().sort((a, b) => Number(online.has(b)) - Number(online.has(a)));
+  const invite = (list: string[]) => {
+    void send('live:invite', { ids: list });
+    setInvited((x) => new Set([...x, ...list]));
+    play('tap');
+  };
+  return (
+    <section className="space-y-2 rounded-3xl bg-surface p-4 ring-1 ring-line" aria-labelledby="invite-title">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="invite-title" className="font-black">
+          📨 {t('live.inviteTitle')}
+        </h2>
+        {sorted.some((id) => online.has(id) && !invited.has(id)) && (
+          <button type="button" onClick={() => invite(sorted.filter((id) => online.has(id)))} className="rounded-xl bg-brand px-3 py-1.5 text-sm font-black text-brand-ink">
+            {t('live.inviteAllOnline')}
+          </button>
+        )}
+      </div>
+      {sorted.length === 0 ? (
+        <p className="text-sm text-muted">
+          {t('live.noFriendsToInvite')}{' '}
+          <Link to="/friends" className="font-black text-brand">
+            {t('friends.title')}
+          </Link>
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {sorted.map((id) => (
+            <li key={id} className="flex items-center gap-2 rounded-2xl bg-surface-2 p-2">
+              <Avatar name={names[id]?.name || '?'} avatar="firefly-amber" size={30} />
+              <span className="min-w-0 flex-1 truncate font-black">{names[id]?.name || t('together.someone')}</span>
+              {online.has(id) && <span className="text-xs font-black text-good">● {t('together.online')}</span>}
+              <button
+                type="button"
+                disabled={invited.has(id)}
+                onClick={() => invite([id])}
+                className="rounded-xl bg-brand px-3 py-1.5 text-sm font-black text-brand-ink disabled:bg-good/20 disabled:text-good"
+                data-testid={`invite-${id}`}
+              >
+                {invited.has(id) ? `✓ ${t('live.invited')}` : t('live.invite')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-xs text-muted">{t('live.inviteHint')}</p>
+    </section>
   );
 }
 
@@ -361,7 +424,9 @@ function useCountdown(s: LivePublic) {
   return { left, fraction: left / total };
 }
 
-function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (questionId: string, a: Answer) => Promise<{ ok: boolean; error?: string }> }) {
+type BetFn = (questionId: string, b: LiveBet) => Promise<{ ok: boolean; error?: string }>;
+
+function QuestionView({ s, me, answer, bet, onPick }: { s: LivePublic; me: string; answer: (questionId: string, a: Answer) => Promise<{ ok: boolean; error?: string }>; bet?: BetFn; onPick: (questionId: string, optionId: string) => void }) {
   const { t } = useTranslation();
   const q = s.question!;
   const [value, setValue] = useState<Answer | null>(null);
@@ -419,6 +484,7 @@ function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (q
           onPick={(id) => {
             const a: Answer = { kind: 'choice', optionId: id };
             setValue(a);
+            onPick(q.id, id);
             void submit(a);
           }}
         />
@@ -428,6 +494,7 @@ function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (q
         </fieldset>
       )}
       {error && <p className="mt-3 font-bold text-bad">{errText(t, error)}</p>}
+      {bet && left > 0 && <BetPanel s={s} me={me} bet={bet} />}
       <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur lg:max-w-3xl ${oneTap && !meAnswered ? 'hidden' : ''}`}>
         {meAnswered ? (
           <p className="py-3 text-center font-black" role="status">
@@ -443,30 +510,121 @@ function QuestionView({ s, me, answer }: { s: LivePublic; me: string; answer: (q
   );
 }
 
-function RevealView({ s, me, isHost, send }: { s: LivePublic; me: string; isHost: boolean; send: Send }) {
+/** Bet XP that another player gets this question right or wrong (a good call wins it, a bad one loses it). */
+function BetPanel({ s, me, bet }: { s: LivePublic; me: string; bet: BetFn }) {
+  const { t } = useTranslation();
+  const q = s.question!;
+  const others = s.players.filter((p) => p.id !== me && p.connected);
+  const mineNow = s.bets.find((b) => b.by === me);
+  const onMe = s.bets.filter((b) => b.on === me);
+  const [on, setOn] = useState(others[0]?.id ?? '');
+  const [stake, setStake] = useState<number>(BET_STAKES[0]);
+  const [sent, setSent] = useState<LiveBet | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setSent(null);
+    setError(null);
+  }, [q.id]);
+  if (others.length === 0) return null;
+  const placed = mineNow ?? sent;
+  const name = (id: string) => s.players.find((p) => p.id === id)?.name ?? '?';
+  const place = async (right: boolean) => {
+    const b = { on: on || others[0]!.id, right, stake };
+    setSent(b);
+    const r = await bet(q.id, b);
+    if (!r.ok) {
+      setSent(null);
+      setError(r.error ?? 'network');
+    } else play('tap');
+  };
+  return (
+    <section className="mt-4 space-y-2 rounded-3xl bg-surface p-3.5 ring-1 ring-amber-glow/40" aria-labelledby="bet-title" data-testid="bet-panel">
+      <h2 id="bet-title" className="font-black">
+        🎲 {t('live.betTitle')}
+      </h2>
+      {placed ? (
+        <p className="rounded-2xl bg-amber-glow/15 px-3 py-2 font-black" role="status">
+          {t(placed.right ? 'live.betPlacedRight' : 'live.betPlacedWrong', { name: name(placed.on), xp: placed.stake })}
+        </p>
+      ) : (
+        <>
+          {others.length > 1 && (
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('live.betOn')}>
+              {others.map((p) => (
+                <button key={p.id} type="button" role="radio" aria-checked={on === p.id} onClick={() => setOn(p.id)} className={`rounded-full px-3 py-1 text-sm font-black ring-1 ${on === p.id ? 'bg-brand text-brand-ink ring-brand' : 'bg-surface-2 ring-line'}`}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-1.5" role="radiogroup" aria-label={t('live.betStake')}>
+            {BET_STAKES.map((n) => (
+              <button key={n} type="button" role="radio" aria-checked={stake === n} onClick={() => setStake(n)} className={`flex-1 rounded-xl py-1.5 text-sm font-black ring-1 ${stake === n ? 'bg-amber-glow text-night ring-amber-glow' : 'bg-surface-2 ring-line'}`}>
+                {n} XP
+              </button>
+            ))}
+          </div>
+          <p className="text-sm font-bold text-muted">{t('live.betQuestion', { name: name(on || others[0]!.id) })}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => void place(true)} className="rounded-2xl bg-good py-3 font-black text-night">
+              ✓ {t('live.betRight')}
+            </button>
+            <button type="button" onClick={() => void place(false)} className="rounded-2xl bg-bad py-3 font-black text-white">
+              ✗ {t('live.betWrong')}
+            </button>
+          </div>
+        </>
+      )}
+      {onMe.length > 0 && <p className="text-xs font-bold text-muted">{t('live.betsOnYou', { count: onMe.length })}</p>}
+      {error && <p className="text-sm font-bold text-bad">{errText(t, error)}</p>}
+    </section>
+  );
+}
+
+function RevealView({ s, me, isHost, send, picked }: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string }) {
   const { t } = useTranslation();
   const r = s.reveal!;
   const mine = r.results[me];
+  const myBet = r.bets?.[me];
   useEffect(() => play(mine?.correct ? 'correct' : 'wrong'), [mine?.correct, s.index]);
   const ranked = s.players.slice().sort((a, b) => a.rank - b.rank);
   const last = s.index + 1 >= s.total;
   const [confirmEnd, setConfirmEnd] = useState(false); // ending early takes two taps
+  const q = s.question;
+  const verdict = mine?.correct ? 'right' : mine && mine.score > 0 ? 'partly' : !s.players.find((p) => p.id === me)?.answered && !mine?.points && !picked ? 'none' : 'wrong';
 
   return (
     <section className="space-y-4 pb-28">
-      <div className={`pop-in flex items-center gap-3 rounded-3xl p-4 ${mine?.correct ? 'bg-good/15 ring-2 ring-good' : 'bg-bad/10 ring-2 ring-bad/50'}`}>
-        <Lumo size={60} mood={mine?.correct ? 'happy' : 'sad'} />
+      {/* Like Gizmo: one big, unmistakable answer. */}
+      <div
+        className={`verdict pop-in flex items-center gap-4 rounded-3xl p-5 text-white ${verdict === 'right' ? 'verdict-right' : verdict === 'partly' ? 'verdict-partly' : 'verdict-wrong'}`}
+        role="status"
+        data-testid="live-verdict"
+        data-verdict={verdict}
+      >
+        <span className="grid size-16 shrink-0 place-items-center rounded-full bg-white/25 text-4xl font-black" aria-hidden>
+          {verdict === 'right' ? '✓' : verdict === 'partly' ? '½' : '✗'}
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-black">{mine?.correct ? t('live.correct') : mine && mine.score > 0 ? t('live.partly') : t('live.wrong')}</p>
-          <p className="font-black text-brand">+{mine?.points ?? 0}</p>
+          <p className="font-display text-3xl leading-none font-black">{verdict === 'right' ? t('live.correct') : verdict === 'partly' ? t('live.partly') : verdict === 'none' ? t('live.noAnswer') : t('live.wrong')}</p>
+          <p className="mt-1 font-black">+{mine?.points ?? 0} {t('live.points')}</p>
           {mine && mine.streak >= 2 && <p className="text-sm font-bold">🔥 {t('live.streak', { n: mine.streak })}</p>}
         </div>
       </div>
-      <div className="rounded-2xl bg-surface p-3.5 ring-1 ring-line">
-        <p className="text-xs font-black text-muted uppercase">{t('live.answerWas')}</p>
-        <p className="font-black whitespace-pre-line">{r.correctAnswer}</p>
-        {r.explanation && <p className="mt-1 text-sm text-muted">{r.explanation}</p>}
-      </div>
+      {q?.options ? (
+        <ChoiceTiles q={q} chosen={picked ?? null} reveal={{ correct: !!mine?.correct, correctAnswer: r.correctAnswer }} removed={[]} locked onPick={() => {}} />
+      ) : (
+        <div className="rounded-2xl bg-surface p-3.5 ring-1 ring-line">
+          <p className="text-xs font-black text-muted uppercase">{t('live.answerWas')}</p>
+          <p className="font-black whitespace-pre-line">{r.correctAnswer}</p>
+        </div>
+      )}
+      {r.explanation && <p className="rounded-2xl bg-surface p-3 text-sm ring-1 ring-line">💡 {r.explanation}</p>}
+      {myBet && (
+        <p className={`rounded-2xl px-3 py-2 font-black ${myBet.won ? 'bg-good/15 text-good' : 'bg-bad/10 text-bad'}`} role="status">
+          🎲 {t(myBet.won ? 'live.betWon' : 'live.betLost', { xp: Math.abs(myBet.delta), name: s.players.find((p) => p.id === myBet.on)?.name ?? '?' })}
+        </p>
+      )}
       <Board players={ranked.slice(0, 5)} me={me} showMoves />
       <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur lg:max-w-3xl">
         {isHost ? (
@@ -539,12 +697,18 @@ function Podium({ s, me, reward }: { s: LivePublic; me: string; reward: ReturnTy
         )}
       </div>
       {reward ? (
-        <div className="flex items-center justify-center gap-4 rounded-3xl bg-surface p-4 text-lg font-black ring-1 ring-line" role="status">
+        <div className="flex flex-wrap items-center justify-center gap-4 rounded-3xl bg-surface p-4 text-lg font-black ring-1 ring-line" role="status">
           <span>{t('live.yourRank', { n: reward.rank })}</span>
           <span className="text-brand">+{reward.xp} XP</span>
           <span className="flex items-center gap-1">
             <CoinIcon size={22} />+{reward.coins}
           </span>
+          {!!reward.betXp && (
+            <span className={reward.betXp > 0 ? 'text-good' : 'text-bad'}>
+              🎲 {reward.betXp > 0 ? '+' : '−'}
+              {Math.abs(reward.betXp)} XP
+            </span>
+          )}
         </div>
       ) : (
         <p className="text-center font-bold text-muted">{t('common.loading')}</p>

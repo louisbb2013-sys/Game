@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ChestArt } from '../Art';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { CoinIcon, FlameIcon, HeartIcon } from '../icons';
@@ -107,7 +108,7 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
             )}
             {rewards.chest && (
               <Link to="/shop?tab=mine" className="pop-in flex items-center gap-1.5 rounded-full bg-amber-300 px-3 py-1 text-night">
-                {rewards.chest === 'common' ? '🎁' : '💼'} {t('rewards.chest', { chest: t(`chests.${rewards.chest}`) })}
+                <ChestArt kind={rewards.chest as 'common' | 'rare' | 'epic'} size={30} /> {t('rewards.chest', { chest: t(`chests.${rewards.chest}`) })}
               </Link>
             )}
             {rewards.badges.map((b) => (
@@ -126,7 +127,7 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
         <div className="mt-6 grid w-full gap-3">
           {(summary.chestsLeft ?? 0) > 0 && (
             <button type="button" onClick={onChests} className="rounded-2xl bg-[#f7f1e3] py-4 text-lg font-black text-night ring-2 ring-[#e8c468]">
-              🎁 {t('play.openChests', { count: summary.chestsLeft })}
+              <ChestArt kind="common" size={30} /> {t('play.openChests', { count: summary.chestsLeft })}
             </button>
           )}
           <button type="button" onClick={onAgain} className="btn-gold rounded-2xl py-4 text-lg font-black">

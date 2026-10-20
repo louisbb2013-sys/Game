@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addPetXp, advanceQuest, applyStats, BADGES, currentFullness, emptyStats, feedPet, hatch, ITEMS, newBadges, PET_SPECIES, petMood, petXpPerk,
-  questsFor, rollChest, seededRng, HOUR_MS, type GameEvent,
+  questsFor, rollChest, seededRng, HOUR_MS, type GameEvent, petTier, upgradeBlocker, upgradePet, RARITIES, PET_UPGRADES,
 } from '../src';
 
 describe('chests', () => {
@@ -46,7 +46,8 @@ describe('pets', () => {
     expect(petMood({ ...pet, fullness: 20 }, T, 'safe')).toBe('hungry');
     expect(petXpPerk(pet, 'happy')).toBeCloseTo(0.04);
     expect(petXpPerk(pet, 'sad')).toBe(0);
-    expect(petXpPerk({ ...pet, species: 'ember_dragon', level: 50 }, 'happy')).toBe(0.15);
+    expect(petXpPerk({ ...pet, species: 'ember_dragon', level: 50 }, 'happy')).toBeCloseTo(0.18);
+    expect(petXpPerk({ ...pet, species: 'ember_dragon', level: 50, tier: 'mythical' }, 'happy')).toBe(0.2); // the cap
   });
 });
 
@@ -78,5 +79,25 @@ describe('quests and badges', () => {
     expect(s.sandboxKinds).toHaveLength(5);
     expect(BADGES.find((b) => b.id === 'explorer')!.earned(s)).toBe(true);
     expect(applyStats(s, { type: 'league', tier: 'bronze' }).bestTier).toBe('gold');
+  });
+});
+
+describe('pet tiers', () => {
+  it('pets climb common → rare → epic → legendary → mythical with level and coins', () => {
+    let p = { species: 'moss_turtle' as const, level: 1, xp: 0, fullness: 80, fedAt: 0 };
+    expect(petTier(p)).toBe('common');
+    expect(upgradeBlocker(p, 10_000)).toBe('level_too_low');
+    p = { ...p, level: 3 };
+    expect(upgradeBlocker(p, 100)).toBe('not_enough_coins');
+    expect(upgradeBlocker(p, 150)).toBeNull();
+    const up = upgradePet(p);
+    expect(petTier(up)).toBe('rare');
+    let top = { ...up, level: 50, tier: 'mythical' as const };
+    expect(upgradeBlocker(top, 1e9)).toBe('max_tier');
+    expect(petXpPerk(top, 'happy')).toBeGreaterThan(petXpPerk({ ...top, tier: 'common' }, 'happy'));
+    top = { ...top, tier: 'mythical' };
+    expect(RARITIES.at(-1)).toBe('mythical');
+    expect(PET_SPECIES.some((s) => s.rarity === 'mythical')).toBe(true);
+    expect(PET_UPGRADES.mythical).toBeNull();
   });
 });

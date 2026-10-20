@@ -2,7 +2,7 @@
 import { Egg3D } from './Pet3D';
 
 export interface EggState {
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythical';
   progress: number;
   target: number;
   emoji: string;

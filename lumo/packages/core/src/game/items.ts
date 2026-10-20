@@ -1,8 +1,10 @@
 import { pickWeighted, type Rng } from '../rng';
 import { HOUR_MS, MINUTE_MS, type Millis } from '../types';
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
-export const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythical';
+export const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'legendary', 'mythical'];
+/** The tier after this one (null at the top). */
+export const nextRarity = (r: Rarity): Rarity | null => RARITIES[RARITIES.indexOf(r) + 1] ?? null;
 
 // ---------------- pets ----------------
 
@@ -23,6 +25,8 @@ export const PET_SPECIES = [
   { id: 'mystic_unicorn', emoji: '🦄', rarity: 'epic', color: '#A78BFA' },
   { id: 'cosmic_whale', emoji: '🐋', rarity: 'legendary', color: '#3B82F6' },
   { id: 'aurora_peacock', emoji: '🦚', rarity: 'legendary', color: '#14B8A6' },
+  { id: 'celestial_phoenix', emoji: '🦅', rarity: 'mythical', color: '#FF9F1C' },
+  { id: 'galaxy_dragon', emoji: '🐲', rarity: 'mythical', color: '#7C3AED' },
 ] as const satisfies readonly { id: string; emoji: string; rarity: Rarity; color: string }[];
 export type PetSpeciesId = (typeof PET_SPECIES)[number]['id'];
 export const STARTER_PETS: PetSpeciesId[] = ['moss_turtle', 'cloud_sheep', 'pixel_owl'];
@@ -69,7 +73,7 @@ export const XP_BOOST_BONUS = 0.5; // +50% while active
 
 /** Eggs hatch into a species; rarer eggs have better odds. */
 export function hatch(egg: 'egg_common' | 'egg_rare', rng: Rng): PetSpeciesId {
-  const weights: Record<Rarity, number> = egg === 'egg_common' ? { common: 70, rare: 24, epic: 5, legendary: 1 } : { common: 0, rare: 60, epic: 32, legendary: 8 };
+  const weights: Record<Rarity, number> = egg === 'egg_common' ? { common: 70, rare: 24, epic: 5, legendary: 1, mythical: 0 } : { common: 0, rare: 58, epic: 32, legendary: 8, mythical: 2 };
   const rarity = pickWeighted(
     RARITIES.map((r) => ({ item: r, weight: weights[r] })),
     rng,
@@ -81,19 +85,20 @@ export function hatch(egg: 'egg_common' | 'egg_rare', rng: Rng): PetSpeciesId {
 // ---------------- the study egg (Gizmo-style: answering questions hatches it) ----------------
 
 /** Questions to answer before an egg of each rarity hatches. */
-export const EGG_TARGET: Record<Rarity, number> = { common: 10, rare: 20, epic: 40, legendary: 60 };
+export const EGG_TARGET: Record<Rarity, number> = { common: 10, rare: 20, epic: 40, legendary: 60, mythical: 80 };
 /** The very first egg hatches quickly, so the reward comes on day one. */
 export const FIRST_EGG_TARGET = 5;
-export const EGG_EMOJI: Record<Rarity, string> = { common: '🥚', rare: '🪺', epic: '🔮', legendary: '🌟' };
+export const EGG_EMOJI: Record<Rarity, string> = { common: '🥚', rare: '🪺', epic: '🔮', legendary: '🌟', mythical: '💠' };
 
 /** A new egg's rarity: mostly common, sometimes something special. */
 export function rollEggRarity(rng: Rng): Rarity {
   return pickWeighted(
     [
-      { item: 'common' as Rarity, weight: 68 },
+      { item: 'common' as Rarity, weight: 67.5 },
       { item: 'rare' as Rarity, weight: 24 },
       { item: 'epic' as Rarity, weight: 6 },
       { item: 'legendary' as Rarity, weight: 2 },
+      { item: 'mythical' as Rarity, weight: 0.5 },
     ],
     rng,
   );
@@ -106,7 +111,7 @@ export function hatchRarity(rarity: Rarity, rng: Rng): PetSpeciesId {
 }
 
 /** A duplicate pet isn't wasted: it powers up the one you already have. */
-export const DUPLICATE_PET_XP: Record<Rarity, number> = { common: 40, rare: 80, epic: 160, legendary: 320 };
+export const DUPLICATE_PET_XP: Record<Rarity, number> = { common: 40, rare: 80, epic: 160, legendary: 320, mythical: 640 };
 
 // ---------------- chests ----------------
 
@@ -163,6 +168,35 @@ export interface PetState {
   /** 100 = full; drops ~1 point per hour. */
   fullness: number;
   fedAt: Millis;
+  /** Its rarity now: it starts at its species' rarity and can be upgraded. */
+  tier?: Rarity;
+}
+
+/** A pet's rarity now (its species' rarity until it has been upgraded). */
+export const petTier = (p: Pick<PetState, 'species' | 'tier'>): Rarity => p.tier ?? speciesOf(p.species)?.rarity ?? 'common';
+
+/** What it takes to upgrade a pet FROM each tier to the next: coins, and the level it must have reached. */
+export const PET_UPGRADES: Record<Rarity, { coins: number; level: number } | null> = {
+  common: { coins: 150, level: 3 },
+  rare: { coins: 300, level: 6 },
+  epic: { coins: 700, level: 12 },
+  legendary: { coins: 1500, level: 20 },
+  mythical: null,
+};
+
+/** Why a pet can't be upgraded right now, or null when it can. */
+export function upgradeBlocker(p: PetState, coins: number): 'max_tier' | 'level_too_low' | 'not_enough_coins' | null {
+  const cost = PET_UPGRADES[petTier(p)];
+  if (!cost) return 'max_tier';
+  if (p.level < cost.level) return 'level_too_low';
+  if (coins < cost.coins) return 'not_enough_coins';
+  return null;
+}
+
+/** The pet one tier up (check `upgradeBlocker` first). */
+export function upgradePet(p: PetState): PetState {
+  const next = nextRarity(petTier(p));
+  return next ? { ...p, tier: next } : p;
 }
 
 export const PET_FULL = 100;
@@ -202,11 +236,10 @@ export function petMood(p: PetState, now: Millis, streakStatus: 'none' | 'safe' 
   return 'content';
 }
 
-const PERK_BY_RARITY: Record<Rarity, number> = { common: 0.02, rare: 0.04, epic: 0.06, legendary: 0.08 };
+const PERK_BY_RARITY: Record<Rarity, number> = { common: 0.02, rare: 0.04, epic: 0.06, legendary: 0.08, mythical: 0.12 };
 
 /** XP bonus from the equipped pet: rarer and higher level = a little more (never pay-to-win). */
 export function petXpPerk(p: PetState, mood: PetMood): number {
-  const s = speciesOf(p.species);
-  if (!s || mood === 'sad') return 0;
-  return Math.min(0.15, PERK_BY_RARITY[s.rarity] + Math.floor(p.level / 5) * 0.01);
+  if (!speciesOf(p.species) || mood === 'sad') return 0;
+  return Math.min(0.2, PERK_BY_RARITY[petTier(p)] + Math.floor(p.level / 5) * 0.01);
 }

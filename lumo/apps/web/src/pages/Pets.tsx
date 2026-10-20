@@ -1,8 +1,11 @@
-import { PET_SPECIES, petXpForLevel, STARTER_PETS } from '@lumo/core';
+import { PET_SPECIES, petXpForLevel, RARITIES, STARTER_PETS, type Rarity } from '@lumo/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Creature3D } from '../components/Pet3D';
+import { EggArt, PetPortrait, RARITY_TONE } from '../components/Art';
+import { CoinIcon } from '../components/icons';
+import { useConfetti } from '../lib/confetti';
 import { api, ApiError } from '../lib/api';
 import { play } from '../lib/sound';
 
@@ -10,7 +13,9 @@ export interface PetView {
   id: string;
   species: string;
   emoji: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: Rarity;
+  /** Its species' rarity (before any upgrade). */
+  baseRarity?: Rarity;
   color: string;
   name: string;
   level: number;
@@ -19,16 +24,26 @@ export interface PetView {
   mood: 'happy' | 'content' | 'hungry' | 'sad';
   perk: number;
   equipped: boolean;
+  /** The next tier and what it takes, or null at the top (mythical). */
+  upgrade?: { to: Rarity; coins: number; level: number } | null;
 }
 
 const MOOD_FACE = { happy: '😄', content: '🙂', hungry: '😋', sad: '😢' };
-const RARITY_RING = { common: 'ring-slate-300', rare: 'ring-sky-400', epic: 'ring-fuchsia-400', legendary: 'ring-amber-400' };
-
 export function PetAvatar({ pet, size = 'lg', three = false }: { pet: Pick<PetView, 'emoji' | 'color' | 'mood' | 'rarity'> & { species?: string }; size?: 'sm' | 'lg'; three?: boolean }) {
   const big = size === 'lg';
   const face = <span className={pet.mood === 'sad' ? '' : pet.mood === 'happy' ? 'lumo-bounce' : 'lumo-float'}>{pet.emoji}</span>;
+  // Small pets in lists are pictures (cheap); the big one is live 3D.
+  if (!big && pet.species && !three)
+    return (
+      <span className={`relative grid size-14 shrink-0 place-items-center rounded-full rarity-ring-${pet.rarity}`} style={{ background: `${pet.color}26` }}>
+        <PetPortrait species={pet.species} rarity={pet.rarity} emoji={pet.emoji} size={56} />
+        <span className="absolute -right-1 -bottom-1 z-[1] rounded-full bg-surface text-base" aria-hidden>
+          {MOOD_FACE[pet.mood]}
+        </span>
+      </span>
+    );
   return (
-    <span className={`relative grid shrink-0 place-items-center rounded-full ring-4 ${RARITY_RING[pet.rarity]} ${big ? 'size-32 text-7xl' : 'size-14 text-3xl'}`} style={{ background: `${pet.color}33` }}>
+    <span className={`relative grid shrink-0 place-items-center rounded-full rarity-ring-${pet.rarity} ${big ? 'size-32 text-7xl' : 'size-14 text-3xl'}`} style={{ background: `${pet.color}33` }}>
       {three && pet.species ? (
         // The pet in 3D, a little bigger than its circle so it can hop out of it.
         <Creature3D species={pet.species} rarity={pet.rarity} className={`absolute ${big ? '-inset-6' : '-inset-3'}`}>
@@ -54,10 +69,14 @@ export function Pets() {
   const [name, setName] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [hearts, setHearts] = useState(false);
+  const [coins, setCoins] = useState(0);
+  const [upgraded, setUpgraded] = useState<Rarity | null>(null);
+  useConfetti(!!upgraded);
 
   const load = useCallback(async () => {
-    const [p, inv] = await Promise.all([api<{ pets: PetView[] }>('/api/game/pets'), api<{ items: { id: string; qty: number }[] }>('/api/game/inventory')]);
+    const [p, inv] = await Promise.all([api<{ pets: PetView[] }>('/api/game/pets'), api<{ items: { id: string; qty: number }[]; coins: number }>('/api/game/inventory')]);
     setPets(p.pets);
+    setCoins(inv.coins ?? 0);
     setFood(inv.items.find((i) => i.id === 'pet_food')?.qty ?? 0);
     setEggs(inv.items.filter((i) => i.id.startsWith('egg')));
   }, []);
@@ -129,14 +148,35 @@ export function Pets() {
             {main.name || t(`pets.species.${main.species}`)} ✏️
           </button>
         )}
-        <p className="text-sm font-bold text-muted">
-          {t(`pets.species.${main.species}`)} · {t(`pets.rarity.${main.rarity}`)} · {t('pets.mood.' + main.mood)}
+        <p className="flex flex-wrap items-center justify-center gap-1.5 text-sm font-bold text-muted">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-black ${RARITY_TONE[main.rarity]}`} data-testid="pet-rarity">
+            {t(`pets.rarity.${main.rarity}`)}
+          </span>
+          {t(`pets.species.${main.species}`)} · {t('pets.mood.' + main.mood)}
         </p>
+        <RarityLadder tier={main.rarity} />
         <div className="w-full space-y-2 text-left">
           <Meter label={t('pets.level', { level: main.level })} value={main.xp / need} detail={`${main.xp} / ${need}`} color="bg-brand" />
           <Meter label={t('pets.fullness')} value={main.fullness / 100} detail={`${main.fullness}%`} color={main.fullness < 35 ? 'bg-bad' : 'bg-good'} />
         </div>
         <p className="rounded-xl bg-amber-glow/15 px-3 py-1.5 text-sm font-bold">✨ {t('pets.perk', { pct: Math.round(main.perk * 100) })}</p>
+        <UpgradeCard
+          pet={main}
+          coins={coins}
+          onUpgrade={() =>
+            void run(async () => {
+              const r = await api<{ pet: PetView }>(`/api/game/pets/${main.id}/upgrade`, { method: 'POST' });
+              play('finish');
+              setUpgraded(r.pet.rarity);
+              setTimeout(() => setUpgraded(null), 3500);
+            })
+          }
+        />
+        {upgraded && (
+          <p role="status" className="combo-pop rounded-2xl bg-brand/15 px-3 py-2 font-black">
+            🎉 {t('pets.upgraded', { rarity: t(`pets.rarity.${upgraded}`) })}
+          </p>
+        )}
         <button
           disabled={food === 0}
           onClick={() =>
@@ -165,7 +205,7 @@ export function Pets() {
           <h2 className="font-black">{t('pets.eggs')}</h2>
           {eggs.map((e) => (
             <button key={e.id} onClick={() => void run(() => api('/api/game/items/use', { method: 'POST', body: { itemId: e.id } }).then(() => play('finish')))} className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 ring-1 ring-line">
-              <span className="text-3xl">{e.id === 'egg_rare' ? '🪺' : '🥚'}</span>
+              <EggArt rarity={e.id === 'egg_rare' ? 'rare' : 'common'} size={48} />
               <span className="flex-1 text-left font-black">
                 {t(`items.${e.id}.name`)} ×{e.qty}
               </span>
@@ -183,8 +223,9 @@ export function Pets() {
               <PetAvatar pet={p} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block font-black">{p.name || t(`pets.species.${p.species}`)}</span>
-                <span className="block text-xs text-muted">
-                  {t(`pets.rarity.${p.rarity}`)} · {t('pets.level', { level: p.level })}
+                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                  <span className={`rounded-full px-2 py-0.5 font-black ${RARITY_TONE[p.rarity]}`}>{t(`pets.rarity.${p.rarity}`)}</span>
+                  {t('pets.level', { level: p.level })}
                 </span>
               </span>
               <button onClick={() => void run(() => api(`/api/game/pets/${p.id}`, { method: 'PATCH', body: { equipped: true } }))} className="rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-black">
@@ -194,6 +235,49 @@ export function Pets() {
           ))}
         </section>
       )}
+    </div>
+  );
+}
+
+/** Common → Rare → Epic → Legendary → Mythical, with where this pet is. */
+function RarityLadder({ tier }: { tier: Rarity }) {
+  const { t } = useTranslation();
+  const at = RARITIES.indexOf(tier);
+  return (
+    <ol className="flex w-full items-center justify-center gap-1 text-[0.65rem] font-black" aria-label={t('pets.ladder')}>
+      {RARITIES.map((r, i) => (
+        <li key={r} className={`rounded-full px-2 py-0.5 ${i <= at ? RARITY_TONE[r] : 'bg-surface-2 text-muted'} ${i === at ? 'scale-110 shadow' : ''}`} aria-current={i === at ? 'step' : undefined}>
+          {t(`pets.rarity.${r}`)}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Upgrade the pet one rarity up: it needs a level and coins (shown, with what's missing). */
+function UpgradeCard({ pet, coins, onUpgrade }: { pet: PetView; coins: number; onUpgrade: () => void }) {
+  const { t } = useTranslation();
+  const up = pet.upgrade;
+  if (!up) return <p className="rounded-2xl bg-surface-2 px-3 py-2 text-sm font-black">👑 {t('pets.maxTier')}</p>;
+  const levelOk = pet.level >= up.level;
+  const coinsOk = coins >= up.coins;
+  return (
+    <div className="w-full space-y-2 rounded-2xl bg-surface-2 p-3 text-left" data-testid="pet-upgrade">
+      <p className="font-black">
+        ⬆️ {t('pets.upgradeTo')} <span className={`rounded-full px-2 py-0.5 text-sm ${RARITY_TONE[up.to]}`}>{t(`pets.rarity.${up.to}`)}</span>
+      </p>
+      <ul className="flex flex-wrap gap-2 text-sm font-bold">
+        <li className={levelOk ? 'text-good' : 'text-muted'}>
+          {levelOk ? '✓' : '○'} {t('pets.needLevel', { level: up.level })}
+        </li>
+        <li className={`flex items-center gap-1 ${coinsOk ? 'text-good' : 'text-muted'}`}>
+          {coinsOk ? '✓' : '○'} <CoinIcon size={16} /> {up.coins}
+        </li>
+      </ul>
+      <button type="button" disabled={!levelOk || !coinsOk} onClick={onUpgrade} className="btn-gold w-full rounded-xl py-2.5 font-black disabled:opacity-40">
+        {t('pets.upgrade')}
+      </button>
+      {!levelOk && <p className="text-xs text-muted">{t('pets.upgradeHint')}</p>}
     </div>
   );
 }

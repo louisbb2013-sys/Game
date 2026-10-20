@@ -35,6 +35,21 @@ export interface LiveResult {
   streak: number;
 }
 
+/** XP a player can put on whether someone else gets the question right. */
+export const BET_STAKES = [10, 25, 50] as const;
+export interface LiveBet {
+  /** The player the bet is on. */
+  on: string;
+  /** Betting they get it right (true) or wrong (false). */
+  right: boolean;
+  stake: number;
+}
+export interface LiveBetResult extends LiveBet {
+  won: boolean;
+  /** XP won (+) or lost (-). */
+  delta: number;
+}
+
 export interface LiveState {
   code: string;
   hostId: string;
@@ -49,6 +64,12 @@ export interface LiveState {
   lastResults: Record<string, LiveResult>; // results of the current/last reveal
   /** Players' ranks before the current reveal, to show who moved up. */
   previousRanks: Record<string, number>;
+  /** Bets on the current question, by the player who bet. */
+  bets?: Record<string, LiveBet>;
+  /** How the bets on the last revealed question went. */
+  betResults?: Record<string, LiveBetResult>;
+  /** XP each player has won or lost betting in this game. */
+  betTotals?: Record<string, number>;
 }
 
 /** Time to answer depends on how much thinking/typing the format needs. */
@@ -96,7 +117,7 @@ export const LIVE_FORMATS: Format[] = [
 ];
 
 export class LiveError extends Error {
-  constructor(public code: 'slow_down' | 'full' | 'started' | 'not_host' | 'not_enough_players' | 'not_in_game' | 'wrong_phase' | 'already_answered' | 'stale_question') {
+  constructor(public code: 'slow_down' | 'full' | 'started' | 'not_host' | 'not_enough_players' | 'not_in_game' | 'wrong_phase' | 'already_answered' | 'stale_question' | 'already_bet' | 'bad_bet') {
     super(code);
   }
 }
@@ -115,6 +136,9 @@ export function createLive(code: string, host: { id: string; name: string; avata
     answers: {},
     lastResults: {},
     previousRanks: {},
+    bets: {},
+    betResults: {},
+    betTotals: {},
   };
 }
 
@@ -143,7 +167,7 @@ export function startLive(s: LiveState, by: string, now: Millis): LiveState {
 
 function openQuestion(s: LiveState, index: number, now: Millis): LiveState {
   const q = s.questions[index]!;
-  return { ...s, phase: 'question', index, startedAt: now, durationMs: durationFor(q.format), answers: {}, lastResults: {} };
+  return { ...s, phase: 'question', index, startedAt: now, durationMs: durationFor(q.format), answers: {}, lastResults: {}, bets: {}, betResults: {} };
 }
 
 export function submitLive(s: LiveState, playerId: string, questionId: string, answer: Answer, now: Millis): LiveState {
@@ -152,6 +176,16 @@ export function submitLive(s: LiveState, playerId: string, questionId: string, a
   if (s.questions[s.index]!.id !== questionId) throw new LiveError('stale_question');
   if (s.answers[playerId]) throw new LiveError('already_answered');
   return { ...s, answers: { ...s.answers, [playerId]: { answer, at: Math.min(now, (s.startedAt ?? now) + s.durationMs) } } };
+}
+
+/** Bet XP that another player gets the current question right (or wrong). One bet per question. */
+export function betLive(s: LiveState, by: string, questionId: string, bet: LiveBet): LiveState {
+  if (s.phase !== 'question') throw new LiveError('wrong_phase');
+  if (!s.players.some((p) => p.id === by)) throw new LiveError('not_in_game');
+  if (s.questions[s.index]!.id !== questionId) throw new LiveError('stale_question');
+  if (s.bets?.[by]) throw new LiveError('already_bet');
+  if (bet.on === by || !s.players.some((p) => p.id === bet.on) || typeof bet.right !== 'boolean' || !(BET_STAKES as readonly number[]).includes(bet.stake)) throw new LiveError('bad_bet');
+  return { ...s, bets: { ...s.bets, [by]: { on: bet.on, right: bet.right, stake: bet.stake } } };
 }
 
 export const allAnswered = (s: LiveState) => s.players.filter((p) => p.connected).every((p) => s.answers[p.id]);
@@ -190,7 +224,18 @@ export function revealLive(s: LiveState, judged: Record<string, OpenGrade> = {},
     lastResults[p.id] = { score, correct, points, streak };
     return { ...p, score: p.score + points, streak, correctCount: p.correctCount + (correct ? 1 : 0) };
   });
-  return { ...s, phase: 'reveal', players, lastResults, previousRanks };
+  // Bets: a good call wins the stake in XP, a bad one loses it.
+  const betResults: Record<string, LiveBetResult> = {};
+  const betTotals = { ...s.betTotals };
+  for (const [by, b] of Object.entries(s.bets ?? {})) {
+    const target = lastResults[b.on];
+    if (!target) continue; // they left the game: the bet is off
+    const won = target.correct === b.right;
+    const delta = won ? b.stake : -b.stake;
+    betResults[by] = { ...b, won, delta };
+    betTotals[by] = (betTotals[by] ?? 0) + delta;
+  }
+  return { ...s, phase: 'reveal', players, lastResults, previousRanks, betResults, betTotals };
 }
 
 export function nextLive(s: LiveState, by: string, now: Millis): LiveState {
@@ -216,13 +261,15 @@ export interface LivePublic {
   hostId: string;
   title: string;
   phase: LivePhase;
-  players: { id: string; name: string; avatar: string; score: number; streak: number; connected: boolean; answered: boolean; rank: number; previousRank: number | null }[];
+  players: { id: string; name: string; avatar: string; score: number; streak: number; connected: boolean; answered: boolean; rank: number; previousRank: number | null; betXp: number }[];
   index: number;
   total: number;
   question: PublicQuestion | null;
   endsAt: Millis | null;
   answeredCount: number;
-  reveal: { correctAnswer: string; explanation: string; results: Record<string, LiveResult> } | null;
+  reveal: { correctAnswer: string; explanation: string; results: Record<string, LiveResult>; bets: Record<string, LiveBetResult> } | null;
+  /** Who bet on whom for the current question (stakes and sides are open: it's part of the fun). */
+  bets: ({ by: string } & LiveBet)[];
 }
 
 /** The only view clients get: no answer keys during the question, nobody else's answers. */
@@ -244,13 +291,15 @@ export function publicView(s: LiveState): LivePublic {
       answered: !!s.answers[p.id],
       rank: rankOf.get(p.id)!,
       previousRank: s.previousRanks[p.id] ?? null,
+      betXp: s.betTotals?.[p.id] ?? 0,
     })),
     index: s.index,
     total: s.questions.length,
     question: q && (s.phase === 'question' || s.phase === 'reveal') ? publicQuestion(q) : null,
     endsAt: s.phase === 'question' && s.startedAt !== null ? s.startedAt + s.durationMs : null,
     answeredCount: Object.keys(s.answers).length,
-    reveal: q && s.phase === 'reveal' ? { correctAnswer: correctAnswerText(q), explanation: q.explanation, results: s.lastResults } : null,
+    reveal: q && s.phase === 'reveal' ? { correctAnswer: correctAnswerText(q), explanation: q.explanation, results: s.lastResults, bets: s.betResults ?? {} } : null,
+    bets: s.phase === 'question' || s.phase === 'reveal' ? Object.entries(s.bets ?? {}).map(([by, b]) => ({ by, ...b })) : [],
   };
 }
 

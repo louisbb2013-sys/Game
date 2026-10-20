@@ -42,6 +42,7 @@ const Router = LOCAL && !NETLIFY ? MemoryRouter : BrowserRouter;
 const NewDeck = lazy(() => import('./pages/NewDeck').then((m) => ({ default: m.NewDeck })));
 const LocalFriends = lazy(() => import('./pages/LocalFriends').then((m) => ({ default: m.LocalFriends })));
 const LocalAddFriend = lazy(() => import('./pages/LocalFriends').then((m) => ({ default: m.LocalAddFriend })));
+const SharedDeckPage = lazy(() => import('./components/SharedDecks').then((m) => ({ default: m.SharedDeckPage })));
 
 export function App() {
   return (
@@ -101,6 +102,7 @@ function AppRoutes() {
             <Route path="live" element={<LiveHome />} />
             <Route path="friends" element={LOCAL ? <LocalFriends /> : <Friends />} />
             <Route path="add/:code" element={LOCAL ? <LocalAddFriend /> : <AddFriend />} />
+            {LOCAL && <Route path="shared/:owner/:deck" element={<SharedDeckPage />} />}
             <Route path="groups" element={<Groups />} />
             <Route path="groups/join/:code" element={<JoinGroup />} />
             <Route path="groups/:id" element={<Group />} />

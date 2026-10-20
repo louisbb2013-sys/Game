@@ -55,6 +55,12 @@ import {
   isMastered,
   isRetry,
   levelFromXp,
+  petTier,
+  PET_UPGRADES,
+  nextRarity,
+  upgradeBlocker,
+  upgradePet,
+  xpForLevel,
   levelProgress,
   levelUpRewards,
   liveRewards,
@@ -217,6 +223,8 @@ interface LocalPet {
   fullness: number;
   fedAt: number;
   equipped: boolean;
+  /** Upgraded rarity (its species' rarity until then). */
+  tier?: Rarity;
 }
 interface GameData {
   inventory: Partial<Record<ItemId, number>>;
@@ -484,7 +492,7 @@ function game(): GameData {
   if (!d.game) d.game = { inventory: {}, chests: [], pets: [], quests: {}, boostUntil: null, theme: 'default', egg: { rarity: 'common', progress: 0, target: FIRST_EGG_TARGET }, hatched: 0 };
   return d.game;
 }
-const petState = (p: LocalPet): PetState => ({ species: p.species, level: p.level, xp: p.xp, fullness: p.fullness, fedAt: p.fedAt });
+const petState = (p: LocalPet): PetState => ({ species: p.species, level: p.level, xp: p.xp, fullness: p.fullness, fedAt: p.fedAt, ...(p.tier ? { tier: p.tier } : {}) });
 const equipped = () => game().pets.find((p) => p.equipped);
 
 function addItem(id: ItemId, qty: number) {
@@ -520,7 +528,25 @@ function petView(p: LocalPet) {
   const st = petState(p);
   const mood = petMood(st, t, streakStatus(u.streak, dayKey(t, u.timezone)));
   const s = speciesOf(p.species)!;
-  return { id: p.id, species: p.species, emoji: s.emoji, rarity: s.rarity, color: s.color, name: p.name, level: p.level, xp: p.xp, fullness: currentFullness(st, t), mood, perk: petXpPerk(st, mood), equipped: p.equipped };
+  const tier = petTier(st);
+  const cost = PET_UPGRADES[tier];
+  const next = nextRarity(tier);
+  return {
+    id: p.id,
+    species: p.species,
+    emoji: s.emoji,
+    rarity: tier,
+    baseRarity: s.rarity,
+    color: s.color,
+    name: p.name,
+    level: p.level,
+    xp: p.xp,
+    fullness: currentFullness(st, t),
+    mood,
+    perk: petXpPerk(st, mood),
+    equipped: p.equipped,
+    upgrade: cost && next ? { to: next, coins: cost.coins, level: cost.level } : null,
+  };
 }
 
 /** XP multiplier bonus from an active boost and the pet you take along. */
@@ -678,6 +704,19 @@ const gameRoutes: [string, RegExp, Handler][] = [
     if (b.name !== undefined) pet.name = checkPetName(String(b.name));
     if (b.equipped) for (const p of g.pets) p.equipped = p === pet;
     return petView(pet);
+  }],
+  ['POST', /^\/api\/game\/pets\/([\w-]+)\/upgrade$/, (m) => {
+    // Rarity goes up one tier: common → rare → epic → legendary → mythical.
+    const pet = game().pets.find((p) => p.id === m[1]);
+    if (!pet) throw new LocalError(404, 'pet_not_found');
+    const u = load().user;
+    const st = petState(pet);
+    const why = upgradeBlocker(st, u.coins);
+    if (why) throw new LocalError(409, why);
+    u.coins -= PET_UPGRADES[petTier(st)]!.coins;
+    pet.tier = petTier(upgradePet(st));
+    award(0, [{ type: 'pet_fed' }]);
+    return { pet: petView(pet), coins: u.coins };
   }],
   ['POST', /^\/api\/game\/quests\/([\w-]+)\/claim$/, (m) => {
     const q = currentQuests().find((x) => x.id === m[1]);
@@ -1444,6 +1483,25 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/api\/decks\/([\w-]+)$/, (m) => masteryMap(m[1]!)],
   [
     'PUT',
+    /^\/api\/local\/decks\/([\w-]+)\/translated$/,
+    (m, b) => {
+      // The same deck in another language: same ideas (same ids, so progress stays), same questions.
+      const dk = deck(m[1]!);
+      const concepts = Array.isArray(b.concepts) ? (b.concepts as Concept[]) : [];
+      if (concepts.length !== dk.concepts.length || concepts.some((c, i) => !c || c.id !== dk.concepts[i]!.id || typeof c.term !== 'string')) throw new LocalError(422, 'bad_translation');
+      const ids = new Set(dk.concepts.map((c) => c.id));
+      dk.title = String(b.title || dk.title).slice(0, 120);
+      dk.subject = String(b.subject ?? dk.subject).slice(0, 80);
+      dk.summary = String(b.summary ?? dk.summary).slice(0, 1000);
+      dk.language = b.language === 'fr' ? 'fr' : 'en';
+      dk.concepts = concepts;
+      if (Array.isArray(b.bank)) dk.bank = (b.bank as Question[]).filter((q) => q && typeof q === 'object' && ids.has(q.conceptId) && typeof q.prompt === 'string' && typeof q.variantKey === 'string').map((q) => ({ ...q, language: dk.language }));
+      dk.updatedAt = now();
+      return { ok: true, language: dk.language };
+    },
+  ],
+  [
+    'PUT',
     /^\/api\/local\/decks\/([\w-]+)\/bank$/,
     (m, b) => {
       const dk = deck(m[1]!);
@@ -1521,7 +1579,7 @@ const routes: [string, RegExp, Handler][] = [
     /^\/api\/decks\/([\w-]+)\/offline$/,
     (m) => {
       const d = deck(m[1]!);
-      return { deck: { id: d.id, title: d.title, subject: d.subject, language: d.language }, concepts: d.concepts, bank: d.bank ?? [], savedAt: now() };
+      return { deck: { id: d.id, title: d.title, subject: d.subject, language: d.language, summary: d.summary }, concepts: d.concepts, bank: d.bank ?? [], savedAt: now() };
     },
   ],
   ['GET', /^\/api\/decks\/([\w-]+)\/plan$/, (m) => plan(m[1]!)],
@@ -1623,8 +1681,16 @@ const routes: [string, RegExp, Handler][] = [
       const r = liveRewards(rank, players, Math.max(0, Math.min(100, Number(b.correct) || 0)));
       u.coins += r.coins;
       const correct = Math.max(0, Math.min(100, Number(b.correct) || 0));
-      const rewards = award(r.xp, [{ type: 'live_done', rank, players }, ...Array.from({ length: correct }, () => ({ type: 'answer' as const, correct: true, combo: 0 }))]);
-      return { rank, xp: r.xp, coins: r.coins, rewards };
+      // Bets: XP won adds to the reward; XP lost comes off, but never below the start of your level.
+      const bet = Math.max(-2500, Math.min(2500, Math.round(Number(b.betXp) || 0)));
+      if (bet < 0) {
+        const floor = xpForLevel(levelFromXp(u.xp));
+        const lost = Math.min(-bet, u.xp - floor);
+        u.xp -= lost;
+        if (u.week?.id === weekId(now())) u.week.xp = Math.max(0, u.week.xp - lost);
+      }
+      const rewards = award(r.xp + Math.max(0, bet), [{ type: 'live_done', rank, players }, ...Array.from({ length: correct }, () => ({ type: 'answer' as const, correct: true, combo: 0 }))]);
+      return { rank, xp: r.xp, coins: r.coins, betXp: bet, rewards };
     },
   ],
   ...gameRoutes,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   allAnswered, createLive, endLive, generateLocal, joinLive, LIVE_MAX_PLAYERS, liveRewards, livePoints, nextLive, openAnswersToJudge, perfectAnswer, publicView,
-  ranking, revealLive, SAMPLE_DECKS, seededRng, setConnected, startLive, submitLive, timeIsUp, type Question,
+  ranking, revealLive, SAMPLE_DECKS, seededRng, setConnected, startLive, submitLive, timeIsUp, type Question, betLive, toLiveChoices,
 } from '../src';
 
 const deck = SAMPLE_DECKS.en.concepts.map((c, i) => ({ ...c, id: `c${i}` }));
@@ -97,5 +97,53 @@ describe('live game engine', () => {
     expect(livePoints(0, 0, 20000, 3)).toBe(0);
     expect(liveRewards(1, 5, 4).xp).toBeGreaterThan(liveRewards(4, 5, 4).xp);
     expect(liveRewards(10, 20, 0).coins).toBeGreaterThan(0);
+  });
+});
+
+describe('live: four choices and bets', () => {
+  it('every question becomes four choices (A-D), wrong answers borrowed from the deck when needed', () => {
+    const set: Question[] = [
+      { id: 'q1', conceptId: 'c1', format: 'multiple_choice', bloom: 'remember', language: 'en', prompt: 'Powerhouse of the cell?', explanation: 'x', variantKey: 'v1', options: [{ id: 'a', text: 'Mitochondria' }, { id: 'b', text: 'Ribosome' }, { id: 'c', text: 'Nucleus' }], correctId: 'a', optionNotes: { b: 'makes proteins' } },
+      { id: 'q2', conceptId: 'c2', format: 'type_answer', bloom: 'remember', language: 'en', prompt: 'Green pigment?', explanation: 'x', variantKey: 'v2', accepted: ['Chlorophyll', 'chlorophyl'] },
+      { id: 'q3', conceptId: 'c3', format: 'fill_blank', bloom: 'remember', language: 'en', prompt: 'Complete:', explanation: 'x', variantKey: 'v3', text: 'Plants release ___.', blanks: [{ accepted: ['Oxygen'] }] },
+      { id: 'q4', conceptId: 'c4', format: 'multiple_choice', bloom: 'remember', language: 'en', prompt: 'Stores DNA?', explanation: 'x', variantKey: 'v4', options: ['Nucleus', 'Vacuole', 'Cell wall', 'Golgi', 'Lysosome'].map((text, i) => ({ id: `o${i}`, text })), correctId: 'o0' },
+      { id: 'q5', conceptId: 'c5', format: 'ordering', bloom: 'understand', language: 'en', prompt: 'Order', explanation: 'x', variantKey: 'v5', items: [{ id: 'a', text: 'one' }, { id: 'b', text: 'two' }], correctOrder: ['a', 'b'] },
+    ];
+    const out = toLiveChoices(set, seededRng(7));
+    expect(out.map((q) => q.id)).toEqual(['q1', 'q2', 'q3', 'q4']); // the ordering one can't be a choice
+    for (const q of out) {
+      expect(q.format).toBe('multiple_choice');
+      expect(q.options).toHaveLength(4);
+      expect(new Set(q.options.map((o) => o.text.toLowerCase())).size).toBe(4);
+      expect(q.options.some((o) => o.id === q.correctId)).toBe(true);
+    }
+    expect(out[1]!.options.find((o) => o.id === out[1]!.correctId)!.text).toBe('Chlorophyll');
+    expect(out[2]!.prompt).toContain('Plants release ___.');
+    expect(out[0]!.optionNotes).toEqual({ b: 'makes proteins' }); // notes kept for options still there
+  });
+
+  it('a good bet wins its stake in XP, a bad one loses it', () => {
+    let s = createLive('BET123', host, 'Cells', qs, T);
+    s = joinLive(s, { id: 'p1', name: 'Ana', avatar: 'b' }, T);
+    s = joinLive(s, { id: 'p2', name: 'Ben', avatar: 'c' }, T);
+    s = startLive(s, 'h', T);
+    const q0 = s.questions[0]!;
+    s = betLive(s, 'p1', q0.id, { on: 'p2', right: true, stake: 25 });
+    s = betLive(s, 'h', q0.id, { on: 'p2', right: false, stake: 10 });
+    expect(() => betLive(s, 'p1', q0.id, { on: 'h', right: true, stake: 10 })).toThrow('already_bet');
+    expect(() => betLive(s, 'p2', q0.id, { on: 'p2', right: true, stake: 10 })).toThrow('bad_bet'); // not on yourself
+    expect(() => betLive(s, 'p2', q0.id, { on: 'h', right: true, stake: 999 })).toThrow('bad_bet');
+    expect(publicView(s).bets).toHaveLength(2);
+    s = submitLive(s, 'p2', q0.id, perfectAnswer(q0), T + 1000);
+    s = revealLive(s);
+    expect(s.betResults!.p1).toMatchObject({ won: true, delta: 25 });
+    expect(s.betResults!.h).toMatchObject({ won: false, delta: -10 });
+    const v = publicView(s);
+    expect(v.players.find((p) => p.id === 'p1')!.betXp).toBe(25);
+    expect(v.players.find((p) => p.id === 'h')!.betXp).toBe(-10);
+    expect(v.reveal!.bets.p1!.won).toBe(true);
+    s = nextLive(s, 'h', T + 5000);
+    expect(s.bets).toEqual({}); // a fresh question, fresh bets
+    expect(s.betTotals).toEqual({ p1: 25, h: -10 });
   });
 });

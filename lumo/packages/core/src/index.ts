@@ -29,6 +29,7 @@ export * from './sandbox/intent';
 export * from './game/items';
 export * from './game/progress';
 export * from './live/game';
+export * from './live/choices';
 export * from './study/exam';
 export * from './study/plan';
 export * from './study/reminders';

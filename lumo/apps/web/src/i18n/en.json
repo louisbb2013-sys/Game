@@ -221,7 +221,12 @@
     "offline": "Save for offline",
     "offlineBody": "Review with no internet.",
     "offlineSaved": "Saved offline",
-    "offlineFailed": "Couldn't save. Is your storage full?"
+    "offlineFailed": "Couldn't save. Is your storage full?",
+    "otherLanguage": "This deck is in {{lang}}.",
+    "translate": "Translate to {{lang}}",
+    "translating": "Translating…",
+    "translatingBody": "Translating the ideas and every question…",
+    "translateFailed": "Couldn't translate it this time. Try again."
   },
   "quiz": {
     "preparing": "Lumo is preparing your questions…",
@@ -566,7 +571,7 @@
     },
     "egg_rare": {
       "name": "Rare egg",
-      "desc": "Hatches a rare, epic or legendary pet."
+      "desc": "Hatches a rare, epic, legendary or even mythical pet."
     },
     "chest_common": {
       "name": "Chest",
@@ -659,13 +664,16 @@
       "rock_dino": "Rock Dino",
       "mystic_unicorn": "Mystic Unicorn",
       "cosmic_whale": "Cosmic Whale",
-      "aurora_peacock": "Aurora Peacock"
+      "aurora_peacock": "Aurora Peacock",
+      "celestial_phoenix": "Celestial Phoenix",
+      "galaxy_dragon": "Galaxy Dragon"
     },
     "rarity": {
       "common": "Common",
       "rare": "Rare",
       "epic": "Epic",
-      "legendary": "Legendary"
+      "legendary": "Legendary",
+      "mythical": "Mythical"
     },
     "mood": {
       "happy": "Happy",
@@ -683,10 +691,20 @@
       "bad_pet_name": "Please choose a kind name (1–16 letters).",
       "already_has_pet": "You already adopted a pet.",
       "not_enough_items": "No snacks left — get some in the shop.",
-      "network": "Can’t reach Lumo. Check your connection."
+      "network": "Can’t reach Lumo. Check your connection.",
+      "max_tier": "This pet is already Mythical.",
+      "level_too_low": "Your pet needs a higher level first.",
+      "not_enough_coins": "Not enough coins yet."
     },
     "feed_one": "Feed ({{count}} snack)",
-    "feed_other": "Feed ({{count}} snacks)"
+    "feed_other": "Feed ({{count}} snacks)",
+    "ladder": "Rarity",
+    "upgradeTo": "Upgrade to",
+    "needLevel": "Level {{level}}",
+    "upgrade": "Upgrade",
+    "upgradeHint": "Pets level up as you study and when you feed them.",
+    "upgraded": "Your pet is {{rarity}} now!",
+    "maxTier": "Mythical: the highest rarity there is!"
   },
   "badges": {
     "first_steps": {
@@ -801,7 +819,7 @@
     "lockIn": "Lock in answer",
     "correct": "Correct!",
     "partly": "Partly right",
-    "wrong": "Not this time",
+    "wrong": "Wrong",
     "streak": "{{n}} in a row",
     "answerWas": "Answer",
     "leaderboard": "Leaderboard",
@@ -829,8 +847,33 @@
       "server_error": "Something went wrong. Try again.",
       "network": "Can't reach Lumo. Check your connection.",
       "slow_down": "Slow down a little and try again in a few seconds.",
-      "read_only": "Claude doesn’t let you save on this page, so you can’t host here. Join a friend’s game, or use the Lumo website."
-    }
+      "read_only": "Claude doesn’t let you save on this page, so you can’t host here. Join a friend’s game, or use the Lumo website.",
+      "already_bet": "You already bet on this question.",
+      "bad_bet": "That bet isn't possible."
+    },
+    "noAnswer": "No answer",
+    "points": "points",
+    "inviteTitle": "Invite friends",
+    "inviteAllOnline": "Invite everyone online",
+    "noFriendsToInvite": "Add friends to invite them here.",
+    "invite": "Invite",
+    "invited": "Invited",
+    "inviteHint": "They get a pop-up anywhere in Lumo and join with one tap. No code needed.",
+    "invitedBy": "{{name}} invites you to play Live!",
+    "joinNow": "Join",
+    "notNow": "Not now",
+    "betTitle": "Bet XP",
+    "betOn": "Bet on",
+    "betStake": "How much XP",
+    "betQuestion": "Will {{name}} get this one right?",
+    "betRight": "Right",
+    "betWrong": "Wrong",
+    "betPlacedRight": "You bet {{xp}} XP that {{name}} gets it right.",
+    "betPlacedWrong": "You bet {{xp}} XP that {{name}} gets it wrong.",
+    "betsOnYou_one": "🎲 Someone bet on you!",
+    "betsOnYou_other": "🎲 {{count}} people bet on you!",
+    "betWon": "Good call! You won {{xp}} XP on {{name}}.",
+    "betLost": "Bad call: you lost {{xp}} XP on {{name}}."
   },
   "friends": {
     "title": "Friends",
@@ -1097,12 +1140,12 @@
     "hostedBy_other": "Hosted by {{name}} · {{count}} players",
     "someone": "Someone",
     "sharedDecks": "Shared decks",
-    "noSharedDecks": "No shared decks yet. Open one of your decks and turn on “Share with friends”.",
+    "noSharedDecks": "No shared decks yet. Open one of your decks and choose Friends or Public under “Who can see this deck”.",
     "sharedBy_one": "by {{name}} · {{count}} idea",
     "sharedBy_other": "by {{name}} · {{count}} ideas",
     "playLiveWith": "Play {{deck}} Live",
     "addToMine": "Add to my decks",
-    "shareDeck": "Share with friends",
+    "shareDeck": "Who can see this deck",
     "shareDeckBody": "Everyone you shared this Lumo page with can copy it and play it Live.",
     "nowPublic": "Your friends can see this deck now.",
     "nowPrivate": "This deck is private again.",
@@ -1142,7 +1185,27 @@
     "inviteTitle": "Adding your friend…",
     "inviteDone": "{{name}} is now your friend!",
     "inviteSelf": "That's your own invite link. Send it to a friend!",
-    "inviteNotFound": "No one called “{{name}}” on Lumo. Check the name and try again."
+    "inviteNotFound": "No one called “{{name}}” on Lumo. Check the name and try again.",
+    "fromFriends": "From your friends",
+    "publicDecks": "Public decks",
+    "vis": {
+      "private": "Only me",
+      "friends": "Friends",
+      "public": "Public"
+    },
+    "visBody": {
+      "private": "Only you can see this deck.",
+      "friends": "Your friends can copy it and play it Live with you.",
+      "friendsClaude": "Everyone you shared this Lumo page with can copy it and play it Live.",
+      "public": "Anyone on Lumo can find it under Public decks, and you can send its link."
+    },
+    "now": {
+      "private": "This deck is private again.",
+      "friends": "Your friends can see this deck now.",
+      "public": "Your deck is public now."
+    },
+    "copyDeckLink": "Share the deck's link",
+    "deckGone": "This deck isn't shared any more."
   },
   "egg": {
     "title": "{{rarity}} egg",
@@ -1327,7 +1390,14 @@
     "explainTitle": "Lumo explains",
     "explaining": "Lumo is thinking…",
     "explainFailed": "Couldn’t explain right now. Tap to try again.",
-    "progress": "Round progress"
+    "progress": "Round progress",
+    "rightAnswer": "✓ Right answer",
+    "yourAnswer": "✗ Your answer",
+    "verdict": {
+      "right": "Correct!",
+      "wrong": "Wrong",
+      "partly": "Partly right"
+    }
   },
   "write": {
     "title": "Claude is writing your test",
@@ -1455,5 +1525,9 @@
     "takePhoto": "Take a photo of your notes",
     "anotherPhoto": "Add another page",
     "photoTab": "Photo"
+  },
+  "langs": {
+    "en": "English",
+    "fr": "French"
   }
 }

@@ -15,7 +15,7 @@ import { bearer, json, limiter, verifySession } from '../lib/session.ts';
  *
  * The answer is streamed back as it is written, so long jobs don't hit a time limit.
  * Environment variables (all optional): ANTHROPIC_API_KEY, CLAUDE_MODEL, LUMO_AI_MONTHLY_USD,
- * LUMO_AI_RESET_DAY.
+ * LUMO_AI_RESET_DAY, LUMO_AI_WEB_SEARCH.
  */
 
 const MEDIA = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -138,7 +138,10 @@ export function makeHandler(deps: Deps) {
       if (i.media_type === 'application/pdf') return [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: i.data } }];
       return MEDIA.has(i.media_type) ? [{ type: 'image', source: { type: 'base64', media_type: i.media_type as 'image/jpeg', data: i.data } }] : [];
     });
-    const research = body.research === true;
+    // Web search costs about a cent per search on top of the words, and through the gateway that comes
+    // out of the credits the site shares with the owner's other sites: there, decks are built from what
+    // Claude knows unless LUMO_AI_WEB_SEARCH=on.
+    const research = body.research === true && (!gateway || deps.env('LUMO_AI_WEB_SEARCH') === 'on');
     const model = deps.env('CLAUDE_MODEL') || 'claude-opus-5-5';
 
     const client = new Anthropic({ apiKey, baseURL, maxRetries: 1, ...(deps.fetch ? { fetch: deps.fetch } : {}) });

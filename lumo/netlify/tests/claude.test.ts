@@ -77,7 +77,7 @@ describe('/api/claude edge function', () => {
     expect(sent[0]!.url).toContain('/.netlify/ai/anthropic');
     expect(sent[0]!.beta).toBeNull();
     expect(sent[0]!.body.fallbacks).toBeUndefined();
-    expect(sent[0]!.body.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }]);
+    expect(sent[0]!.body.tools).toBeUndefined(); // no paid web search on the shared credits
     const month = new Date().toISOString().slice(0, 7);
     const usd = JSON.parse((await kv.get(`ai/${month}`))!.value).usd as number;
     expect(usd).toBeCloseTo((1000 * 4 + 2000 * 20) / 1e6, 6); // $0.044
@@ -111,6 +111,12 @@ describe('/api/claude edge function', () => {
     expect(res.status).toBe(200);
     await res.text();
     expect(JSON.parse((await kv.get('ai/2026-10-17'))!.value).usd).toBeGreaterThan(0);
+  });
+
+  it('through the gateway, web search only when the owner turns it on', async () => {
+    const { token, post, sent } = await setup({ ANTHROPIC_API_KEY: 'gw-key', ANTHROPIC_BASE_URL: 'https://lumo.example/.netlify/ai/anthropic', LUMO_AI_WEB_SEARCH: 'on' });
+    await (await post(await token('u9'), { input: 'volcanoes', research: true })).text();
+    expect(sent[0]!.body.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }]);
   });
 
   it('with Haiku: the basic web search, no refusal fallback, and no research if the search is refused', async () => {

@@ -221,7 +221,12 @@
     "offline": "Garder hors ligne",
     "offlineBody": "Réviser sans internet.",
     "offlineSaved": "Gardé hors ligne",
-    "offlineFailed": "Impossible d’enregistrer. Ton stockage est-il plein ?"
+    "offlineFailed": "Impossible d’enregistrer. Ton stockage est-il plein ?",
+    "otherLanguage": "Ce paquet est en {{lang}}.",
+    "translate": "Traduire en {{lang}}",
+    "translating": "Traduction…",
+    "translatingBody": "Je traduis les notions et chaque question…",
+    "translateFailed": "La traduction n'a pas marché cette fois. Réessaie."
   },
   "quiz": {
     "preparing": "Lumo prépare tes questions…",
@@ -566,7 +571,7 @@
     },
     "egg_rare": {
       "name": "Œuf rare",
-      "desc": "Fait éclore un compagnon rare, épique ou légendaire."
+      "desc": "Fait éclore un compagnon rare, épique, légendaire, ou même mythique."
     },
     "chest_common": {
       "name": "Coffre",
@@ -659,13 +664,16 @@
       "rock_dino": "Dino rocheux",
       "mystic_unicorn": "Licorne mystique",
       "cosmic_whale": "Baleine cosmique",
-      "aurora_peacock": "Paon aurore"
+      "aurora_peacock": "Paon aurore",
+      "celestial_phoenix": "Phénix céleste",
+      "galaxy_dragon": "Dragon galactique"
     },
     "rarity": {
       "common": "Commun",
       "rare": "Rare",
       "epic": "Épique",
-      "legendary": "Légendaire"
+      "legendary": "Légendaire",
+      "mythical": "Mythique"
     },
     "mood": {
       "happy": "Heureux",
@@ -683,10 +691,20 @@
       "bad_pet_name": "Choisis un nom gentil (1 à 16 lettres).",
       "already_has_pet": "Tu as déjà adopté un compagnon.",
       "not_enough_items": "Plus de collations — achète-en à la boutique.",
-      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion.",
+      "max_tier": "Ce compagnon est déjà Mythique.",
+      "level_too_low": "Ton compagnon doit d'abord monter de niveau.",
+      "not_enough_coins": "Pas encore assez de pièces."
     },
     "feed_one": "Nourrir ({{count}} collation)",
-    "feed_other": "Nourrir ({{count}} collations)"
+    "feed_other": "Nourrir ({{count}} collations)",
+    "ladder": "Rareté",
+    "upgradeTo": "Améliorer en",
+    "needLevel": "Niveau {{level}}",
+    "upgrade": "Améliorer",
+    "upgradeHint": "Ton compagnon monte de niveau quand tu étudies et quand tu le nourris.",
+    "upgraded": "Ton compagnon est {{rarity}} maintenant !",
+    "maxTier": "Mythique : la plus haute rareté qui existe !"
   },
   "badges": {
     "first_steps": {
@@ -801,7 +819,7 @@
     "lockIn": "Valider ma réponse",
     "correct": "Bonne réponse !",
     "partly": "En partie juste",
-    "wrong": "Pas cette fois",
+    "wrong": "Faux",
     "streak": "{{n}} d’affilée",
     "answerWas": "Réponse",
     "leaderboard": "Classement",
@@ -829,8 +847,33 @@
       "server_error": "Un problème est survenu. Réessaie.",
       "network": "Impossible de joindre Lumo. Vérifie ta connexion.",
       "slow_down": "Doucement ! Réessaie dans quelques secondes.",
-      "read_only": "Claude ne te laisse pas enregistrer sur cette page, donc tu ne peux pas organiser de partie ici. Rejoins la partie d’un ami, ou utilise le site Web de Lumo."
-    }
+      "read_only": "Claude ne te laisse pas enregistrer sur cette page, donc tu ne peux pas organiser de partie ici. Rejoins la partie d’un ami, ou utilise le site Web de Lumo.",
+      "already_bet": "Tu as déjà parié sur cette question.",
+      "bad_bet": "Ce pari n'est pas possible."
+    },
+    "noAnswer": "Pas de réponse",
+    "points": "points",
+    "inviteTitle": "Inviter des amis",
+    "inviteAllOnline": "Inviter tous ceux en ligne",
+    "noFriendsToInvite": "Ajoute des amis pour les inviter ici.",
+    "invite": "Inviter",
+    "invited": "Invité",
+    "inviteHint": "Ils reçoivent une fenêtre n'importe où dans Lumo et rejoignent d'un toucher. Pas besoin de code.",
+    "invitedBy": "{{name}} t'invite à jouer en Direct !",
+    "joinNow": "Rejoindre",
+    "notNow": "Pas maintenant",
+    "betTitle": "Parier des XP",
+    "betOn": "Parier sur",
+    "betStake": "Combien d'XP",
+    "betQuestion": "{{name}} va-t-il avoir la bonne réponse ?",
+    "betRight": "Bonne",
+    "betWrong": "Mauvaise",
+    "betPlacedRight": "Tu paries {{xp}} XP que {{name}} aura la bonne réponse.",
+    "betPlacedWrong": "Tu paries {{xp}} XP que {{name}} se trompera.",
+    "betsOnYou_one": "🎲 Quelqu'un a parié sur toi !",
+    "betsOnYou_other": "🎲 {{count}} personnes ont parié sur toi !",
+    "betWon": "Bien vu ! Tu gagnes {{xp}} XP grâce à {{name}}.",
+    "betLost": "Raté : tu perds {{xp}} XP sur {{name}}."
   },
   "friends": {
     "title": "Amis",
@@ -1097,12 +1140,12 @@
     "hostedBy_other": "Organisée par {{name}} · {{count}} joueurs",
     "someone": "Quelqu’un",
     "sharedDecks": "Paquets partagés",
-    "noSharedDecks": "Aucun paquet partagé pour l’instant. Ouvre un de tes paquets et active « Partager avec mes amis ».",
+    "noSharedDecks": "Aucun paquet partagé pour l'instant. Ouvre un de tes paquets et choisis Amis ou Public sous « Qui peut voir ce paquet ».",
     "sharedBy_one": "par {{name}} · {{count}} notion",
     "sharedBy_other": "par {{name}} · {{count}} notions",
     "playLiveWith": "Jouer {{deck}} en Live",
     "addToMine": "Ajouter à mes paquets",
-    "shareDeck": "Partager avec mes amis",
+    "shareDeck": "Qui peut voir ce paquet",
     "shareDeckBody": "Tous ceux avec qui tu as partagé cette page Lumo peuvent le copier et y jouer en Live.",
     "nowPublic": "Tes amis voient ce paquet maintenant.",
     "nowPrivate": "Ce paquet est de nouveau privé.",
@@ -1142,7 +1185,27 @@
     "inviteTitle": "J’ajoute ton ami…",
     "inviteDone": "{{name}} est maintenant ton ami!",
     "inviteSelf": "C’est ton propre lien d’invitation. Envoie-le à un ami!",
-    "inviteNotFound": "Personne ne s’appelle « {{name}} » sur Lumo. Vérifie le nom et réessaie."
+    "inviteNotFound": "Personne ne s’appelle « {{name}} » sur Lumo. Vérifie le nom et réessaie.",
+    "fromFriends": "De tes amis",
+    "publicDecks": "Paquets publics",
+    "vis": {
+      "private": "Moi seul",
+      "friends": "Amis",
+      "public": "Public"
+    },
+    "visBody": {
+      "private": "Toi seul vois ce paquet.",
+      "friends": "Tes amis peuvent le copier et y jouer en Direct avec toi.",
+      "friendsClaude": "Tous ceux avec qui tu as partagé cette page Lumo peuvent le copier et y jouer en Direct.",
+      "public": "Tout le monde sur Lumo peut le trouver dans Paquets publics, et tu peux envoyer son lien."
+    },
+    "now": {
+      "private": "Ce paquet est de nouveau privé.",
+      "friends": "Tes amis voient ce paquet maintenant.",
+      "public": "Ton paquet est public maintenant."
+    },
+    "copyDeckLink": "Partager le lien du paquet",
+    "deckGone": "Ce paquet n'est plus partagé."
   },
   "egg": {
     "title": "Œuf {{rarity}}",
@@ -1327,7 +1390,14 @@
     "explainTitle": "Lumo explique",
     "explaining": "Lumo réfléchit…",
     "explainFailed": "Impossible d’expliquer pour l’instant. Touche pour réessayer.",
-    "progress": "Progression de la manche"
+    "progress": "Progression de la manche",
+    "rightAnswer": "✓ Bonne réponse",
+    "yourAnswer": "✗ Ta réponse",
+    "verdict": {
+      "right": "Bonne réponse !",
+      "wrong": "Faux",
+      "partly": "En partie juste"
+    }
   },
   "write": {
     "title": "Claude écrit ton examen",
@@ -1455,5 +1525,9 @@
     "takePhoto": "Prends une photo de tes notes",
     "anotherPhoto": "Ajouter une autre page",
     "photoTab": "Photo"
+  },
+  "langs": {
+    "en": "anglais",
+    "fr": "français"
   }
 }

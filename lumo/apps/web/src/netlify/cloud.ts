@@ -116,7 +116,7 @@ export function takeGoogleReturn(): { token: string } | { error: string } | null
 
 // ------------------------------------------------------------------ polling
 
-/** Runs `tick` now and then every `ms` while the page is visible; returns a stop function. */
+/** Runs `tick` now and then every `ms` while the page is visible; returns a stop function (`.now()` checks at once). */
 function every(ms: number, tick: () => Promise<void> | void) {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -132,11 +132,12 @@ function every(ms: number, tick: () => Promise<void> | void) {
   };
   document.addEventListener('visibilitychange', wake);
   void run();
-  return () => {
+  const stop = () => {
     stopped = true;
     if (timer) clearTimeout(timer);
     document.removeEventListener('visibilitychange', wake);
   };
+  return Object.assign(stop, { now: wake });
 }
 
 // ------------------------------------------------------------------ db
@@ -150,6 +151,20 @@ const pack = (rows: Row[]) => {
 
 function makeDb(s: SessionInfo) {
   const call = <T>(body: Record<string, unknown>) => post<T>('/api/data', body, s.token);
+  // What this page writes shows on this page at once (others see it at their next check).
+  const watching = new Map<string, Set<() => void>>();
+  const watch = (path: string, stop: ReturnType<typeof every>) => {
+    const set = watching.get(path) ?? new Set();
+    set.add(stop.now);
+    watching.set(path, set);
+    return () => {
+      stop();
+      set.delete(stop.now);
+    };
+  };
+  const changed = (path: string) => {
+    for (const p of [path, path.slice(0, path.lastIndexOf('/'))]) for (const f of watching.get(p) ?? []) f();
+  };
 
   const docRef = (path: string): Any => {
     const id = path.split('/').pop()!;
@@ -160,12 +175,22 @@ function makeDb(s: SessionInfo) {
         const r = await call<{ exists: boolean; data?: Record<string, unknown> }>({ op: 'get', path });
         return snapOf(id, r.exists, r.data);
       },
-      set: async (data: Record<string, unknown>) => void (await call({ op: 'set', path, data: JSON.parse(JSON.stringify(data)) })),
-      update: async (data: Record<string, unknown>) => void (await call({ op: 'update', path, data: JSON.parse(JSON.stringify(data)) })),
-      delete: async () => void (await call({ op: 'delete', path })),
+      set: async (data: Record<string, unknown>) => {
+        await call({ op: 'set', path, data: JSON.parse(JSON.stringify(data)) });
+        changed(path);
+      },
+      update: async (data: Record<string, unknown>) => {
+        await call({ op: 'update', path, data: JSON.parse(JSON.stringify(data)) });
+        changed(path);
+      },
+      delete: async () => {
+        await call({ op: 'delete', path });
+        changed(path);
+      },
       onSnapshot: (next: (snap: Any) => void, err?: (e: Any) => void) => {
         let known = '';
-        return every(5000, async () => {
+        // Documents (my friends list, a profile) change rarely.
+        return watch(path, every(10_000, async () => {
           try {
             const r = await call<{ same?: boolean; exists?: boolean; data?: Record<string, unknown>; etag: string }>({ op: 'get', path, known });
             if (r.same) return;
@@ -174,7 +199,7 @@ function makeDb(s: SessionInfo) {
           } catch (e) {
             err?.(e);
           }
-        });
+        }));
       },
       collection: (p: string) => colRef(`${path}/${p}`, {}),
     };
@@ -190,8 +215,10 @@ function makeDb(s: SessionInfo) {
     get: async () => pack((await call<{ docs: Row[] }>({ op: 'list', coll: path, ...q })).docs),
     onSnapshot: (next: (snap: Any) => void, err?: (e: Any) => void) => {
       let known = '';
-      // Live games are looked for more often than friends' profiles change.
-      return every(path === 'games' ? 2500 : 8000, async () => {
+      // A Live game in progress is followed closely; lists (open games, friends' decks) change slowly.
+      // Every check is a request the site pays for, so slow things are checked slowly.
+      const inGame = path === 'games' && (q.where ?? []).some(([f]) => f === 'code');
+      return watch(path, every(inGame ? 2000 : path === 'games' ? 6000 : 15_000, async () => {
         try {
           const r = await call<{ same?: boolean; docs?: Row[]; tag: string }>({ op: 'list', coll: path, ...q, known });
           if (r.same) return;
@@ -200,7 +227,7 @@ function makeDb(s: SessionInfo) {
         } catch (e) {
           err?.(e);
         }
-      });
+      }));
     },
   });
   return { doc: docRef, collection: (path: string) => colRef(path, {}) };
@@ -291,8 +318,8 @@ function makeRoom(s: SessionInfo) {
       on: () => () => {},
     };
   };
-  // The lobby (friends online) changes slowly; a Live game room is checked about every second.
-  const lobby = join('lobby', 6000);
+  // The lobby (friends online, Live invites) changes slowly; a Live game room is checked about every second.
+  const lobby = join('lobby', 10_000);
   return { ...lobby, join: async (name: string) => join(name, 1200) };
 }
 
@@ -424,8 +451,9 @@ function makeSample(s: SessionInfo) {
     canResearch: true,
     json: async <T,>(input: string, o: SampleOpts = {}): Promise<T> => {
       const { text } = await call(input, o);
-      const a = text.indexOf('{');
-      const b = text.lastIndexOf('}');
+      // An object or a list, whichever the answer starts with.
+      const a = text.search(/[[{]/);
+      const b = text.lastIndexOf(text[a] === '[' ? ']' : '}');
       if (a < 0 || b < a) throw Object.assign(new Error('bad_json'), { code: 'upstream_error' });
       return JSON.parse(text.slice(a, b + 1)) as T;
     },

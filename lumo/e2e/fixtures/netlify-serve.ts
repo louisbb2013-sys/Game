@@ -49,7 +49,9 @@ async function claude(req: Request): Promise<Response> {
           .join('\n') + '\n'
       : input.includes('You are checking a school quiz')
         ? '[]'
-        : '{}';
+        : input.includes('Translate every string in this JSON array')
+          ? JSON.stringify((JSON.parse(input.slice(input.lastIndexOf('\n\n') + 2)) as string[]).map((x) => `FR ${x}`))
+          : '{}';
   const half = Math.floor(text.length / 2);
   const ev = (o: unknown) => `event: x\ndata: ${JSON.stringify(o)}\n\n`;
   const body = new ReadableStream({

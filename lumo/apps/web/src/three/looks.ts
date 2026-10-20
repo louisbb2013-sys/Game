@@ -46,9 +46,11 @@ const LOOKS: Record<PetSpeciesId, { forme: Forme; base: string; accent: string }
   ember_dragon: { forme: 'minotaure', base: '#FF4A3D', accent: '#FFC21F' },
   cosmic_whale: { forme: 'bloop', base: '#2F5BFF', accent: '#9FE8FF' },
   aurora_peacock: { forme: 'noki', base: '#14B8A6', accent: '#C084FC' },
+  celestial_phoenix: { forme: 'noki', base: '#FF8A1C', accent: '#FF4FD8' },
+  galaxy_dragon: { forme: 'minotaure', base: '#6D3BFF', accent: '#35E3FF' },
 };
 
-const GLOW: Record<Rarity, number> = { common: 0.05, rare: 0.18, epic: 0.32, legendary: 0.5 };
+const GLOW: Record<Rarity, number> = { common: 0.05, rare: 0.18, epic: 0.32, legendary: 0.5, mythical: 0.7 };
 
 export function lookFor(species: string, rarity: Rarity = 'common') {
   const l = LOOKS[species as PetSpeciesId] ?? LOOKS.moss_turtle;

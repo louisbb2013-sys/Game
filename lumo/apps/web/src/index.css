@@ -420,8 +420,15 @@ html[data-reduce-motion='true'] *::after {
 @media (hover: hover) and (pointer: fine) { .tile-key { display: block; } }
 @media (min-width: 1024px) { .tile-grid .tile { min-height: 10.5rem; font-size: 1.2rem; } .tile-grid .tile-shape { width: 2.6rem; height: 2.6rem; } }
 .tile[data-state='dim'] { opacity: 0.32; filter: saturate(0.4); }
-.tile[data-state='right'] { box-shadow: 0 0 0 4px #4ade80, 0 0 28px 6px rgb(74 222 128 / 0.55), 0 6px 0 0 rgb(0 0 0 / 0.35); animation: tile-win 0.5s ease-out; }
-.tile[data-state='wrong'] { box-shadow: 0 0 0 4px #fb7185, 0 6px 0 0 rgb(0 0 0 / 0.35); animation: shake 0.45s ease-in-out; }
+/* After answering, colour means one thing only: green = the right answer, red = my wrong pick. */
+.tile[data-state='right'] { background: linear-gradient(155deg, #22c55e, #15803d) !important; color: #fff !important; box-shadow: 0 0 0 4px #bbf7d0, 0 0 28px 6px rgb(74 222 128 / 0.55), 0 6px 0 0 rgb(0 0 0 / 0.35); animation: tile-win 0.5s ease-out; }
+.tile[data-state='wrong'] { background: linear-gradient(155deg, #f43f5e, #9f1239) !important; color: #fff !important; box-shadow: 0 0 0 4px #fecdd3, 0 6px 0 0 rgb(0 0 0 / 0.35); animation: shake 0.45s ease-in-out; }
+.tile-letter { font: 900 1.05rem/1 var(--font-sans); }
+.tile-caption { display: block; margin-top: 0.25rem; font-size: 0.72rem; font-weight: 900; letter-spacing: 0.02em; opacity: 0.95; }
+.verdict { box-shadow: 0 10px 30px rgb(0 0 0 / 0.35); }
+.verdict-right { background: linear-gradient(135deg, #22c55e, #15803d); }
+.verdict-wrong { background: linear-gradient(135deg, #f43f5e, #9f1239); }
+.verdict-partly { background: linear-gradient(135deg, #f59e0b, #b45309); }
 .tile[data-state='gone'] { opacity: 0; transform: scale(0.85); pointer-events: none; }
 @keyframes tile-win { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .tile-badge { position: absolute; top: -0.6rem; right: -0.6rem; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9999px; font-size: 1.1rem; box-shadow: 0 2px 8px rgb(0 0 0 / 0.35); animation: combo-pop 0.4s ease-out both; }
@@ -519,4 +526,84 @@ html[data-reduce-motion='true'] .flip-inner { transition: none; }
 @keyframes sheet-up { from { transform: translateY(105%); } to { transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
   .page-in, .tile-deal, .sheet-up { animation: none !important; }
+}
+
+/* ------------------------------------------------------------------ game art: chests, eggs, pet portraits */
+
+.chest-art, .egg-art { overflow: visible; display: inline-block; }
+.chest-art .chest-all, .chest-art .chest-lid, .chest-art .chest-rays, .chest-art .chest-shine, .chest-art .chest-spark,
+.egg-art .egg-bob, .egg-art .egg-body, .egg-art .egg-shell { transform-box: view-box; }
+.chest-art .chest-all { transform-origin: 60px 100px; animation: chest-idle 2.8s ease-in-out infinite; }
+@keyframes chest-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.chest-art .chest-shine { animation: chest-shine 3.6s ease-in-out infinite; }
+@keyframes chest-shine { 0%, 55% { transform: translateX(-60px) skewX(-20deg); } 100% { transform: translateX(110px) skewX(-20deg); } }
+.chest-art .chest-spark { transform-box: fill-box; transform-origin: center; opacity: 0; animation: twinkle 2.2s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); } 50% { opacity: 1; transform: scale(1) rotate(45deg); } }
+.chest-art[data-state='shake'] .chest-all { animation: chest-shake 0.42s ease-in-out infinite; }
+@keyframes chest-shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-5deg) translateY(-3px); } 75% { transform: rotate(5deg) translateY(-3px); } }
+.chest-art .chest-lid { transform-origin: 60px 50px; transition: transform 0.5s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.chest-art[data-state='open'] .chest-lid { transform: translateY(-24px) rotate(-12deg) scaleY(0.82); }
+.chest-art .chest-rays { opacity: 0; transform-origin: 60px 50px; transition: opacity 0.35s; }
+.chest-art[data-state='open'] .chest-rays { opacity: 1; animation: spin-slow 7s linear infinite; }
+.chest-art[data-state='open'] .chest-all { animation: chest-pop 0.5s ease-out; }
+@keyframes chest-pop { 0% { transform: scale(0.92); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+
+.egg-art .egg-bob { transform-origin: 50px 110px; animation: egg-bob 2.6s ease-in-out infinite; }
+@keyframes egg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.egg-art .egg-body { transform-origin: 50px 110px; animation: egg-wiggle 4.2s ease-in-out infinite; }
+.egg-art[data-ready='true'] .egg-body { animation-duration: 2.2s; }
+@keyframes egg-wiggle {
+  0%, 60%, 100% { transform: rotate(0deg) translateY(0) scale(1, 1); }
+  64% { transform: rotate(-8deg) scale(1.03, 0.97); }
+  68% { transform: rotate(7deg); }
+  72% { transform: rotate(-4deg) translateY(-7px) scale(0.97, 1.04); }
+  77% { transform: rotate(2deg) translateY(0) scale(1.04, 0.96); }
+  82% { transform: rotate(0deg) scale(1, 1); }
+}
+.egg-art[data-rarity='rare'] { filter: drop-shadow(0 0 6px rgb(96 165 250 / 0.55)); }
+.egg-art[data-rarity='epic'] { animation: glow-epic 2.4s ease-in-out infinite; }
+.egg-art[data-rarity='legendary'] { animation: glow-legend 2.4s ease-in-out infinite; }
+.egg-art[data-rarity='mythical'] { animation: glow-myth 2.4s ease-in-out infinite; }
+.egg-art[data-rarity='mythical'] .egg-shell { animation: hue-spin 6s linear infinite; }
+@keyframes glow-epic { 0%, 100% { filter: drop-shadow(0 0 4px rgb(217 70 239 / 0.45)); } 50% { filter: drop-shadow(0 0 12px rgb(217 70 239 / 0.8)); } }
+@keyframes glow-legend { 0%, 100% { filter: drop-shadow(0 0 5px rgb(251 191 36 / 0.5)); } 50% { filter: drop-shadow(0 0 16px rgb(251 191 36 / 0.95)); } }
+@keyframes glow-myth { 0%, 100% { filter: drop-shadow(0 0 6px rgb(244 114 182 / 0.6)); } 50% { filter: drop-shadow(0 0 18px rgb(56 189 248 / 0.95)); } }
+@keyframes hue-spin { to { filter: hue-rotate(360deg); } }
+.egg-art .egg-crack { stroke-dasharray: 60; stroke-dashoffset: 60; animation: crack-in 0.6s ease-out forwards; }
+@keyframes crack-in { to { stroke-dashoffset: 0; } }
+
+.pet-portrait { position: relative; display: inline-grid; place-items: center; flex-shrink: 0; }
+.pet-portrait .pet-aura { position: absolute; inset: 6%; border-radius: 9999px; background: radial-gradient(circle, var(--aura, rgb(148 163 184 / 0.35)) 0%, transparent 70%); }
+.pet-portrait[data-rarity='rare'] { --aura: rgb(56 189 248 / 0.5); }
+.pet-portrait[data-rarity='epic'] { --aura: rgb(217 70 239 / 0.55); }
+.pet-portrait[data-rarity='legendary'] { --aura: rgb(251 191 36 / 0.65); }
+.pet-portrait[data-rarity='mythical'] { --aura: rgb(244 114 182 / 0.6); }
+.pet-portrait[data-rarity='legendary'] .pet-aura, .pet-portrait[data-rarity='mythical'] .pet-aura { inset: -4%; animation: aura-pulse 2.4s ease-in-out infinite; }
+.pet-portrait[data-rarity='legendary'] .pet-aura::before, .pet-portrait[data-rarity='mythical'] .pet-aura::before {
+  content: ''; position: absolute; inset: 0; border-radius: 9999px; opacity: 0.55;
+  background: repeating-conic-gradient(from 0deg, rgb(255 236 160 / 0.9) 0deg 8deg, transparent 8deg 30deg);
+  mask: radial-gradient(circle, transparent 30%, #000 45%, transparent 72%); animation: spin-slow 10s linear infinite;
+}
+.pet-portrait[data-rarity='mythical'] .pet-aura::before { background: conic-gradient(#ff5fd2, #ffd84a, #4cf0ff, #8b5cff, #ff5fd2); opacity: 0.5; }
+@keyframes aura-pulse { 0%, 100% { transform: scale(0.94); opacity: 0.8; } 50% { transform: scale(1.06); opacity: 1; } }
+.pet-portrait .pet-img, .pet-portrait .pet-emoji { position: relative; width: 112%; height: 112%; object-fit: contain; display: grid; place-items: center; animation: pet-idle 3.2s ease-in-out infinite; transform-origin: 50% 90%; }
+.pet-portrait .pet-emoji { width: auto; height: auto; }
+.pet-portrait:hover .pet-img, .pet-portrait:active .pet-img { animation: pet-hop 0.6s ease-out; }
+.pet-portrait.is-still .pet-img { animation: none; }
+@keyframes pet-idle { 0%, 100% { transform: translateY(0) scale(1, 1); } 45% { transform: translateY(-3%) scale(0.98, 1.02); } 55% { transform: translateY(-3%) scale(0.98, 1.02); } }
+@keyframes pet-hop { 0% { transform: translateY(0) scale(1.06, 0.94); } 40% { transform: translateY(-16%) scale(0.95, 1.06); } 70% { transform: translateY(0) scale(1.08, 0.92); } 100% { transform: translateY(0) scale(1, 1); } }
+
+.rarity-mythical { background: linear-gradient(90deg, #ec4899, #8b5cf6, #06b6d4, #ec4899); background-size: 300% 100%; animation: myth-flow 4s linear infinite; }
+@keyframes myth-flow { to { background-position: 300% 0; } }
+.rarity-ring-common { box-shadow: 0 0 0 3px rgb(148 163 184); }
+.rarity-ring-rare { box-shadow: 0 0 0 3px rgb(56 189 248), 0 0 14px rgb(56 189 248 / 0.45); }
+.rarity-ring-epic { box-shadow: 0 0 0 3px rgb(217 70 239), 0 0 16px rgb(217 70 239 / 0.5); }
+.rarity-ring-legendary { box-shadow: 0 0 0 3px rgb(251 191 36), 0 0 20px rgb(251 191 36 / 0.6); }
+.rarity-ring-mythical { box-shadow: 0 0 0 3px rgb(244 114 182), 0 0 0 6px rgb(56 189 248 / 0.6), 0 0 26px rgb(139 92 246 / 0.7); }
+
+@media (prefers-reduced-motion: reduce) {
+  .chest-art *, .egg-art, .egg-art *, .pet-portrait *, .pet-portrait *::before, .rarity-mythical { animation: none !important; transition: none !important; }
+  .chest-art .chest-spark { opacity: 0.8; }
+  .egg-art .egg-crack { stroke-dashoffset: 0; }
 }

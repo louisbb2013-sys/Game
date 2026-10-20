@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { api } from '../../lib/api';
+import { ChestArt } from '../Art';
 import { burst, haptic } from '../../lib/fx';
 import { play } from '../../lib/sound';
 import type { Rewards } from '../../lib/rewards';
@@ -15,7 +16,7 @@ interface Picked {
   chests: number;
 }
 
-const CHESTS = ['🎁', '🧰', '💼'];
+const CHESTS = ['common', 'rare', 'epic'] as const;
 
 const ITEM_EMOJI: Record<string, string> = { streak_freeze: '🧊', xp_boost: '🚀', pet_food: '🍎', heart_refill: '💗' };
 
@@ -76,8 +77,8 @@ export function ChestPick({ sessionId, onDone, onRewards }: { sessionId: string;
                     <span className="mt-1 block text-sm leading-tight font-black">{loot.text}</span>
                   </span>
                 ) : (
-                  <span className={`text-5xl ${busy === i ? 'shake' : 'chest-bob'}`} style={{ ['--d' as string]: `${i * 0.25}s` }}>
-                    {CHESTS[i]}
+                  <span style={{ animationDelay: `${i * 0.25}s` }}>
+                    <ChestArt kind={CHESTS[i]} size={84} state={busy === i ? 'shake' : 'idle'} />
                   </span>
                 )}
               </button>

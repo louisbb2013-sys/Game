@@ -2,6 +2,7 @@ import { ITEMS, type ItemId } from '@lumo/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
+import { ChestArt, ItemArt } from '../components/Art';
 import { CoinIcon } from '../components/icons';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -21,7 +22,7 @@ interface Loot {
   badges: string[];
 }
 
-const CHEST_EMOJI = { common: '🎁', rare: '💼', epic: '👑' };
+type ChestKind = 'common' | 'rare' | 'epic';
 const SHOP_ORDER: ItemId[] = ['streak_freeze', 'heart_refill', 'xp_boost', 'pet_food', 'egg_common', 'egg_rare', 'chest_common', 'theme_sunset', 'theme_ocean', 'theme_forest'];
 
 export function Shop() {
@@ -94,7 +95,7 @@ export function Shop() {
             const have = owned.get(id) ?? 0;
             return (
               <div key={id} className="flex flex-col gap-1.5 rounded-3xl bg-surface p-3.5 ring-1 ring-line">
-                <span className="text-4xl">{def.emoji}</span>
+                <ItemArt id={id} emoji={def.emoji} size={52} />
                 <span className="font-black">{t(`items.${id}.name`)}</span>
                 <span className="flex-1 text-xs text-muted">{t(`items.${id}.desc`)}</span>
                 {have > 0 && <span className="text-xs font-bold text-brand">{t('shop.owned', { n: have })}</span>}
@@ -120,7 +121,7 @@ export function Shop() {
               <div className="grid grid-cols-3 gap-3">
                 {inv.chests.map((c) => (
                   <button key={c.id} onClick={() => void open(c)} className="flex flex-col items-center gap-1 rounded-3xl bg-surface p-3 ring-2 ring-amber-glow/50 hover:ring-amber-glow" aria-label={t('shop.openChest', { kind: t(`chests.${c.kind}`) })}>
-                    <span className="lumo-float text-5xl">{CHEST_EMOJI[c.kind]}</span>
+                    <ChestArt kind={c.kind as ChestKind} size={78} />
                     <span className="text-xs font-black">{t(`chests.${c.kind}`)}</span>
                     <span className="text-[0.65rem] font-bold text-brand">{t('shop.tapToOpen')}</span>
                   </button>
@@ -140,7 +141,7 @@ export function Shop() {
                   const isTheme = def.kind === 'cosmetic';
                   return (
                     <li key={i.id} className="flex items-center gap-3 rounded-2xl bg-surface p-3 ring-1 ring-line">
-                      <span className="text-3xl">{def.emoji}</span>
+                      <ItemArt id={i.id} emoji={def.emoji} size={40} />
                       <span className="min-w-0 flex-1">
                         <span className="block font-black">
                           {t(`items.${i.id}.name`)} {!isTheme && <span className="text-muted">×{i.qty}</span>}
@@ -181,14 +182,12 @@ export function Shop() {
           <div className="w-full max-w-sm space-y-4 rounded-3xl royal p-6 text-center text-white shadow-2xl ring-2 ring-amber-glow">
             {!opening.result ? (
               <>
-                <span className="shake inline-block text-8xl" style={{ animationIterationCount: 'infinite' }}>
-                  {CHEST_EMOJI[opening.kind as keyof typeof CHEST_EMOJI]}
-                </span>
+                <ChestArt kind={opening.kind as ChestKind} size={170} state="shake" />
                 <p className="font-black">{t('shop.opening')}</p>
               </>
             ) : (
               <>
-                <span className="combo-pop inline-block text-7xl">✨</span>
+                <ChestArt kind={opening.kind as ChestKind} size={150} state="open" />
                 <h2 className="text-2xl font-black">{t('shop.youGot')}</h2>
                 <ul className="space-y-2">
                   <li className="pop-in flex items-center justify-center gap-2 rounded-2xl bg-white/15 p-3 text-xl font-black">
@@ -196,7 +195,7 @@ export function Shop() {
                   </li>
                   {opening.result.loot.items.map((i, k) => (
                     <li key={i.id} className="pop-in flex items-center justify-center gap-2 rounded-2xl bg-white/15 p-3 text-lg font-black" style={{ animationDelay: `${0.2 * (k + 1)}s` }}>
-                      <span className="text-3xl">{ITEMS[i.id].emoji}</span> {t(`items.${i.id}.name`)} ×{i.qty}
+                      <ItemArt id={i.id} emoji={ITEMS[i.id].emoji} size={38} /> {t(`items.${i.id}.name`)} ×{i.qty}
                     </li>
                   ))}
                 </ul>

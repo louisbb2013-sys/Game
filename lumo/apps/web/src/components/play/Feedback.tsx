@@ -43,11 +43,15 @@ export function FeedbackSheet({ result, chosenText, onContinue, onReport, onExpl
       className={`sheet-up fixed inset-x-0 bottom-0 z-40 mx-auto max-h-[72dvh] max-w-xl overflow-y-auto lg:max-w-3xl rounded-t-3xl p-4 pb-[max(env(safe-area-inset-bottom),1rem)] text-night shadow-[0_-12px_40px_rgb(0_0_0/0.45)] ${good ? 'bg-[#dcfce7]' : partial ? 'bg-[#fef3c7]' : 'bg-[#ffe4e6]'}`}
     >
       <div className="flex items-center gap-3">
-        <span className={`grid size-12 shrink-0 place-items-center rounded-full text-2xl font-black text-white ${good ? 'bg-green-600' : partial ? 'bg-amber-500' : 'bg-rose-600'}`} aria-hidden>
+        <span className={`grid size-14 shrink-0 place-items-center rounded-full text-3xl font-black text-white ${good ? 'bg-green-600' : partial ? 'bg-amber-500' : 'bg-rose-600'}`} aria-hidden>
           {good ? '✓' : partial ? '½' : '✗'}
         </span>
         <div className="min-w-0 flex-1">
-          <p className={`text-2xl leading-tight font-black ${good ? 'text-green-800' : partial ? 'text-amber-800' : 'text-rose-800'}`}>
+          {/* The verdict in one word first (like Gizmo), the cheer after it. */}
+          <p className={`font-display text-3xl leading-none font-black ${good ? 'text-green-700' : partial ? 'text-amber-700' : 'text-rose-700'}`} data-testid="verdict">
+            {good ? t('play.verdict.right') : partial ? t('play.verdict.partly') : t('play.verdict.wrong')}
+          </p>
+          <p className={`mt-1 text-sm leading-tight font-black ${good ? 'text-green-900' : partial ? 'text-amber-900' : 'text-rose-900'}`}>
             {good ? praise.current : partial ? t('quiz.partial', { pct: Math.round(result.score * 100) }) : praise.current}
           </p>
           <div className="mt-0.5 flex flex-wrap gap-1.5 text-xs font-black">
@@ -58,16 +62,16 @@ export function FeedbackSheet({ result, chosenText, onContinue, onReport, onExpl
         </div>
       </div>
 
-      {!good && chosenText && result.chosenNote && (
-        <div className="mt-3 rounded-2xl bg-white/80 p-3">
-          <p className="text-xs font-black tracking-wide text-rose-700 uppercase">{t('play.youPicked', { answer: chosenText })}</p>
-          <p className="mt-0.5 font-bold">{result.chosenNote}</p>
+      {!good && result.correctAnswer && (
+        <div className="mt-3 rounded-2xl bg-green-600 p-3 text-white">
+          <p className="text-xs font-black tracking-wide uppercase">✓ {t('quiz.correctAnswer')}</p>
+          <p className="text-lg font-black whitespace-pre-line">{result.correctAnswer}</p>
         </div>
       )}
-      {!good && result.correctAnswer && (
-        <div className="mt-3">
-          <p className="text-xs font-black tracking-wide text-slate-600 uppercase">{t('quiz.correctAnswer')}</p>
-          <p className="text-lg font-black whitespace-pre-line">{result.correctAnswer}</p>
+      {!good && chosenText && (
+        <div className="mt-2 rounded-2xl bg-white/80 p-3">
+          <p className="text-xs font-black tracking-wide text-rose-700 uppercase">✗ {t('play.youPicked', { answer: chosenText })}</p>
+          {result.chosenNote && <p className="mt-0.5 font-bold">{result.chosenNote}</p>}
         </div>
       )}
       {result.feedback && <p className="mt-2 font-bold">{result.feedback}</p>}

@@ -103,7 +103,9 @@ test('live: two players play a full game to the podium', async ({ browser }) => 
     if (i === 1) await guest.page.screenshot({ path: 'e2e/screens/live-question.png', fullPage: true });
     await playQuestion(guest.page, true);
     // Everyone answered: the reveal shows right away.
-    await expect(guest.page.getByText('Answer', { exact: true })).toBeVisible();
+    // The answer screen says right or wrong plainly, then shows the right answer.
+    await expect(guest.page.getByTestId('live-verdict')).toBeVisible();
+    await expect(guest.page.getByText(/✓ Right answer|^Answer$/).first()).toBeVisible();
     if (i === 1) await guest.page.screenshot({ path: 'e2e/screens/live-reveal.png', fullPage: true });
     await expect(guest.page.getByText('Waiting for the host…')).toBeVisible();
     await host.page.getByRole('button', { name: i < 5 ? 'Next question' : 'Show the podium' }).click();

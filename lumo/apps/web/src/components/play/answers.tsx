@@ -15,6 +15,8 @@ export interface Reveal {
 }
 
 const COLORS = ['tile-red', 'tile-blue', 'tile-yellow', 'tile-green'] as const;
+/** Choices are A, B, C, D (like a test, and like Gizmo). */
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 export function Shape({ i, size = 18 }: { i: number; size?: number }) {
   const fill = i === 2 ? '#1e1b4b' : '#fff';
@@ -49,7 +51,7 @@ export function Shape({ i, size = 18 }: { i: number; size?: number }) {
 
 type TileState = 'idle' | 'right' | 'wrong' | 'dim' | 'gone';
 
-function Tile({ i, state, onTap, children, pressed, disabled, label, hint }: { i: number; state: TileState; onTap: () => void; children: ReactNode; pressed?: boolean; disabled?: boolean; label: string; hint?: string }) {
+function Tile({ i, state, onTap, children, pressed, disabled, label, hint, letter, caption }: { i: number; state: TileState; onTap: () => void; children: ReactNode; pressed?: boolean; disabled?: boolean; label: string; hint?: string; letter?: string; caption?: string }) {
   return (
     <button
       type="button"
@@ -66,12 +68,13 @@ function Tile({ i, state, onTap, children, pressed, disabled, label, hint }: { i
           {hint}
         </kbd>
       )}
-      <span className="tile-shape">
-        <Shape i={i} />
+      <span className="tile-shape">{letter ? <span className="tile-letter">{letter}</span> : <Shape i={i} />}</span>
+      <span className="min-w-0 text-[1.05rem] leading-snug break-words">
+        {children}
+        {caption && <span className="tile-caption">{caption}</span>}
       </span>
-      <span className="min-w-0 text-[1.05rem] leading-snug break-words">{children}</span>
-      {state === 'right' && <span className="tile-badge bg-good text-night">✓</span>}
-      {state === 'wrong' && <span className="tile-badge bg-bad text-white">✗</span>}
+      {state === 'right' && <span className="tile-badge bg-white text-green-700">✓</span>}
+      {state === 'wrong' && <span className="tile-badge bg-white text-rose-700">✗</span>}
     </button>
   );
 }
@@ -90,13 +93,13 @@ export function ChoiceTiles({ q, chosen, reveal, removed, onPick, locked }: { q:
     if (o.id === chosen) return 'wrong';
     return 'dim';
   };
-  // Keys 1-4 (or T/F, V/F) answer on a computer.
+  // Keys A-D or 1-4 (or T/F, V/F) answer on a computer.
   useEffect(() => {
     if (locked || reveal) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const k = e.key.toLowerCase();
-      let idx = Number(k) - 1;
+      let idx = !tf && 'abcd'.includes(k) && k.length === 1 ? 'abcd'.indexOf(k) : Number(k) - 1;
       if (tf && (k === 't' || k === 'v')) idx = 0;
       if (tf && k === 'f') idx = 1;
       const o = opts[idx];
@@ -115,8 +118,10 @@ export function ChoiceTiles({ q, chosen, reveal, removed, onPick, locked }: { q:
           pressed={chosen === o.id && !reveal}
           disabled={locked || !!reveal || removed.includes(o.id)}
           onTap={() => onPick(o.id)}
-          label={o.text}
-          hint={String(i + 1)}
+          label={tf ? o.text : `${LETTERS[i] ?? ''}: ${o.text}`}
+          hint={tf ? String(i + 1) : undefined}
+          letter={tf ? undefined : LETTERS[i]}
+          caption={!reveal ? undefined : stateOf(o) === 'right' ? t('play.rightAnswer') : stateOf(o) === 'wrong' ? t('play.yourAnswer') : undefined}
         >
           {tf ? <span className="text-2xl">{o.text}</span> : o.text}
         </Tile>

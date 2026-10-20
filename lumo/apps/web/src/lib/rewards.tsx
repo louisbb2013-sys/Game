@@ -2,6 +2,7 @@ import { BADGES } from '@lumo/core';
 import type { Rarity } from '@lumo/core';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Creature3D, Egg3D } from '../components/Pet3D';
+import { ChestArt } from '../components/Art';
 import type { Handle } from '../three/stage';
 import { useConfetti } from './confetti';
 import { useTranslation } from 'react-i18next';
@@ -18,12 +19,14 @@ export interface Rewards {
   /** Website: a chest earned for finishing a round. */
   chest?: string;
   /** Website: the study egg after this answer. */
-  egg?: { rarity: 'common' | 'rare' | 'epic' | 'legendary'; progress: number; target: number };
+  egg?: { rarity: Rarity; progress: number; target: number };
 }
 
 interface Toast {
   id: number;
   emoji: string;
+  /** A chest is drawn rather than shown as an emoji. */
+  chest?: 'common' | 'rare' | 'epic';
   title: string;
   body?: string;
   link?: string;
@@ -54,7 +57,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
         next.push({ id: Math.random(), emoji: BADGES.find((x) => x.id === b)?.emoji ?? '🏅', title: t('rewards.badge'), body: t(`badges.${b}.name`), link: '/me' });
       }
       if (r.hatched) setHatch(r.hatched);
-      if (r.chest) next.push({ id: Math.random(), emoji: r.chest === 'rare' ? '💼' : '🎁', title: t('rewards.chest', { chest: t(`chests.${r.chest}`) }), body: t('rewards.chestOpen'), link: '/shop?tab=mine' });
+      if (r.chest) next.push({ id: Math.random(), emoji: '', chest: r.chest as 'common' | 'rare' | 'epic', title: t('rewards.chest', { chest: t(`chests.${r.chest}`) }), body: t('rewards.chestOpen'), link: '/shop?tab=mine' });
       if (r.questsCompleted.length) {
         next.push({ id: Math.random(), emoji: '📜', title: t('rewards.quest', { count: r.questsCompleted.length }), body: t('rewards.questClaim'), link: '/' });
       }
@@ -74,7 +77,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
         {toasts.map((x) => {
           const inner = (
             <>
-              <span className="text-3xl">{x.emoji}</span>
+              {x.chest ? <ChestArt kind={x.chest} size={40} /> : <span className="text-3xl">{x.emoji}</span>}
               <span className="min-w-0">
                 <span className="block font-black">{x.title}</span>
                 {x.body && <span className="block text-sm text-indigo-100">{x.body}</span>}
@@ -116,7 +119,7 @@ function HatchCelebration({ pet, onClose }: { pet: NonNullable<Rewards['hatched'
   const [open, setOpen] = useState(false);
   const egg = useRef<Handle | null>(null);
   const creature = useRef<Handle | null>(null);
-  const rarity = (['common', 'rare', 'epic', 'legendary'].includes(pet.rarity) ? pet.rarity : 'common') as Rarity;
+  const rarity = (['common', 'rare', 'epic', 'legendary', 'mythical'].includes(pet.rarity) ? pet.rarity : 'common') as Rarity;
   useEffect(() => {
     play('tap');
     const shakes = [200, 700, 1150].map((ms) => setTimeout(() => egg.current?.jump(), ms));

@@ -70,3 +70,34 @@ test('browser-only Lumo: deck, quiz, exam, sandbox, notes, progress kept after r
   await expect(page.getByText('The Water Cycle')).toBeVisible();
   expect(errors.filter((e) => !/favicon/i.test(e))).toEqual([]);
 });
+
+test('pets climb the rarities: Common → Rare with enough level and coins (Mythical at the top)', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto(process.env.LOCAL_URL!);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  await page.getByLabel('Give it a name').fill('Pip');
+  await page.getByRole('button', { name: 'Adopt!' }).click();
+  await expect(page.getByTestId('pet-rarity')).toHaveText('Common');
+  await expect(page.getByRole('list', { name: 'Rarity' }).getByRole('listitem')).toHaveText(['Common', 'Rare', 'Epic', 'Legendary', 'Mythical']);
+  // Not yet: the pet needs level 3 and 150 coins.
+  await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Rare');
+  await expect(page.getByTestId('pet-upgrade').getByRole('button', { name: 'Upgrade' })).toBeDisabled();
+
+  // After some studying (level 3) and saving up coins, it can go up a rarity.
+  await page.evaluate(() => {
+    const k = 'lumo_local_v1';
+    const d = JSON.parse(localStorage.getItem(k)!);
+    d.user.coins = 500;
+    d.game.pets[0].level = 3;
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  await page.getByTestId('pet-upgrade').getByRole('button', { name: 'Upgrade' }).click();
+  await expect(page.getByText('Your pet is Rare now!')).toBeVisible();
+  await expect(page.getByTestId('pet-rarity')).toHaveText('Rare');
+  await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Epic');
+  await page.screenshot({ path: 'e2e/screens/local-pet-upgrade.png', fullPage: true });
+});

@@ -23,7 +23,7 @@ test('friends, a shared deck and a two-player Live game on the website', async (
   // Alice makes a deck, earns a little XP and shares the deck.
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByRole('button', { name: 'Try a sample deck' }).click();
-  await a.getByRole('switch', { name: /Share with friends/ }).click();
+  await a.getByRole('radio', { name: 'Friends', exact: true }).click();
   await expect(a.getByText('Your friends can see this deck now.')).toBeVisible();
 
   // Bruno sees Alice on the Friends page, adds her, and copies the shared deck.
