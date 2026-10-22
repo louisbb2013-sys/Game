@@ -1,7 +1,7 @@
 /**
  * Standalone site: the same `window.claude.use(...)` surface the app uses inside the Claude viewer,
  * backed by the site's own endpoints (netlify/lib): shared data (/api/data), live rooms (/api/room),
- * the signed-in learner, and Claude (/api/claude). The rest of Revio doesn't change.
+ * the signed-in learner, and Claude (/api/claude). The rest of Lumo doesn't change.
  *
  * Changes made by others (a friend's new score, someone joining a Live game) are picked up by asking
  * the site every few seconds while the page is open and visible; each check that finds nothing new

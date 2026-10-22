@@ -4,7 +4,7 @@
   // ?viewonly=1: a friend on another Claude account opening a shared link (holds `view`: every write is refused).
   const viewOnly = new URLSearchParams(location.search).get('viewonly') === '1';
   const refuse = () => Promise.reject({ code: 'invalid_argument', message: 'write not allowed at this level' });
-  // Each tab is its own Revio learner: namespace the app's own storage by uid.
+  // Each tab is its own Lumo learner: namespace the app's own storage by uid.
   const gi = Storage.prototype.getItem, si = Storage.prototype.setItem, ri = Storage.prototype.removeItem;
   const k = (key) => (key.startsWith('fake:') ? key : uid + ':' + key);
   Storage.prototype.getItem = function (key) { return gi.call(this, k(key)); };
@@ -96,7 +96,7 @@
     { c: i + 1, type: 'tf', level: 'understand', q: 'Bank statement ' + (i + 1) + ': this idea describes something real.', answer: true, why: 'It is a real idea from the course.' },
     { c: i + 1, type: 'written', level: 'analyze', q: 'Bank question ' + (i + 1) + ': explain why this idea matters in a new situation.', points: ['names the idea', 'gives a reason'], model: 'A model answer.', why: 'A full answer names the idea and gives a reason.' },
   ].map((o) => JSON.stringify(o)));
-  // Every prompt sent to Claude, so tests can check what Revio told it (e.g. the learner's memory).
+  // Every prompt sent to Claude, so tests can check what Lumo told it (e.g. the learner's memory).
   window.__prompts = [];
   const writeBank = async (p, o = {}) => {
     window.__prompts.push(String(p));

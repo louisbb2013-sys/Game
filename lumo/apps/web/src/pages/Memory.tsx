@@ -10,8 +10,8 @@ const IDEAS = ['book', 'grade', 'hard', 'like', 'tests'] as const;
 const IDEA_EMOJI: Record<(typeof IDEAS)[number], string> = { book: '📘', grade: '🎓', hard: '😅', like: '❤️', tests: '📝' };
 
 /**
- * Revio's memory: what the learner tells Revio (their class, the book they use, what's hard, what they
- * like), what Revio noticed from how they play, and how it adapts. Used when Revio writes their decks,
+ * Lumo's memory: what the learner tells Lumo (their class, the book they use, what's hard, what they
+ * like), what Lumo noticed from how they play, and how it adapts. Used when Lumo writes their decks,
  * questions and explanations.
  */
 export function Memory() {
@@ -230,7 +230,7 @@ function Choice<T extends string>({ label, value, options, name, onChange }: { l
   );
 }
 
-/** A small "Revio remembers N things" link (or an invitation to tell Revio), for the create page. */
+/** A small "Lumo remembers N things" link (or an invitation to tell Lumo), for the create page. */
 export function MemoryLink() {
   const { t } = useTranslation();
   const count = useMemoryCount();
@@ -242,7 +242,7 @@ export function MemoryLink() {
   );
 }
 
-/** Home: tell Revio about you (until you have), then a quiet reminder of what it remembers. */
+/** Home: tell Lumo about you (until you have), then a quiet reminder of what it remembers. */
 export function MemoryCard() {
   const { t } = useTranslation();
   const count = useMemoryCount();

@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// VITE_LOCAL=1 builds the browser-only Revio: one self-contained page, no server, no service worker.
+// VITE_LOCAL=1 builds the browser-only Lumo: one self-contained page, no server, no service worker.
 // VITE_NETLIFY=1 (with VITE_LOCAL=1) builds the same app as a standalone, installable site.
 const netlify = process.env.VITE_NETLIFY === '1';
 const local = process.env.VITE_LOCAL === '1' && !netlify;
@@ -29,8 +29,8 @@ export default defineConfig({
           registerType: 'autoUpdate',
           includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
           manifest: {
-            name: 'Revio — study smarter',
-            short_name: 'Revio',
+            name: 'Lumo — study smarter',
+            short_name: 'Lumo',
             description: 'Turn your notes into quizzes that make you truly understand.',
             theme_color: '#0F0C29',
             background_color: '#0F0C29',

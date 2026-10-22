@@ -166,7 +166,7 @@ export function makeDataHandler(deps: DataDeps) {
     if (await kv.etag(goneKey(me.u))) return json(401, { error: 'account_deleted' }); // signs that device out
     const data = body.data;
     if (!data || typeof data !== 'object' || Array.isArray(data)) return json(400, { error: 'bad_request' });
-    // A Revio name belongs to one learner: taking a new one checks nobody else has it.
+    // A Lumo name belongs to one learner: taking a new one checks nobody else has it.
     if (s[0] === 'profiles' && s.length === 2 && typeof (data as { username?: unknown }).username === 'string') {
       const want = String((data as { username: string }).username).trim().toLowerCase();
       const before = String(parse((await kv.get(key))?.value)?.username ?? '').toLowerCase();

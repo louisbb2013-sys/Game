@@ -1,7 +1,7 @@
-# Revio ✨ — study smarter, understand deeper
+# Lumo ✨ — study smarter, understand deeper
 
-Revio turns your notes into quizzes that help you **truly understand**, not memorize by heart.
-Mascot: **Revio the firefly**, whose light grows as you master ideas.
+Lumo turns your notes into quizzes that help you **truly understand**, not memorize by heart.
+Mascot: **Lumo the firefly**, whose light grows as you master ideas.
 
 See [PLAN.md](PLAN.md) for architecture, data model and milestones.
 
@@ -14,7 +14,7 @@ See [PLAN.md](PLAN.md) for architecture, data model and milestones.
   with an offline fallback), anti-repeat planner (never the same format twice in a row per concept, Bloom
   depth that rises with success, retries asked differently), spaced repetition, mastery map, practice /
   review / fix-mistakes / challenge (hearts) modes, XP + combo, coins, streaks, EN/FR sample decks.
-- ✅ **Milestone 3 — AI chat deck builder**: send photos, PDFs or text (with a clear consent notice), Revio keeps
+- ✅ **Milestone 3 — AI chat deck builder**: send photos, PDFs or text (with a clear consent notice), Lumo keeps
   only what matters and shows *What I understood*; edit, untick or add concepts (or say “chapter 3 isn’t on the
   exam”), then build the deck. Follow-ups in plain words: “make it harder”, “quiz me on what I got wrong”,
   “explain osmosis again”, “make me a crossword”. Uploads are deleted as soon as the deck is built.
@@ -53,9 +53,9 @@ See [PLAN.md](PLAN.md) for architecture, data model and milestones.
   - **Mock exams**: the whole deck sampled evenly, timed (about a minute per question), no feedback until the
     end, hand in early or auto hand-in when time is up (enforced on the server). The report shows the score,
     readiness, weak spots, results by topic and by kind of thinking, and what to do next.
-  - **Study plans**: pick an exam date and daily time; Revio plans each day (new ideas first, reviews after 1, 3
+  - **Study plans**: pick an exam date and daily time; Lumo plans each day (new ideas first, reviews after 1, 3
     and 7 days, a mock exam two days before, a light last day) and shows today's plan on Home.
-  - **Audio mode**: Revio reads questions and answers aloud; answer out loud (speech recognition where the
+  - **Audio mode**: Lumo reads questions and answers aloud; answer out loud (speech recognition where the
     browser has it) or "just listen" like a podcast. Adjustable speed.
   - **Offline review**: save a deck to the device; rounds are generated and graded on the device with no
     connection and synced later (each batch counts once; small capped XP).
@@ -90,7 +90,7 @@ Without any keys, use **Developer sign-in** (dev only) or the email code (printe
 3. Put `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `.env`, restart the server.
 
 ### Anthropic
-Set `ANTHROPIC_API_KEY` in `.env` (server only — it is never sent to the browser). Without a key, Revio uses its
+Set `ANTHROPIC_API_KEY` in `.env` (server only — it is never sent to the browser). Without a key, Lumo uses its
 built-in offline question generator and keyword grader, so everything still works.
 `AI_MODEL` (question writing) and `AI_GRADING_MODEL` (open-answer grading) default to `claude-opus-5-5`;
 set `AI_GRADING_MODEL=claude-haiku-5-5` to make grading much cheaper.

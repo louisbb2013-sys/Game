@@ -6,7 +6,7 @@ import { bearer, goneKey, json, limiter, randomId, signSession, verifySession, t
 /**
  * Accounts for the standalone site (Netlify Function at /api/auth/*), so progress, friends and Live
  * games follow a learner to any device:
- *   - a Revio name + password (works the moment the site is up), or
+ *   - a Lumo name + password (works the moment the site is up), or
  *   - Google, through the site's Netlify Identity (on when the site owner switches it on).
  * Passwords are stored only as a slow salted hash (PBKDF2-SHA256). Google accounts keep only the
  * Identity user id: no e-mail address or real name is stored.

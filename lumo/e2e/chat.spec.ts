@@ -19,7 +19,7 @@ test('chat: notes → What I understood → edit → build → quiz & sandbox', 
   await page.request.post('/api/auth/dev', { data: { name } });
   await page.request.patch('/api/me', { data: { locale: 'en', settings: { sound: false } } });
   await page.goto('/learn');
-  await page.getByRole('link', { name: /Make a deck with Revio/ }).click();
+  await page.getByRole('link', { name: /Make a deck with Lumo/ }).click();
   await page.getByRole('button', { name: /New deck from my notes/ }).click();
   await expect(page.getByText(/Send me photos of your notes/)).toBeVisible();
 
@@ -29,7 +29,7 @@ test('chat: notes → What I understood → edit → build → quiz & sandbox', 
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'I understand' }).click();
   await (await chooser).setFiles({ name: 'water.txt', mimeType: 'text/plain', buffer: Buffer.from(NOTES) });
-  await page.getByLabel(/Message Revio/).fill('My science test is on Friday');
+  await page.getByLabel(/Message Lumo/).fill('My science test is on Friday');
   await page.getByRole('button', { name: 'Send' }).click();
 
   const editor = page.getByRole('region', { name: 'What I understood' });

@@ -19,7 +19,7 @@ const LINES = {
 const YES = /\b(yes|yeah|yep|oui|ouais)\b/i;
 const NO = /\b(no|nope|non|pas)\b/i;
 
-/** Audio mode: Revio reads ideas aloud and quizzes you by voice — for the bus, a walk, or tired eyes. */
+/** Audio mode: Lumo reads ideas aloud and quizzes you by voice — for the bus, a walk, or tired eyes. */
 export function Audio() {
   const { deckId = '' } = useParams();
   const { t } = useTranslation();

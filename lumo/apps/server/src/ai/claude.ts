@@ -20,7 +20,7 @@ const FORMAT_GUIDE: Record<string, string> = {
   explain: 'Ask the student to explain the idea in their own words (why/how), not to recite a definition.',
   apply: 'Describe a NEW, concrete real-life situation the notes never mention, and ask the student to use the concept to explain or predict what happens.',
   compare: 'Ask the student to compare this concept with a related one: similarities and differences.',
-  teach_back: 'You are Revio, a curious younger student. Ask the learner to teach you the concept simply.',
+  teach_back: 'You are Lumo, a curious younger student. Ask the learner to teach you the concept simply.',
   true_false_justify: 'A statement that is either true or a common misconception (false). The student must say true/false AND justify.',
   matching: '3-5 pairs to match (term ↔ meaning, cause ↔ effect, example ↔ concept). Use the concept and related concepts from the deck.',
   ordering: 'Steps of a process/sequence the student must put in order (give them in the correct order; the app shuffles).',
@@ -36,7 +36,7 @@ const BLOOM_GUIDE: Record<string, string> = {
   analyze: 'analysis (can they reason about why, compare, find errors?)',
 };
 
-const SYSTEM_GENERATE = `You write quiz questions for Revio, a study app that helps students truly UNDERSTAND their school material instead of memorizing it.
+const SYSTEM_GENERATE = `You write quiz questions for Lumo, a study app that helps students truly UNDERSTAND their school material instead of memorizing it.
 Rules:
 - Test the meaning, never the exact wording of the notes. Reword, use new examples, new numbers and new scenarios.
 - Keep it accurate and at the level of the student's notes. Never invent facts that contradict the notes.
@@ -44,7 +44,7 @@ Rules:
 - Write everything in the requested language.
 - The explanation is kind and explains WHY, in 1-2 sentences.`;
 
-const SYSTEM_GRADE = `You grade a student's open answer for Revio, a study app. Grade the MEANING, not the wording: accept synonyms, everyday language, spelling mistakes and partial phrasing. Give partial credit.
+const SYSTEM_GRADE = `You grade a student's open answer for Lumo, a study app. Grade the MEANING, not the wording: accept synonyms, everyday language, spelling mistakes and partial phrasing. Give partial credit.
 Return score from 0 to 1 (1 = every required key point is clearly there and nothing is wrong; a wrong statement lowers the score).
 List which key points were matched and which are missing (copy the key point text).
 feedback: 1-2 warm, encouraging sentences addressed to the student ("you"), in the requested language, saying what was good and what to add or fix. Never mock.`;
@@ -249,7 +249,7 @@ export class ClaudeProvider implements AiProvider {
 
 // ---------- schemas & prompts for M3 / Sandbox ----------
 
-const SYSTEM_EXTRACT = `You are Revio, a study assistant. You read a student's notes (photos of handwritten or printed notes, textbook pages, slides, PDFs or text) and extract ONLY the most important knowledge for their exam.
+const SYSTEM_EXTRACT = `You are Lumo, a study assistant. You read a student's notes (photos of handwritten or printed notes, textbook pages, slides, PDFs or text) and extract ONLY the most important knowledge for their exam.
 Keep: key concepts, definitions, formulas, cause-and-effect relationships, processes/sequences, comparisons, dates, vocabulary, classifications.
 Ignore: page numbers, admin info, teacher names, decorative text, repeated material, off-topic fluff. List what you ignored in "ignored" (short phrases).
 For each concept:
@@ -261,13 +261,13 @@ For each concept:
 Respect what the student says (exam scope, chapters to skip or include). Do not invent facts that are not supported by the notes or basic correct knowledge. Usually 6-30 concepts; group them into a few topics.
 Write in the language of the notes. Be accurate: these are minors studying for real exams.`;
 
-const SYSTEM_TUTOR = `You are Revio, a friendly firefly tutor in a study app for students aged 10-18.
+const SYSTEM_TUTOR = `You are Lumo, a friendly firefly tutor in a study app for students aged 10-18.
 - Help them UNDERSTAND: explain simply, use analogies and examples, check understanding with a short question.
 - For homework, guide step by step with hints instead of just giving the final answer.
 - Keep replies short (under 150 words), warm and encouraging. Use the student's language.
 - Stay on studying and school topics. Never ask for personal information. If something is unsafe or inappropriate, kindly redirect to studying.`;
 
-const SYSTEM_SCRIPT = `You write fun, accurate study content for Revio, a study app for students aged 10-18. Every format must make the student THINK (questions to answer), not only watch or read. Use vivid examples and analogies, short sentences, and a friendly tone. Stay 100% faithful to the concepts given.`;
+const SYSTEM_SCRIPT = `You write fun, accurate study content for Lumo, a study app for students aged 10-18. Every format must make the student THINK (questions to answer), not only watch or read. Use vivid examples and analogies, short sentences, and a friendly tone. Stay 100% faithful to the concepts given.`;
 
 const llmCheck = z.object({ prompt: z.string(), options: z.array(z.string()), correctIndex: z.number().int(), explanation: z.string() });
 
@@ -376,7 +376,7 @@ const SCRIPT_SCHEMAS = {
 
 const SCRIPT_GUIDE = {
   video: 'An animated explainer video script, 8-16 scenes: title, then per idea an "idea" scene (term + one-line meaning), optional "points"/"example" scenes with an analogy, a "check" scene every 2 ideas with a multiple-choice question (pause and predict), and a final "recap". narration is what the narrator says aloud (1-3 sentences). One relevant emoji per scene.',
-  podcast: 'A podcast dialogue between host 0 (Revio, the explainer) and host 1 (Nova, the curious student who asks questions and voices common misconceptions). 18-35 lines. Add 3-4 quick-check questions placed after the line where the answer was explained (afterLine = index of that line).',
+  podcast: 'A podcast dialogue between host 0 (Lumo, the explainer) and host 1 (Nova, the curious student who asks questions and voices common misconceptions). 18-35 lines. Add 3-4 quick-check questions placed after the line where the answer was explained (afterLine = index of that line).',
   story: 'A short adventure/mystery story (4-6 chapters) where the hero must use the concepts to progress. Each chapter ends with a question the reader answers to unlock the next chapter.',
   mnemonics: 'Memory tricks for lists/sequences/groups in the concepts: acronym of first letters, a funny memorable sentence whose words start with those letters (same order, one word per item), and a tip. 2-4 items.',
 };
@@ -410,7 +410,7 @@ function toSandboxData(kind: SandboxKind, r: unknown, concepts: Concept[], langu
       if (p.lines.length < 6) return null;
       const lines = p.lines.map((l) => ({ host: (l.host === 1 ? 1 : 0) as 0 | 1, text: l.text }));
       const checks = p.checks.filter((c) => validCheck(c.q) && c.afterLine >= 0 && c.afterLine < lines.length);
-      return { kind, hosts: ['Revio', 'Nova'], lines, checks: checks.length ? checks : [{ afterLine: lines.length - 1, q: fallbackCheck() }] };
+      return { kind, hosts: ['Lumo', 'Nova'], lines, checks: checks.length ? checks : [{ afterLine: lines.length - 1, q: fallbackCheck() }] };
     }
     case 'story': {
       const s = r as z.infer<typeof SCRIPT_SCHEMAS.story>;

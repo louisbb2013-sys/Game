@@ -14,7 +14,7 @@ async function copyDeck(d: PublicDeck): Promise<string> {
   return id;
 }
 
-/** Browser-only build: decks friends shared, and (on the website) public decks from anyone on Revio. */
+/** Browser-only build: decks friends shared, and (on the website) public decks from anyone on Lumo. */
 export function SharedDecks() {
   const { t } = useTranslation();
   const navigate = useNavigate();

@@ -87,7 +87,7 @@ export function LocalFriends() {
   const shareInvite = async () => {
     if (!invite) return;
     const text = t('together.inviteText', { name: user?.username });
-    if (navigator.share) await navigator.share({ title: 'Revio', text, url: invite }).catch(() => {});
+    if (navigator.share) await navigator.share({ title: 'Lumo', text, url: invite }).catch(() => {});
     else copy(invite);
   };
 

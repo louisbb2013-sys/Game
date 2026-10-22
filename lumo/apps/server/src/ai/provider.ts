@@ -56,7 +56,7 @@ export interface DeckDraft {
   subject: string;
   language: Locale;
   summary: string;
-  /** What Revio deliberately left out (fluff, admin info…), shown for transparency. */
+  /** What Lumo deliberately left out (fluff, admin info…), shown for transparency. */
   ignored: string[];
   concepts: ConceptInput[];
 }

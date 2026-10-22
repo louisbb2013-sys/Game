@@ -18,7 +18,7 @@ export function applySettings(s: Settings) {
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {}
   const root = document.documentElement;
-  const theme = s.theme ?? 'dark'; // Midnight is Revio's look; light and system are a choice in Settings
+  const theme = s.theme ?? 'dark'; // Midnight is Lumo's look; light and system are a choice in Settings
   media ??= window.matchMedia('(prefers-color-scheme: dark)');
   const resolved = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme;
   root.dataset.theme = resolved;

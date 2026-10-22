@@ -89,7 +89,7 @@ export function Friends() {
             <button onClick={() => setShowQr((v) => !v)} className="rounded-xl bg-surface px-3 py-2 text-sm font-black ring-1 ring-line" aria-expanded={showQr}>
               {t('friends.qr')}
             </button>
-            <button onClick={() => void shareOrCopy(link, 'Revio').then((r) => r !== 'failed' && setMsg({ ok: true, text: t(`live.${r}`) }))} className="rounded-xl bg-surface px-3 py-2 text-sm font-black ring-1 ring-line">
+            <button onClick={() => void shareOrCopy(link, 'Lumo').then((r) => r !== 'failed' && setMsg({ ok: true, text: t(`live.${r}`) }))} className="rounded-xl bg-surface px-3 py-2 text-sm font-black ring-1 ring-line">
               🔗 {t('friends.shareLink')}
             </button>
           </div>

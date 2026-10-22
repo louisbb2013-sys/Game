@@ -199,7 +199,7 @@ export class StudyService {
       if (!claimed.rowCount) continue;
       const fr = u.locale === 'fr';
       const days = u.streak.days;
-      const subject = fr ? 'Revio t’attend ✨' : 'Revio is waiting for you ✨';
+      const subject = fr ? 'Lumo t’attend ✨' : 'Lumo is waiting for you ✨';
       const text = fr
         ? `Salut ${u.username} ! ${days > 0 ? `Garde ta série de ${days} jours : ` : ''}5 minutes de révision suffisent aujourd’hui.\n${this.appUrl}\n\nTu peux couper ces rappels dans Réglages.`
         : `Hi ${u.username}! ${days > 0 ? `Keep your ${days}-day streak going: ` : ''}5 minutes of study is enough today.\n${this.appUrl}\n\nYou can turn these reminders off in Settings.`;
