@@ -46,6 +46,27 @@ import { FRIENDS_ONLY, namesFor, plain, setLiveInvite, together, useFriends } fr
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/*
+ * Now, on the clock all players share. The website has the site's clock. In Claude, players follow the
+ * host's clock: each update the host writes carries its time, and the freshest one tells how far this
+ * device's clock is from the host's (an update can only arrive after it was written, so the largest
+ * gap seen is the closest).
+ */
+const siteClock = () => (globalThis as { __LUMO_CLOCK__?: () => number }).__LUMO_CLOCK__;
+let hostSkew = 0;
+let bestSkew = -Infinity;
+function learnHostClock(writtenAt: number) {
+  const gap = writtenAt - Date.now();
+  if (gap > bestSkew) bestSkew = hostSkew = gap;
+}
+export const liveNow = () => siteClock()?.() ?? Date.now() + hostSkew;
+/** A question opens this long after the host moves on: every screen has it by then, and a 3-2-1 plays. */
+export const QUESTION_LEAD = 3500;
+/** "And the answer is…": then every screen shows it at once. */
+export const REVEAL_LEAD = 1600;
+/** Quick reactions players can send (they float up on everyone's screen). */
+export const REACTIONS = ['👏', '🔥', '😂', '😮', '😭', '💪'];
 const roomName = (code: string) => `game-${code.toLowerCase()}`;
 
 interface GameDoc {
@@ -95,7 +116,12 @@ class HostGame {
   };
 
   view(): LivePublic {
-    return { ...publicView(this.state), serverNow: Date.now() };
+    return { ...publicView(this.state), serverNow: liveNow() };
+  }
+
+  /** The game's room (for who answered and reactions). */
+  get room() {
+    return this.named;
   }
 
   subscribe(fn: (v: LivePublic) => void) {
@@ -135,7 +161,7 @@ class HostGame {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     const s = this.state;
-    if (s.phase === 'question' && s.startedAt !== null) this.timer = setTimeout(() => void this.reveal(), Math.max(0, s.startedAt + s.durationMs - Date.now()) + 300);
+    if (s.phase === 'question' && s.startedAt !== null) this.timer = setTimeout(() => void this.reveal(), Math.max(0, s.startedAt + s.durationMs - liveNow()) + 300);
   }
 
   private async onPeers(peers: Any[]) {
@@ -147,7 +173,7 @@ class HostGame {
       if (!id || pr.player !== this.code || this.kicked.has(id)) continue;
       here.add(id);
       if (!this.state.players.some((x) => x.id === id) && this.state.phase === 'lobby') fresh.push(id);
-      const a = pr.answer as { qid?: string; a?: Answer } | undefined;
+      const a = pr.answer as { qid?: string; a?: Answer; at?: number } | undefined;
       const q = this.state.questions[this.state.index];
       const b = pr.bet as ({ qid?: string } & Partial<LiveBet>) | undefined;
       if (b?.qid && q && b.qid === q.id && this.seenBet.get(id) !== q.id && this.state.phase === 'question' && !this.revealing) {
@@ -161,7 +187,9 @@ class HostGame {
       if (a?.qid && q && a.qid === q.id && this.seenAnswer.get(id) !== q.id && this.state.phase === 'question' && !this.revealing && a.a && typeof a.a === 'object') {
         this.seenAnswer.set(id, q.id);
         try {
-          this.state = submitLive(this.state, id, q.id, a.a, Date.now());
+          // Their own moment of answering (on the shared clock), never later than when it got here.
+          const at = Math.min(liveNow(), Number(a.at) || liveNow());
+          this.state = submitLive(this.state, id, q.id, a.a, at);
         } catch {
           /* late, duplicate or not a player */
         }
@@ -185,7 +213,7 @@ class HostGame {
   }
 
   start() {
-    this.state = startLive(this.state, this.t.me, Date.now());
+    this.state = startLive(this.state, this.t.me, liveNow(), QUESTION_LEAD);
     this.changed();
     void setLiveInvite(null); // the game has begun: invites close
   }
@@ -204,7 +232,7 @@ class HostGame {
 
   submit(questionId: string, a: Answer) {
     if (this.revealing) throw new LiveError('wrong_phase');
-    this.state = submitLive(this.state, this.t.me, questionId, a, Date.now());
+    this.state = submitLive(this.state, this.t.me, questionId, a, liveNow());
     this.changed();
   }
 
@@ -216,7 +244,7 @@ class HostGame {
   }
 
   next() {
-    this.state = nextLive(this.state, this.t.me, Date.now());
+    this.state = nextLive(this.state, this.t.me, liveNow(), QUESTION_LEAD);
     this.changed();
   }
 
@@ -241,7 +269,7 @@ class HostGame {
     );
     this.revealing = false;
     if (this.state.phase !== 'question' || this.state.index !== index) return;
-    this.state = revealLive(this.state, {}, meanings);
+    this.state = revealLive(this.state, {}, meanings, liveNow() + REVEAL_LEAD);
     this.changed();
   }
 
@@ -367,6 +395,29 @@ export function useLocalLiveRoom(code: string) {
   const [reward, setReward] = useState<LiveReward | null>(null);
   const named = useRef<Any>(null);
   const rewarded = useRef(false);
+  // Seen in the game room: who has answered which question (sooner than the host's next update), and reactions.
+  const [peerAnswered, setPeerAnswered] = useState<Record<string, string>>({});
+  const [reactions, setReactions] = useState<LiveReaction[]>([]);
+  const seenReact = useRef(new Map<string, number>());
+  const followRoom = useCallback((r: Any) => {
+    return r.onPeers((change: Any) => {
+      const answered: Record<string, string> = {};
+      const fresh: LiveReaction[] = [];
+      for (const p of change.peers ?? []) {
+        const id = p.by as string | null;
+        const pr = (p.presence ?? {}) as { answer?: { qid?: string }; react?: { e?: string; at?: number } };
+        if (!id) continue;
+        if (pr.answer?.qid) answered[id] = String(pr.answer.qid);
+        const re = pr.react;
+        if (re?.e && REACTIONS.includes(re.e) && typeof re.at === 'number' && re.at > (seenReact.current.get(id) ?? 0)) {
+          seenReact.current.set(id, re.at);
+          if (Math.abs(liveNow() - re.at) < 8000) fresh.push({ key: `${id}-${re.at}`, by: id, e: re.e });
+        }
+      }
+      setPeerAnswered(answered);
+      if (fresh.length) setReactions((x) => [...x, ...fresh].slice(-24));
+    });
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -381,12 +432,17 @@ export function useLocalLiveRoom(code: string) {
       }
       setMe(t.me);
       if (host?.code === code) {
+        hostSkew = 0; // the host's clock is the game's clock
         cleanups.push(host.subscribe((v) => setState(v)));
+        named.current = host.room;
+        cleanups.push(followRoom(host.room));
         setStatus('in');
         return;
       }
       // Player: follow the host's published game and send answers by presence.
       let seen = false;
+      hostSkew = 0;
+      bestSkew = -Infinity;
       const unsub = t.db
         .collection('games')
         .where('code', '==', code)
@@ -403,6 +459,7 @@ export function useLocalLiveRoom(code: string) {
               return;
             }
             seen = true;
+            if (!siteClock() && typeof doc.updatedAt === 'number') learnHostClock(doc.updatedAt);
             if (doc.kicked?.includes(t.me)) return setStatus('kicked');
             const inGame = doc.view.players.some((p) => p.id === t.me);
             if (!inGame && doc.phase !== 'lobby') {
@@ -410,7 +467,7 @@ export function useLocalLiveRoom(code: string) {
               setError('started');
               return;
             }
-            setState({ ...doc.view, serverNow: doc.updatedAt });
+            setState({ ...doc.view, serverNow: liveNow() });
             setStatus(inGame ? 'in' : 'joining');
             if (doc.phase === 'podium' && !rewarded.current) {
               const p = doc.view.players.find((x) => x.id === t.me);
@@ -431,6 +488,7 @@ export function useLocalLiveRoom(code: string) {
         if (!alive) return void r.leave();
         named.current = r;
         await r.presence({ player: code });
+        cleanups.push(followRoom(r));
         cleanups.push(() => void r.leave());
       } catch {
         setStatus('error');
@@ -476,7 +534,7 @@ export function useLocalLiveRoom(code: string) {
         if (host?.code === code) host.submit(questionId, a);
         else {
           if (!named.current) return { ok: false as const, error: 'network' };
-          await named.current.presence({ player: code, answer: { qid: questionId, a } });
+          await named.current.presence({ player: code, answer: { qid: questionId, a, at: liveNow() } });
         }
         return { ok: true as const };
       } catch (e) {
@@ -502,7 +560,36 @@ export function useLocalLiveRoom(code: string) {
     [code],
   );
 
-  return { state, me, status, error, reward, connected: true, send, answer, bet };
+  /** Send a reaction: it floats up on everyone's screen (mine shows at once). */
+  const react = useCallback(
+    (e: string) => {
+      if (!REACTIONS.includes(e) || !me) return;
+      const at = liveNow();
+      seenReact.current.set(me, at);
+      setReactions((x) => [...x, { key: `${me}-${at}`, by: me, e }].slice(-24));
+      void named.current?.presence({ react: { e, at } }).catch(() => {});
+    },
+    [me],
+  );
+  const done = useCallback((key: string) => setReactions((x) => x.filter((r) => r.key !== key)), []);
+
+  // Who answered: the host's word, or sooner, what each player's page says in the room.
+  const q = state?.phase === 'question' ? state.question : null;
+  const shown =
+    state && q
+      ? (() => {
+          const players = state.players.map((p) => ({ ...p, answered: p.answered || peerAnswered[p.id] === q.id }));
+          return { ...state, players, answeredCount: players.filter((p) => p.answered).length };
+        })()
+      : state;
+
+  return { state: shown, me, status, error, reward, connected: true, send, answer, bet, react, reactions, reactionDone: done };
+}
+
+export interface LiveReaction {
+  key: string;
+  by: string;
+  e: string;
 }
 
 /** Leaving the host page for good ends the game for everyone. */

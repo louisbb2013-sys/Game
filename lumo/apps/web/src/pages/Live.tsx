@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 import { BET_STAKES, durationFor, type Answer, type LiveBet } from '@lumo/core';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { CoinIcon } from '../components/icons';
@@ -10,7 +10,7 @@ import { QrCode, shareOrCopy } from '../components/QrCode';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { ChoiceTiles } from '../components/play/answers';
 import { api, LOCAL } from '../lib/api';
-import { hostLocalGame, useLocalLiveRoom, useOpenGames } from '../local/liveLocal';
+import { hostLocalGame, liveNow, REACTIONS, useLocalLiveRoom, useOpenGames, type LiveReaction } from '../local/liveLocal';
 import { canAskClaude } from '../local/reader';
 import { writeQuestions } from '../local/writer';
 import { READY_TO_PLAY, WritingScreen } from '../components/play/Writing';
@@ -20,7 +20,10 @@ import { useConfetti } from '../lib/confetti';
 import { liveCall, useLiveRoom, type LivePublic } from '../lib/live';
 import type { DeckListItem } from '../lib/quiz';
 import { useRewards } from '../lib/rewards';
-import { play, setSoundEnabled } from '../lib/sound';
+import { play, setMusicEnabled, setSoundEnabled, startMusic, stopMusic } from '../lib/sound';
+
+/** Send a reaction (website and Claude page); absent in the server version. */
+const ReactCtx = createContext<((e: string) => void) | null>(null);
 
 const errText = (t: TFunction, code: string) => t(`live.errors.${code}`, { defaultValue: t('signin.errors.network') });
 
@@ -244,6 +247,14 @@ export function LiveRoom() {
   const bet = (room as { bet?: BetFn }).bet; // the server version has no bets
 
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
+  useEffect(() => setMusicEnabled(user?.settings.music ?? true), [user?.settings.music]);
+  // Game music while questions are on; quiet in the lobby and on the podium.
+  const phase = room.state?.phase;
+  useEffect(() => {
+    if (phase === 'question' || phase === 'reveal') startMusic('speed');
+    else stopMusic();
+  }, [phase]);
+  useEffect(() => () => stopMusic(), []);
   useEffect(() => {
     if (!room.reward || shown.current) return;
     shown.current = true;
@@ -266,15 +277,20 @@ export function LiveRoom() {
   const s = room.state;
   if (!s || !room.me) return <p className="pt-10 text-center font-bold text-muted">{t('live.connecting')}</p>;
   const isHost = s.hostId === room.me;
+  // Reactions (website and Claude page): anyone can send one; it floats up on every screen.
+  const fun = room as { react?: (e: string) => void; reactions?: LiveReaction[]; reactionDone?: (key: string) => void };
 
   return (
+    <ReactCtx.Provider value={fun.react ?? null}>
     <div className="space-y-4">
       {!room.connected && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">{t('live.reconnecting')}</p>}
       {s.phase === 'lobby' && <Lobby s={s} isHost={isHost} send={room.send} />}
       {s.phase === 'question' && <QuestionView s={s} me={room.me} answer={room.answer} bet={bet} onPick={(qid, id) => (picks.current[qid] = id)} />}
       {s.phase === 'reveal' && <RevealView s={s} me={room.me} isHost={isHost} send={room.send} picked={s.question ? picks.current[s.question.id] : undefined} />}
       {s.phase === 'podium' && <Podium s={s} me={room.me} reward={room.reward} />}
+      {fun.reactions && fun.reactionDone && <FloatingReactions list={fun.reactions} players={s.players} me={room.me} done={fun.reactionDone} />}
     </div>
+    </ReactCtx.Provider>
   );
 }
 
@@ -333,6 +349,7 @@ function Lobby({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send
           ))}
         </ul>
       </section>
+      <ReactionBar />
       {isHost && LOCAL && <InviteFriends s={s} send={send} />}
       {msg && <p role="status" className="text-center font-bold text-muted">{msg}</p>}
       {isHost ? (
@@ -408,20 +425,28 @@ function InviteFriends({ s, send }: { s: LivePublic; send: Send }) {
   );
 }
 
-function useCountdown(s: LivePublic) {
-  // Correct for the difference between this device's clock and the server's.
+/** "Now" on the game's clock, ticking: everyone's screen counts down to the same moments. */
+function useGameNow(s: LivePublic, ms = 100) {
+  // The website and Claude page share one clock; the server version corrects for this device's clock.
   const offset = useRef(0);
   useEffect(() => {
-    offset.current = s.serverNow - Date.now();
+    if (!LOCAL) offset.current = s.serverNow - Date.now();
   }, [s.serverNow]);
-  const [now, setNow] = useState(Date.now());
+  const read = () => (LOCAL ? liveNow() : Date.now() + offset.current);
+  const [now, setNow] = useState(read);
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 200);
+    const id = setInterval(() => setNow(read()), ms);
     return () => clearInterval(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ms]);
+  return now;
+}
+
+function useCountdown(s: LivePublic) {
+  const now = useGameNow(s);
   const total = s.question ? durationFor(s.question.format) : 1;
-  const left = s.endsAt ? Math.max(0, s.endsAt - (now + offset.current)) : 0;
-  return { left, fraction: left / total };
+  const left = s.endsAt ? Math.max(0, s.endsAt - now) : 0;
+  return { left, fraction: Math.min(1, left / total), now };
 }
 
 type BetFn = (questionId: string, b: LiveBet) => Promise<{ ok: boolean; error?: string }>;
@@ -432,9 +457,22 @@ function QuestionView({ s, me, answer, bet, onPick }: { s: LivePublic; me: strin
   const [value, setValue] = useState<Answer | null>(null);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { left, fraction } = useCountdown(s);
+  const { left, fraction, now } = useCountdown(s);
   const meAnswered = sent || !!s.players.find((p) => p.id === me)?.answered;
   const oneTap = q.format === 'multiple_choice' || q.format === 'true_false' || q.format === 'cause_effect';
+  const secsLeft = Math.ceil(left / 1000);
+  // The last seconds tick (everyone hears them at the same time).
+  useEffect(() => {
+    if (secsLeft > 0 && secsLeft <= 5 && (!s.startsAt || now >= s.startsAt)) play('tick');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secsLeft]);
+  const online = s.players.filter((p) => p.connected);
+  const everyone = online.length > 0 && online.every((p) => p.answered);
+  const started = !s.startsAt || now >= s.startsAt;
+  useEffect(() => {
+    if (started && s.startsAt) play('go'); // the question appears for everyone
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started]);
 
   useEffect(() => {
     setValue(null);
@@ -453,9 +491,17 @@ function QuestionView({ s, me, answer, bet, onPick }: { s: LivePublic; me: strin
     } else play('correct');
   };
 
-  const secs = Math.ceil(left / 1000);
+  const secs = secsLeft;
+  // A 3-2-1 first: the question appears on every screen at the same moment.
+  if (s.startsAt && now < s.startsAt) return <GetReady s={s} msLeft={s.startsAt - now} />;
   return (
     <section key={q.id} className="pb-28" data-format={q.format}>
+      <PlayersStrip s={s} me={me} />
+      {(left === 0 || everyone) && (
+        <p className="time-up pop-in mb-3 rounded-2xl px-4 py-2.5 text-center text-lg font-black text-white" role="status" data-testid="live-time-up">
+          {left === 0 ? `⏰ ${t('live.timeUp')}` : `🙌 ${t('live.everyoneAnswered')}`}
+        </p>
+      )}
       <div className="mb-3 flex items-center justify-between text-sm font-black">
         <span>{t('live.questionOf', { n: s.index + 1, total: s.total })}</span>
         <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs text-muted">{t(`formats.${q.format}`)}</span>
@@ -494,6 +540,11 @@ function QuestionView({ s, me, answer, bet, onPick }: { s: LivePublic; me: strin
         </fieldset>
       )}
       {error && <p className="mt-3 font-bold text-bad">{errText(t, error)}</p>}
+      {meAnswered && (
+        <div className="mt-4">
+          <ReactionBar />
+        </div>
+      )}
       {bet && left > 0 && <BetPanel s={s} me={me} bet={bet} />}
       <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur lg:max-w-3xl ${oneTap && !meAnswered ? 'hidden' : ''}`}>
         {meAnswered ? (
@@ -581,7 +632,14 @@ function BetPanel({ s, me, bet }: { s: LivePublic; me: string; bet: BetFn }) {
   );
 }
 
-function RevealView({ s, me, isHost, send, picked }: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string }) {
+function RevealView(props: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string }) {
+  const now = useGameNow(props.s);
+  // "And the answer is…": every screen shows the answer at the same moment.
+  if (props.s.revealAt && now < props.s.revealAt) return <Suspense s={props.s} />;
+  return <RevealResults {...props} />;
+}
+
+function RevealResults({ s, me, isHost, send, picked }: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string }) {
   const { t } = useTranslation();
   const r = s.reveal!;
   const mine = r.results[me];
@@ -611,6 +669,7 @@ function RevealView({ s, me, isHost, send, picked }: { s: LivePublic; me: string
           {mine && mine.streak >= 2 && <p className="text-sm font-bold">🔥 {t('live.streak', { n: mine.streak })}</p>}
         </div>
       </div>
+      <ReactionBar />
       {q?.options ? (
         <ChoiceTiles q={q} chosen={picked ?? null} reveal={{ correct: !!mine?.correct, correctAnswer: r.correctAnswer }} removed={[]} locked onPick={() => {}} />
       ) : (
@@ -626,7 +685,7 @@ function RevealView({ s, me, isHost, send, picked }: { s: LivePublic; me: string
           🎲 {t(myBet.won ? 'live.betWon' : 'live.betLost', { xp: Math.abs(myBet.delta), name: s.players.find((p) => p.id === myBet.on)?.name ?? '?' })}
         </p>
       )}
-      <Board players={ranked.slice(0, 5)} me={me} showMoves />
+      <Board players={ranked.slice(0, 5)} me={me} showMoves gained={Object.fromEntries(Object.entries(r.results).map(([id, x]) => [id, x.points]))} />
       <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl border-t border-line bg-bg/95 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] backdrop-blur lg:max-w-3xl">
         {isHost ? (
           <div className="flex gap-2">
@@ -681,23 +740,172 @@ function WhoGotIt({ s, me }: { s: LivePublic; me: string }) {
   );
 }
 
-function Board({ players, me, showMoves }: { players: LivePublic['players']; me: string; showMoves?: boolean }) {
+function Board({ players, me, showMoves, gained }: { players: LivePublic['players']; me: string; showMoves?: boolean; gained?: Record<string, number> }) {
   const { t } = useTranslation();
   return (
     <ol className="space-y-1.5" aria-label={t('live.leaderboard')}>
       {players.map((p) => {
         const moved = showMoves && p.previousRank ? p.previousRank - p.rank : 0;
+        const plus = gained?.[p.id] ?? 0;
         return (
-          <li key={p.id} className={`flex items-center gap-2 rounded-2xl p-2.5 ring-1 ${p.id === me ? 'bg-brand/10 ring-brand' : 'bg-surface ring-line'}`}>
+          // Rows slide from their old place to the new one, and scores count up.
+          <li
+            key={p.id}
+            className={`board-row flex items-center gap-2 rounded-2xl p-2.5 ring-1 ${p.id === me ? 'bg-brand/10 ring-brand' : 'bg-surface ring-line'}`}
+            style={{ ['--from' as string]: `${moved * 112}%` }}
+            data-moved={moved !== 0 ? 'true' : undefined}
+          >
             <span className="w-6 text-center font-black">{p.rank}</span>
             <Avatar name={p.name} avatar={p.avatar} size={28} />
-            <span className="min-w-0 flex-1 truncate font-black">{p.name}</span>
+            <span className="min-w-0 flex-1 truncate font-black">
+              {p.name}
+              {p.streak >= 2 && <span className="ml-1.5 text-sm text-amber-glow" title={t('live.streak', { n: p.streak })}>🔥{p.streak}</span>}
+            </span>
             {moved > 0 && <span className="text-xs font-black text-good">▲{moved}</span>}
-            <span className="font-black tabular-nums">{p.score}</span>
+            {moved < 0 && <span className="text-xs font-black text-bad">▼{-moved}</span>}
+            {plus > 0 && <span className="pop-in text-xs font-black text-good">+{plus}</span>}
+            <CountUp to={p.score} from={p.score - plus} />
           </li>
         );
       })}
     </ol>
+  );
+}
+
+/** A score that counts up to its new value. */
+function CountUp({ to, from }: { to: number; from: number }) {
+  const [v, setV] = useState(from);
+  useEffect(() => {
+    if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) return setV(to);
+    const start = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - start) / 900);
+      setV(Math.round(from + (to - from) * (1 - (1 - k) ** 3)));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to]);
+  return <span className="w-14 text-right font-black tabular-nums">{v}</span>;
+}
+
+/** Before each question: its number and a big 3-2-1, the same on every screen. */
+function GetReady({ s, msLeft }: { s: LivePublic; msLeft: number }) {
+  const { t } = useTranslation();
+  const n = Math.ceil(msLeft / 1000);
+  useEffect(() => play(n <= 0 ? 'go' : 'tick'), [n]);
+  return (
+    <section className="flex min-h-[60dvh] flex-col items-center justify-center gap-4 text-center" data-testid="live-get-ready" aria-live="polite">
+      <p className="text-sm font-black tracking-wide text-muted">{t('live.questionOf', { n: s.index + 1, total: s.total })}</p>
+      {s.question && <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-black">{t(`formats.${s.question.format}`)}</span>}
+      <p key={n} className="count-pop font-display text-gold text-9xl font-black tabular-nums" aria-label={t('live.getReadyIn', { n })}>
+        {Math.max(1, n)}
+      </p>
+      <p className="text-xl font-black">{t('live.getReady')}</p>
+      <PlayersStrip s={s} me="" quiet />
+    </section>
+  );
+}
+
+/** Everyone in the game; a check pops on each player as they answer. */
+function PlayersStrip({ s, me, quiet = false }: { s: LivePublic; me: string; quiet?: boolean }) {
+  const { t } = useTranslation();
+  const players = s.players.filter((p) => p.connected);
+  const done = players.filter((p) => p.answered).length;
+  const before = useRef(done);
+  useEffect(() => {
+    // Someone else just answered: a little pop.
+    if (!quiet && done > before.current) play('tap');
+    before.current = done;
+  }, [done, quiet]);
+  return (
+    <section className="mb-3 rounded-2xl bg-surface p-2.5 ring-1 ring-line" aria-label={t('live.answeredCount', { n: done, total: players.length })} data-testid="players-strip">
+      {!quiet && (
+        <p className="mb-1.5 text-xs font-black text-muted" aria-live="polite">
+          {t('live.answeredCount', { n: done, total: players.length })}
+        </p>
+      )}
+      <ul className="flex gap-2 overflow-x-auto pb-0.5">
+        {players.map((p) => (
+          <li key={p.id} className="flex w-14 shrink-0 flex-col items-center gap-0.5" data-answered={p.answered ? 'true' : 'false'}>
+            <span className={`relative rounded-full ${p.answered && !quiet ? 'ring-2 ring-good' : ''}`}>
+              <Avatar name={p.name} avatar={p.avatar} size={36} />
+              {p.answered && !quiet && (
+                <span key="done" className="combo-pop absolute -right-1 -bottom-1 grid size-5 place-items-center rounded-full bg-good text-xs font-black text-night">
+                  ✓
+                </span>
+              )}
+            </span>
+            <span className="w-full truncate text-center text-[0.68rem] font-bold">
+              {p.id === me ? t('live.you') : p.name}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** "And the answer is…": a short drumroll, then every screen shows the answer together. */
+function Suspense({ s }: { s: LivePublic }) {
+  const { t } = useTranslation();
+  useEffect(() => play('whoosh'), []);
+  return (
+    <section className="flex min-h-[55dvh] flex-col items-center justify-center gap-5 text-center" data-testid="live-suspense" role="status">
+      {s.question && <p className="max-w-md text-lg font-bold text-muted">{s.question.prompt}</p>}
+      <p className="font-display text-3xl font-black">{t('live.andTheAnswer')}</p>
+      <span className="drumroll flex items-end gap-1.5" aria-hidden>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <span key={i} style={{ animationDelay: `${i * 0.09}s` }} />
+        ))}
+      </span>
+    </section>
+  );
+}
+
+/** Quick reactions: tap one and it floats up on everyone's screen. */
+function ReactionBar() {
+  const { t } = useTranslation();
+  const onReact = useContext(ReactCtx);
+  const last = useRef(0);
+  if (!onReact) return null;
+  return (
+    <div className="mx-auto flex w-fit gap-1 rounded-full bg-surface p-1 ring-1 ring-line" role="group" aria-label={t('live.react')} data-testid="reaction-bar">
+      {REACTIONS.map((e) => (
+        <button
+          key={e}
+          type="button"
+          onClick={() => {
+            if (Date.now() - last.current < 600) return; // no spamming
+            last.current = Date.now();
+            onReact(e);
+          }}
+          className="grid size-9 place-items-center rounded-full text-xl hover:bg-surface-2 active:scale-90"
+          aria-label={t('live.reactWith', { e })}
+        >
+          {e}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function FloatingReactions({ list, players, me, done }: { list: LiveReaction[]; players: LivePublic['players']; me: string; done: (key: string) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden>
+      {list.map((r) => {
+        const x = 8 + ([...r.key].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 70);
+        const who = r.by === me ? t('live.you') : (players.find((p) => p.id === r.by)?.name ?? '');
+        return (
+          <span key={r.key} className="float-react absolute bottom-24 flex flex-col items-center" style={{ left: `${x}%` }} onAnimationEnd={() => done(r.key)} data-testid="floating-reaction">
+            <span className="text-5xl">{r.e}</span>
+            <span className="rounded-full bg-night/70 px-2 text-xs font-black text-white">{who}</span>
+          </span>
+        );
+      })}
+    </div>
   );
 }
 

@@ -79,6 +79,11 @@ test('pets climb the rarities: Common → Rare with enough level and coins (Myth
   await page.getByRole('link', { name: 'Pets' }).first().click();
   await page.getByLabel('Give it a name').fill('Pip');
   await page.getByRole('button', { name: 'Adopt!' }).click();
+  // Like Gizmo: a team of up to 4 pets, each with a bonus; tap a card to see the pet up close.
+  await expect(page.getByRole('heading', { name: 'Active pets (1/4)' })).toBeVisible();
+  await expect(page.getByTestId('pet-card')).toContainText('+5% chance to win a heart on a right answer');
+  await expect(page.getByTestId('study-egg')).toContainText('Answer 5 more questions to hatch your egg!');
+  await page.getByTestId('pet-card').click();
   await expect(page.getByTestId('pet-rarity')).toHaveText('Common');
   await expect(page.getByRole('list', { name: 'Rarity' }).getByRole('listitem')).toHaveText(['Common', 'Rare', 'Epic', 'Legendary', 'Mythical']);
   // Not yet: the pet needs level 3 and 150 coins.
@@ -95,10 +100,13 @@ test('pets climb the rarities: Common → Rare with enough level and coins (Myth
   });
   await page.reload();
   await page.getByRole('link', { name: 'Pets' }).first().click();
+  await page.getByTestId('pet-card').click();
   await page.getByTestId('pet-upgrade').getByRole('button', { name: 'Upgrade' }).click();
   await expect(page.getByText('Your pet is Rare now!')).toBeVisible();
   await expect(page.getByTestId('pet-rarity')).toHaveText('Rare');
   await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Epic');
+  // Rarer and higher level: a bigger bonus (Rare base 8% + 2 levels).
+  await expect(page.getByTestId('pet-buff')).toContainText('+10% chance to win a heart on a right answer');
   await page.screenshot({ path: 'e2e/screens/local-pet-upgrade.png', fullPage: true });
 });
 
@@ -138,4 +146,47 @@ test('Challenge: hearts show while you play, and a miss breaks one', async ({ pa
   await page.getByRole('button', { name: 'Leave quiz' }).click();
   await expect(page.getByTestId('challenge-tile').getByRole('img', { name: '4 hearts left' })).toBeVisible();
   await page.getByTestId('challenge-tile').screenshot({ path: 'e2e/screens/local-challenge-tile.png' });
+});
+
+test('pet team: up to 4 active pets, their bonuses add up, swap one for another', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto(process.env.LOCAL_URL!);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  await page.getByLabel('Give it a name').fill('Pokka');
+  await page.getByRole('button', { name: 'Adopt!' }).click();
+  await expect(page.getByTestId('pet-card')).toHaveCount(1);
+  // Four more pets hatched over time (saved before teams: the first 4 make the team).
+  await page.evaluate(() => {
+    const k = 'lumo_local_v1';
+    const d = JSON.parse(localStorage.getItem(k)!);
+    const base = d.game.pets[0];
+    delete base.active;
+    for (const [i, species] of ['pixel_owl', 'acorn_squirrel', 'crystal_cat', 'comet_fox'].entries()) d.game.pets.push({ ...base, id: `p${i}`, species, name: '', equipped: false });
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Active pets (4/4)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Available pets (1)' })).toBeVisible();
+  // The team's bonuses, added up: two heart pets (5% + 8%), an XP pet, a coin pet.
+  await expect(page.getByTestId('team-buffs')).toContainText('+13% heart chance');
+  await expect(page.getByTestId('team-buffs')).toContainText('+4% XP');
+  await expect(page.getByTestId('team-buffs')).toContainText('+1 coin per right answer');
+  // The 5th can't join a full team…
+  await page.getByRole('button', { name: /^Comet Fox/ }).click();
+  await expect(page.getByTestId('pet-join-team')).toBeDisabled();
+  await expect(page.getByRole('dialog').getByText('Your team is full (4 pets). Take one off first.')).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
+  // …until one leaves it.
+  await page.getByRole('button', { name: /^Acorn Squirrel/ }).click();
+  await page.getByTestId('pet-leave-team').click();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('button', { name: /^Comet Fox/ }).click();
+  await page.getByTestId('pet-join-team').click();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByTestId('team')).toContainText('Comet Fox');
+  await expect(page.getByTestId('team')).not.toContainText('Acorn Squirrel');
+  await page.screenshot({ path: 'e2e/screens/local-pet-team.png', fullPage: true });
 });

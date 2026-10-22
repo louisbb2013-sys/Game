@@ -70,6 +70,8 @@ export interface LiveState {
   betResults?: Record<string, LiveBetResult>;
   /** XP each player has won or lost betting in this game. */
   betTotals?: Record<string, number>;
+  /** When everyone's screen shows the answer (a short "and the answer is…" moment first). */
+  revealAt?: Millis | null;
 }
 
 /** Time to answer depends on how much thinking/typing the format needs. */
@@ -158,16 +160,20 @@ export function removePlayer(s: LiveState, playerId: string): LiveState {
   return { ...s, players: s.players.filter((x) => x.id !== playerId) };
 }
 
-export function startLive(s: LiveState, by: string, now: Millis): LiveState {
+/**
+ * `lead`: the question opens that long from now, so every screen has it before it starts and everyone
+ * sees it (after a 3-2-1) at the same moment.
+ */
+export function startLive(s: LiveState, by: string, now: Millis, lead = 0): LiveState {
   if (by !== s.hostId) throw new LiveError('not_host');
   if (s.phase !== 'lobby') throw new LiveError('wrong_phase');
   if (s.players.length < LIVE_MIN_PLAYERS) throw new LiveError('not_enough_players');
-  return openQuestion(s, 0, now);
+  return openQuestion(s, 0, now + lead);
 }
 
-function openQuestion(s: LiveState, index: number, now: Millis): LiveState {
+function openQuestion(s: LiveState, index: number, opensAt: Millis): LiveState {
   const q = s.questions[index]!;
-  return { ...s, phase: 'question', index, startedAt: now, durationMs: durationFor(q.format), answers: {}, lastResults: {}, bets: {}, betResults: {} };
+  return { ...s, phase: 'question', index, startedAt: opensAt, durationMs: durationFor(q.format), answers: {}, lastResults: {}, bets: {}, betResults: {}, revealAt: null };
 }
 
 export function submitLive(s: LiveState, playerId: string, questionId: string, answer: Answer, now: Millis): LiveState {
@@ -175,7 +181,8 @@ export function submitLive(s: LiveState, playerId: string, questionId: string, a
   if (!s.players.some((p) => p.id === playerId)) throw new LiveError('not_in_game');
   if (s.questions[s.index]!.id !== questionId) throw new LiveError('stale_question');
   if (s.answers[playerId]) throw new LiveError('already_answered');
-  return { ...s, answers: { ...s.answers, [playerId]: { answer, at: Math.min(now, (s.startedAt ?? now) + s.durationMs) } } };
+  const start = s.startedAt ?? now;
+  return { ...s, answers: { ...s.answers, [playerId]: { answer, at: Math.max(start, Math.min(now, start + s.durationMs)) } } };
 }
 
 /** Bet XP that another player gets the current question right (or wrong). One bet per question. */
@@ -208,8 +215,11 @@ export function openAnswersToJudge(s: LiveState): { playerId: string; text: stri
   });
 }
 
-/** Close the question: grade everyone, award points, rank. `judged` holds AI grades for open answers; `meanings`, accepted short answers. */
-export function revealLive(s: LiveState, judged: Record<string, OpenGrade> = {}, meanings: Record<string, Record<string, boolean>> = {}): LiveState {
+/**
+ * Close the question: grade everyone, award points, rank. `judged` holds AI grades for open answers;
+ * `meanings`, accepted short answers; `showAt`, when every screen shows the answer.
+ */
+export function revealLive(s: LiveState, judged: Record<string, OpenGrade> = {}, meanings: Record<string, Record<string, boolean>> = {}, showAt: Millis | null = null): LiveState {
   if (s.phase !== 'question') throw new LiveError('wrong_phase');
   const q = s.questions[s.index]!;
   const previousRanks = Object.fromEntries(ranking(s).map((p, i) => [p.id, i + 1]));
@@ -235,14 +245,14 @@ export function revealLive(s: LiveState, judged: Record<string, OpenGrade> = {},
     betResults[by] = { ...b, won, delta };
     betTotals[by] = (betTotals[by] ?? 0) + delta;
   }
-  return { ...s, phase: 'reveal', players, lastResults, previousRanks, betResults, betTotals };
+  return { ...s, phase: 'reveal', players, lastResults, previousRanks, betResults, betTotals, revealAt: showAt };
 }
 
-export function nextLive(s: LiveState, by: string, now: Millis): LiveState {
+export function nextLive(s: LiveState, by: string, now: Millis, lead = 0): LiveState {
   if (by !== s.hostId) throw new LiveError('not_host');
   if (s.phase !== 'reveal') throw new LiveError('wrong_phase');
   if (s.index + 1 >= s.questions.length) return { ...s, phase: 'podium', startedAt: null };
-  return openQuestion(s, s.index + 1, now);
+  return openQuestion(s, s.index + 1, now + lead);
 }
 
 /** The host stops a long game early: straight to the podium with the scores so far. */
@@ -266,6 +276,10 @@ export interface LivePublic {
   total: number;
   question: PublicQuestion | null;
   endsAt: Millis | null;
+  /** When the question appears on every screen (after a 3-2-1); answers count from then. */
+  startsAt: Millis | null;
+  /** When every screen shows the answer. */
+  revealAt: Millis | null;
   answeredCount: number;
   reveal: { correctAnswer: string; explanation: string; results: Record<string, LiveResult>; bets: Record<string, LiveBetResult> } | null;
   /** Who bet on whom for the current question (stakes and sides are open: it's part of the fun). */
@@ -297,6 +311,8 @@ export function publicView(s: LiveState): LivePublic {
     total: s.questions.length,
     question: q && (s.phase === 'question' || s.phase === 'reveal') ? publicQuestion(q) : null,
     endsAt: s.phase === 'question' && s.startedAt !== null ? s.startedAt + s.durationMs : null,
+    startsAt: s.phase === 'question' ? s.startedAt : null,
+    revealAt: s.phase === 'reveal' ? (s.revealAt ?? null) : null,
     answeredCount: Object.keys(s.answers).length,
     reveal: q && s.phase === 'reveal' ? { correctAnswer: correctAnswerText(q), explanation: q.explanation, results: s.lastResults, bets: s.betResults ?? {} } : null,
     bets: s.phase === 'question' || s.phase === 'reveal' ? Object.entries(s.bets ?? {}).map(([by, b]) => ({ by, ...b })) : [],

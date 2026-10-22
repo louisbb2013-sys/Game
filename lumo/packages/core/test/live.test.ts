@@ -147,3 +147,22 @@ describe('live: four choices and bets', () => {
     expect(s.betTotals).toEqual({ p1: 25, h: -10 });
   });
 });
+
+describe('everyone on the same moment', () => {
+  it('opens each question after a lead time, counts answers from then, and reveals at a set moment', () => {
+    let s = createLive('ABCD', host, 'Deck', qs, 0);
+    s = joinLive(s, { id: 'g', name: 'Guest', avatar: 'b' }, 0);
+    s = startLive(s, 'h', 1000, 3500);
+    const v = publicView(s);
+    expect(v.startsAt).toBe(4500); // a 3-2-1 for everyone first
+    expect(v.endsAt).toBe(4500 + s.durationMs);
+    // An answer stamped before the question opened counts as instant, never earlier.
+    s = submitLive(s, 'g', qs[0]!.id, { kind: 'choice', optionId: 'x' }, 4000);
+    expect(s.answers.g!.at).toBe(4500);
+    s = revealLive(s, {}, {}, 9000);
+    expect(publicView(s).revealAt).toBe(9000);
+    s = nextLive(s, 'h', 10_000, 3500);
+    expect(publicView(s).startsAt).toBe(13_500);
+    expect(publicView(s).revealAt).toBeNull();
+  });
+});

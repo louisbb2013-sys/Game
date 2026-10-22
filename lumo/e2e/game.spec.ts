@@ -57,9 +57,10 @@ test('shop, chest opening, pets, quests and badges', async ({ page }) => {
   await page.getByRole('radio', { name: /Pixel Owl/ }).click();
   await page.getByLabel('Give it a name').fill('Hoot');
   await page.getByRole('button', { name: 'Adopt!' }).click();
-  await expect(page.getByRole('button', { name: /Hoot/ })).toBeVisible();
+  await page.getByRole('button', { name: /Hoot/ }).click(); // its card opens the pet up close
   await page.getByRole('button', { name: /Feed \(\d+ snacks?\)/ }).click();
   await expect(page.getByText(/15 \//)).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
   await page.getByRole('button', { name: /Mystery egg/ }).click();
   await expect(page.getByText(/Collection \(2 of 18 species\)|Collection \(1 of 18 species\)/)).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/game-pets.png', fullPage: true });

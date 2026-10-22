@@ -220,7 +220,7 @@ export function makeDataHandler(deps: DataDeps) {
     return json(200, { peers: peers.filter(Boolean), now: t });
   }
 
-  return async (req: Request): Promise<Response> => {
+  const handle = async (req: Request): Promise<Response> => {
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
     let body: Record<string, unknown>;
     try {
@@ -241,5 +241,11 @@ export function makeDataHandler(deps: DataDeps) {
       console.error('lumo: data request failed', body.op, body.path ?? body.coll ?? body.room, e);
       return json(503, { error: 'unavailable' });
     }
+  };
+  // Every answer carries the site's time, so all pages in a Live game agree on the moment.
+  return async (req: Request): Promise<Response> => {
+    const res = await handle(req);
+    res.headers.set('x-lumo-now', String(now()));
+    return res;
   };
 }

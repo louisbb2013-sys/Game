@@ -599,7 +599,7 @@ html[data-reduce-motion='true'] .flip-inner { transition: none; }
 
 .rarity-mythical { background: linear-gradient(90deg, #ec4899, #8b5cf6, #06b6d4, #ec4899); background-size: 300% 100%; animation: myth-flow 4s linear infinite; }
 @keyframes myth-flow { to { background-position: 300% 0; } }
-.rarity-ring-common { box-shadow: 0 0 0 3px rgb(148 163 184); }
+.rarity-ring-common { box-shadow: 0 0 0 3px rgb(16 185 129), 0 0 12px rgb(16 185 129 / 0.35); }
 .rarity-ring-rare { box-shadow: 0 0 0 3px rgb(56 189 248), 0 0 14px rgb(56 189 248 / 0.45); }
 .rarity-ring-epic { box-shadow: 0 0 0 3px rgb(217 70 239), 0 0 16px rgb(217 70 239 / 0.5); }
 .rarity-ring-legendary { box-shadow: 0 0 0 3px rgb(251 191 36), 0 0 20px rgb(251 191 36 / 0.6); }
@@ -610,3 +610,38 @@ html[data-reduce-motion='true'] .flip-inner { transition: none; }
   .chest-art .chest-spark { opacity: 0.8; }
   .egg-art .egg-crack { stroke-dashoffset: 0; }
 }
+
+/* Pet collection cards (like Gizmo's monsters): the rarity glows around the active ones. */
+.pet-card { --rc: 16 185 129; display: flex; width: 100%; height: 100%; min-height: 13rem; flex-direction: column; align-items: center; justify-content: space-between; gap: 0.35rem; padding: 0.9rem 0.6rem 0.8rem; border-radius: 1.5rem; background: var(--color-surface); border: 2px solid rgb(var(--rc) / 0.3); text-align: center; transition: transform 0.15s ease, box-shadow 0.2s ease; }
+.pet-card:hover { transform: translateY(-3px); }
+.pet-card:focus-visible { outline: 3px solid rgb(var(--rc)); outline-offset: 3px; }
+.pet-card[data-active='true'] { border-width: 3px; border-color: rgb(var(--rc)); box-shadow: 0 0 18px rgb(var(--rc) / 0.45), inset 0 0 26px rgb(var(--rc) / 0.12); }
+.pet-card[data-rarity='rare'] { --rc: 56 189 248; }
+.pet-card[data-rarity='epic'] { --rc: 217 70 239; }
+.pet-card[data-rarity='legendary'] { --rc: 249 146 22; }
+.pet-card[data-rarity='mythical'] { --rc: 244 114 182; }
+.pet-card[data-rarity='mythical'][data-active='true'] { animation: mythic-glow 3s linear infinite; }
+@keyframes mythic-glow { 0%, 100% { box-shadow: 0 0 18px rgb(244 114 182 / 0.55); border-color: rgb(244 114 182); } 50% { box-shadow: 0 0 24px rgb(139 92 246 / 0.6); border-color: rgb(56 189 248); } }
+.level-shield-bg { fill: rgb(16 185 129); }
+.level-shield[data-rarity='rare'] .level-shield-bg { fill: rgb(14 165 233); }
+.level-shield[data-rarity='epic'] .level-shield-bg { fill: rgb(192 38 211); }
+.level-shield[data-rarity='legendary'] .level-shield-bg { fill: rgb(234 138 12); }
+.level-shield[data-rarity='mythical'] .level-shield-bg { fill: rgb(219 39 119); }
+/* Not found yet: a dark silhouette. */
+.pet-locked .pet-img, .pet-locked .pet-emoji { filter: brightness(0) opacity(0.45); }
+.pet-locked .pet-aura { display: none; }
+@media (prefers-reduced-motion: reduce) { .pet-card, .pet-card[data-rarity='mythical'][data-active='true'] { animation: none; transition: none; } }
+
+/* Live: the moments everyone shares. */
+.time-up { background: linear-gradient(90deg, #f43f5e, #f59e0b); }
+.board-row[data-moved='true'] { animation: board-move 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+@keyframes board-move { from { transform: translateY(var(--from)); } to { transform: translateY(0); } }
+.drumroll span { display: block; width: 0.7rem; height: 2.6rem; border-radius: 999px; background: linear-gradient(#fde68a, #f59e0b); animation: drum 0.45s ease-in-out infinite alternate; }
+@keyframes drum { from { transform: scaleY(0.35); opacity: 0.6; } to { transform: scaleY(1); opacity: 1; } }
+.float-react { animation: float-react 2.8s cubic-bezier(0.3, 0.6, 0.4, 1) forwards; }
+@keyframes float-react { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 12% { transform: translateY(-4vh) scale(1.15); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-60vh) scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .board-row[data-moved='true'], .drumroll span { animation: none; }
+  .float-react { animation: float-react-still 2s linear forwards; }
+}
+@keyframes float-react-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }

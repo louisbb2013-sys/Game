@@ -243,3 +243,75 @@ export function petXpPerk(p: PetState, mood: PetMood): number {
   if (!speciesOf(p.species) || mood === 'sad') return 0;
   return Math.min(0.2, PERK_BY_RARITY[petTier(p)] + Math.floor(p.level / 5) * 0.01);
 }
+
+// ---------------- the team: up to 4 active pets, each with a bonus (like Gizmo's monsters) ----------------
+
+export const MAX_ACTIVE_PETS = 4;
+
+/** What a pet helps with: more XP, coins for each right answer, a chance to win a heart back, a faster egg. */
+export type PetBuffKind = 'xp' | 'coins' | 'heart' | 'egg';
+
+export const PET_BUFF: Record<PetSpeciesId, PetBuffKind> = {
+  pixel_owl: 'xp',
+  mystic_unicorn: 'xp',
+  ember_dragon: 'xp',
+  cosmic_whale: 'xp',
+  galaxy_dragon: 'xp',
+  acorn_squirrel: 'coins',
+  comet_fox: 'coins',
+  bubble_octo: 'coins',
+  aurora_peacock: 'coins',
+  moss_turtle: 'heart',
+  crystal_cat: 'heart',
+  lucky_bunny: 'heart',
+  celestial_phoenix: 'heart',
+  cloud_sheep: 'egg',
+  puddle_frog: 'egg',
+  snow_penguin: 'egg',
+  star_jelly: 'egg',
+  rock_dino: 'egg',
+};
+
+/** The bonus at level 1 for each rarity: a share (0.05 = 5 %), or coins for `coins`. */
+const BUFF_BASE: Record<PetBuffKind, Record<Rarity, number>> = {
+  xp: { common: 0.04, rare: 0.06, epic: 0.08, legendary: 0.1, mythical: 0.14 },
+  heart: { common: 0.05, rare: 0.08, epic: 0.11, legendary: 0.14, mythical: 0.18 },
+  egg: { common: 0.1, rare: 0.15, epic: 0.2, legendary: 0.25, mythical: 0.35 },
+  coins: { common: 1, rare: 1, epic: 2, legendary: 2, mythical: 3 },
+};
+/** The whole team's bonus never goes past these. */
+export const BUFF_CAP: Record<PetBuffKind, number> = { xp: 0.4, heart: 0.5, egg: 0.75, coins: 8 };
+/** Below this fullness a pet is too hungry to help (feed it and its bonus comes back). */
+export const HUNGRY_BUFF_LIMIT = 10;
+
+export interface PetBuff {
+  kind: PetBuffKind;
+  value: number;
+}
+
+/** This pet's bonus: set by what it is, growing with its rarity and level. */
+export function petBuff(p: Pick<PetState, 'species' | 'tier' | 'level'>): PetBuff {
+  const kind = PET_BUFF[p.species as PetSpeciesId] ?? 'xp';
+  const level = Math.max(1, p.level);
+  let value = BUFF_BASE[kind][petTier(p)];
+  if (kind === 'coins') value += Math.floor(level / 10); // +1 coin at levels 10, 20, …
+  else if (kind === 'xp') value += Math.floor((level - 1) / 2) * 0.01; // +1 % every 2 levels
+  else value += Math.min(10, level - 1) * 0.01; // +1 % a level, up to +10 %
+  return { kind, value: kind === 'coins' ? value : Math.round(value * 100) / 100 };
+}
+
+export const petTooHungry = (p: PetState, now: Millis) => currentFullness(p, now) < HUNGRY_BUFF_LIMIT;
+
+export type TeamBuffs = Record<PetBuffKind, number>;
+
+/** Everything the active pets add up to (hungry ones don't help; each kind is capped). */
+export function teamBuffs(team: PetState[], now: Millis): TeamBuffs {
+  const sum: TeamBuffs = { xp: 0, coins: 0, heart: 0, egg: 0 };
+  for (const p of team.slice(0, MAX_ACTIVE_PETS)) {
+    if (!speciesOf(p.species) || petTooHungry(p, now)) continue;
+    const b = petBuff(p);
+    sum[b.kind] += b.value;
+  }
+  for (const k of Object.keys(sum) as PetBuffKind[]) sum[k] = Math.min(BUFF_CAP[k], Math.round(sum[k] * 100) / 100);
+  return sum;
+}

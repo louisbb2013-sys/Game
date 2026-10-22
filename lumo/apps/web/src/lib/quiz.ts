@@ -51,6 +51,10 @@ export interface AnswerResult {
   shield?: 'lost' | 'mended';
   /** A chest to pick was earned with this answer. */
   chest?: boolean;
+  /** Coins a coin pet paid for this right answer. */
+  petCoins?: number;
+  /** A heart pet won a heart back. */
+  petGift?: { kind: 'heart'; name: string; species: string };
   lightning?: boolean;
 }
 
@@ -79,6 +83,8 @@ export interface SessionSummary {
   bestCombo: number;
   streak: { days: number; extended: boolean };
   heartsGained: number;
+  /** Coins the team's pets paid during the round (part of `coins`). */
+  petCoins?: number;
   endedReason: 'done' | 'out_of_hearts' | 'time_up' | 'boss_defeated' | 'boss_escaped';
   concepts: { id: string; term: string; score: number; band: string }[];
 }

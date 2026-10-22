@@ -61,9 +61,36 @@ export function onSignedOut(f: () => void) {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// ------------------------------------------------------------------ the site's clock
+
+/*
+ * Devices' clocks disagree by seconds; a Live game needs everyone on the same moment. Each answer from
+ * the site carries its time: the quickest round trips give the best estimate of how far off this
+ * device is, and `siteNow()` is "now" on the site's clock.
+ */
+let clockOffset = 0;
+let bestTrip = Infinity;
+let tripAt = 0;
+function learnClock(sent: number, res: Response) {
+  const site = Number(res.headers.get('x-lumo-now'));
+  if (!site) return;
+  const back = Date.now();
+  const trip = back - sent;
+  // A quicker trip is a better estimate; an old one fades after a minute (clocks drift, networks change).
+  if (trip <= bestTrip || back - tripAt > 60_000) {
+    bestTrip = trip;
+    tripAt = back;
+    clockOffset = site - (sent + trip / 2);
+  }
+}
+export const siteNow = () => Date.now() + clockOffset;
+
 async function once(path: string, body: unknown, token?: string): Promise<Response | null> {
   try {
-    return await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
+    const sent = Date.now();
+    const res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
+    learnClock(sent, res);
+    return res;
   } catch {
     return null; // offline or the connection dropped
   }
@@ -171,7 +198,10 @@ function makeDb(s: SessionInfo) {
     };
   };
   const changed = (path: string) => {
-    for (const p of [path, path.slice(0, path.lastIndexOf('/'))]) for (const f of watching.get(p) ?? []) f();
+    const paths = [path, path.slice(0, path.lastIndexOf('/'))];
+    // My friend list changed: show the new friend's stats now too.
+    if (/^data\/users\/[^/]+\/me$/.test(path)) paths.push('profiles');
+    for (const p of paths) for (const f of watching.get(p) ?? []) f();
   };
 
   const docRef = (path: string): Any => {
@@ -226,7 +256,7 @@ function makeDb(s: SessionInfo) {
       // A Live game in progress is followed closely; lists (open games, friends' decks) change slowly.
       // Every check is a request the site pays for, so slow things are checked slowly.
       const inGame = path === 'games' && (q.where ?? []).some(([f]) => f === 'code');
-      return watch(path, every(inGame ? 2000 : path === 'games' ? 6000 : 15_000, async () => {
+      return watch(path, every(inGame ? 1000 : path === 'games' ? 6000 : 15_000, async () => {
         try {
           const r = await call<{ same?: boolean; docs?: Row[]; tag: string }>({ op: 'list', coll: path, ...q, known });
           if (r.same) return;
@@ -328,7 +358,7 @@ function makeRoom(s: SessionInfo) {
   };
   // The lobby (friends online, Live invites) changes slowly; a Live game room is checked about every second.
   const lobby = join('lobby', 10_000);
-  return { ...lobby, join: async (name: string) => join(name, 1200) };
+  return { ...lobby, join: async (name: string) => join(name, 900) };
 }
 
 // ------------------------------------------------------------------ user
@@ -473,6 +503,8 @@ function makeSample(s: SessionInfo) {
 
 /** Make the signed-in learner's site-backed capabilities available as `window.claude`. */
 export function installCloud(s: SessionInfo) {
+  // Live games keep time on the site's clock (see siteNow).
+  (globalThis as { __LUMO_CLOCK__?: () => number }).__LUMO_CLOCK__ = siteNow;
   const db = makeDb(s);
   const caps: Record<string, unknown> = {
     db,

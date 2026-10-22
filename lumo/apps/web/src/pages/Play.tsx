@@ -65,6 +65,7 @@ export function Play() {
   const [egg, setEgg] = useState<Rewards['egg'] | null>(null);
   const [buddy, setBuddy] = useState<{ species: string; rarity: Rarity } | null>(null);
   const [bossDown, setBossDown] = useState(false);
+  const [petGift, setPetGift] = useState<AnswerResult['petGift'] | null>(null);
   const [leftMs, setLeftMs] = useState<number | null>(null);
   const [lightLeft, setLightLeft] = useState<number | null>(null);
   const [endRewards, setEndRewards] = useState<Rewards | null>(null);
@@ -270,6 +271,13 @@ export function Play() {
         burst(target, { count: r.combo >= 5 ? 30 : 18 });
         if (mode === 'speed' && r.points) floatText(`+${r.points}`, target, { color: '#fde047' });
         else if (r.xp > 0) floatText(`+${r.xp} XP`, target);
+        // The pets on the team help: coins for the answer, sometimes a heart back.
+        if (r.petCoins) setTimeout(() => floatText(`+${r.petCoins} 🪙`, target, { color: '#fcd34d', size: 22 }), 350);
+        if (r.petGift) {
+          setPetGift(r.petGift);
+          setTimeout(() => play('heal'), 300);
+          setTimeout(() => setPetGift(null), 2600);
+        }
         buddyRef.current?.jump(r.combo >= 3 ? 1.1 : 0.8);
         buddyRef.current?.burst(r.combo >= 3 ? 36 : 18);
         if ([3, 5, 10, 15, 20].includes(r.combo)) {
@@ -518,6 +526,13 @@ export function Play() {
         </div>
       )}
 
+      {petGift && (
+        <div className="pointer-events-none fixed inset-x-0 top-36 z-40 flex justify-center" role="status" data-testid="pet-gift">
+          <div className="combo-pop flex items-center gap-2 rounded-full bg-heart px-4 py-2 font-black text-white shadow-xl">
+            <HeartIcon size={20} /> {t('play.petHeart', { name: petGift.name || t(`pets.species.${petGift.species}`) })}
+          </div>
+        </div>
+      )}
       {banner && (
         <div className="pointer-events-none fixed inset-x-0 top-24 z-40 flex justify-center" aria-live="polite">
           <div className={`combo-pop rounded-full px-5 py-2 text-xl font-black shadow-xl ${banner === 'lightning' ? 'bg-yellow-300 text-night' : 'combo-hot'}`}>

@@ -176,7 +176,8 @@
     "loading": "Chargement…",
     "back": "Retour",
     "retry": "Réessayer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "close": "Fermer"
   },
   "learn": {
     "title": "Mes paquets",
@@ -695,7 +696,8 @@
       "network": "Impossible de joindre Lumo. Vérifie ta connexion.",
       "max_tier": "Ce compagnon est déjà Mythique.",
       "level_too_low": "Ton compagnon doit d'abord monter de niveau.",
-      "not_enough_coins": "Pas encore assez de pièces."
+      "not_enough_coins": "Pas encore assez de pièces.",
+      "team_full": "Ton équipe est pleine (4 compagnons). Retires-en un d’abord."
     },
     "feed_one": "Nourrir ({{count}} collation)",
     "feed_other": "Nourrir ({{count}} collations)",
@@ -705,7 +707,46 @@
     "upgrade": "Améliorer",
     "upgradeHint": "Ton compagnon monte de niveau quand tu étudies et quand tu le nourris.",
     "upgraded": "Ton compagnon est {{rarity}} maintenant !",
-    "maxTier": "Mythique : la plus haute rareté qui existe !"
+    "maxTier": "Mythique : la plus haute rareté qui existe !",
+    "collectionTitle": "Collection de compagnons",
+    "teamBonus": "Ce que ton équipe ajoute",
+    "activeTitle": "Compagnons actifs ({{n}}/{{max}})",
+    "buddyTitle": "Ton compagnon",
+    "activeHint": "Leurs bonus s’additionnent quand tu étudies",
+    "availableTitle": "Compagnons disponibles ({{n}})",
+    "missingTitle": "À découvrir ({{n}})",
+    "locked": "Pas encore trouvé : fais éclore des œufs pour le trouver",
+    "emptySlot": "Place libre : touche un compagnon plus bas pour l’ajouter",
+    "emptySlotHatch": "Place libre : fais éclore un œuf pour la remplir",
+    "joinTeam": "Ajouter à mon équipe",
+    "leaveTeam": "Retirer de l’équipe",
+    "makeBuddy": "En faire mon compagnon",
+    "teamFull": "Ton équipe est pleine (4 compagnons). Retires-en un d’abord.",
+    "tooHungry": "Trop affamé pour aider",
+    "tooHungryLong": "Trop affamé pour aider. Nourris-le pour retrouver son bonus !",
+    "studyEgg": "Œuf {{rarity}}",
+    "studyEggBody_one": "Réponds à {{count}} question de plus pour faire éclore ton œuf !",
+    "studyEggBody_other": "Réponds à {{count}} questions de plus pour faire éclore ton œuf !",
+    "buff": {
+      "xp": "+{{pct}} % de bonus d’XP",
+      "heart": "+{{pct}} % de chances de gagner un cœur sur une bonne réponse",
+      "egg": "+{{pct}} % de chances qu’une réponse réchauffe ton œuf deux fois",
+      "coins_one": "+{{n}} pièce par bonne réponse",
+      "coins_other": "+{{n}} pièces par bonne réponse"
+    },
+    "buffShort": {
+      "xp": "+{{pct}} % d’XP",
+      "heart": "+{{pct}} % de chances de cœur",
+      "egg": "+{{pct}} % œuf plus rapide",
+      "coins_one": "+{{n}} pièce par bonne réponse",
+      "coins_other": "+{{n}} pièces par bonne réponse"
+    },
+    "buffKind": {
+      "xp": "Plus d’XP",
+      "coins": "Pièces",
+      "heart": "Cœurs",
+      "egg": "Œufs plus rapides"
+    }
   },
   "badges": {
     "first_steps": {
@@ -876,7 +917,15 @@
     "betWon": "Bien vu ! Tu gagnes {{xp}} XP grâce à {{name}}.",
     "betLost": "Raté : tu perds {{xp}} XP sur {{name}}.",
     "whoGotIt": "{{n}} sur {{total}} ont eu la bonne réponse",
-    "you": "toi"
+    "you": "toi",
+    "timeUp": "Temps écoulé !",
+    "everyoneAnswered": "Tout le monde a répondu !",
+    "getReady": "Prépare-toi !",
+    "getReadyIn": "Ça commence dans {{n}}",
+    "answeredCount": "{{n}} sur {{total}} ont répondu",
+    "andTheAnswer": "Et la réponse est…",
+    "react": "Réactions",
+    "reactWith": "Réagir avec {{e}}"
   },
   "friends": {
     "title": "Amis",
@@ -1342,7 +1391,8 @@
       "fix_other": "Corriger {{count}} erreurs",
       "review": "À revoir",
       "close": "Fermer",
-      "finish": "Terminé"
+      "finish": "Terminé",
+      "petCoins": "+{{n}} grâce à tes compagnons"
     },
     "points": "{{n}} points",
     "pts": "pts",
@@ -1408,7 +1458,8 @@
       "partly": "En partie juste"
     },
     "heartsLeft_one": "{{count}} cœur restant",
-    "heartsLeft_other": "{{count}} cœurs restants"
+    "heartsLeft_other": "{{count}} cœurs restants",
+    "petHeart": "{{name}} t’a fait gagner un cœur !"
   },
   "write": {
     "title": "Lumo écrit ton examen",

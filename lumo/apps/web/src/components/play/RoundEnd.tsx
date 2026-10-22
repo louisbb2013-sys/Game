@@ -103,6 +103,11 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
               <FlameIcon size={18} /> {t('quiz.streakDays', { count: summary.streak.days })}
             </Chip>
           )}
+          {!!summary.petCoins && (
+            <Chip>
+              🐾 {t('play.end.petCoins', { n: summary.petCoins })}
+            </Chip>
+          )}
           {summary.heartsGained > 0 && (
             <Chip>
               <HeartIcon size={18} className="text-heart" /> +{summary.heartsGained}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addPetXp, advanceQuest, applyStats, BADGES, currentFullness, emptyStats, feedPet, hatch, ITEMS, newBadges, PET_SPECIES, petMood, petXpPerk,
   questsFor, rollChest, seededRng, HOUR_MS, type GameEvent, petTier, upgradeBlocker, upgradePet, RARITIES, PET_UPGRADES,
+  MAX_ACTIVE_PETS, petBuff, teamBuffs, type PetState,
 } from '../src';
 
 describe('chests', () => {
@@ -99,5 +100,30 @@ describe('pet tiers', () => {
     expect(RARITIES.at(-1)).toBe('mythical');
     expect(PET_SPECIES.some((s) => s.rarity === 'mythical')).toBe(true);
     expect(PET_UPGRADES.mythical).toBeNull();
+  });
+});
+
+describe('pet team bonuses (like Gizmo)', () => {
+  const pet = (species: string, level = 1, extra: Partial<PetState> = {}): PetState => ({ species: species as PetState['species'], level, xp: 0, fullness: 100, fedAt: 0, ...extra });
+
+  it('gives every pet one bonus that grows with rarity and level', () => {
+    expect(petBuff(pet('moss_turtle'))).toEqual({ kind: 'heart', value: 0.05 });
+    expect(petBuff(pet('moss_turtle', 3))).toEqual({ kind: 'heart', value: 0.07 });
+    expect(petBuff(pet('moss_turtle', 3, { tier: 'rare' }))).toEqual({ kind: 'heart', value: 0.1 });
+    expect(petBuff(pet('pixel_owl', 5))).toEqual({ kind: 'xp', value: 0.06 });
+    expect(petBuff(pet('acorn_squirrel', 9))).toEqual({ kind: 'coins', value: 1 });
+    expect(petBuff(pet('acorn_squirrel', 10))).toEqual({ kind: 'coins', value: 2 });
+    expect(petBuff(pet('cloud_sheep'))).toEqual({ kind: 'egg', value: 0.1 });
+    // Every species has a bonus.
+    for (const s of PET_SPECIES) expect(['xp', 'coins', 'heart', 'egg']).toContain(petBuff(pet(s.id)).kind);
+  });
+
+  it('adds up the 4 active pets, skips hungry ones, and caps each bonus', () => {
+    const team = [pet('moss_turtle', 3), pet('crystal_cat', 2), pet('pixel_owl'), pet('acorn_squirrel'), pet('ember_dragon')];
+    expect(MAX_ACTIVE_PETS).toBe(4);
+    expect(teamBuffs(team, 0)).toEqual({ heart: 0.07 + 0.09, xp: 0.04, coins: 1, egg: 0 }); // the 5th pet isn't on the team
+    expect(teamBuffs([pet('moss_turtle', 3, { fullness: 0 })], 0).heart).toBe(0); // too hungry to help
+    const xpTeam = Array.from({ length: 4 }, () => pet('galaxy_dragon', 50));
+    expect(teamBuffs(xpTeam, 0).xp).toBe(0.4);
   });
 });

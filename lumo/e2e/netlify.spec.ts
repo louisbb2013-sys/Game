@@ -250,7 +250,14 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   await b.getByTestId('live-invite').getByRole('button', { name: 'Join', exact: true }).click();
   await expect(b.getByText('Waiting for the host to start…')).toBeVisible({ timeout: 15_000 });
   await expect(b.getByTestId('live-invite')).toHaveCount(0);
+  // Everyone gets a 3-2-1, then the question appears on both screens at the same moment.
+  const shownAt = [a, b].map((p) => p.locator('section[data-format]').waitFor({ timeout: 20_000 }).then(() => Date.now()));
   await a.getByRole('button', { name: 'Start with 2 players' }).click({ timeout: 15_000 });
+  await expect(b.getByTestId('live-get-ready')).toBeVisible({ timeout: 15_000 });
+  await expect(b.getByTestId('live-get-ready')).toContainText('Get ready!');
+  await b.screenshot({ path: 'e2e/screens/netlify-live-ready.png' });
+  const [ta, tb] = await Promise.all(shownAt);
+  expect(Math.abs(ta - tb)).toBeLessThan(1000);
 
   // Every question: four answers, A to D.
   await expect(b.getByText('Question 1 of 5')).toBeVisible({ timeout: 15_000 });
@@ -263,7 +270,19 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   await b.getByTestId('bet-panel').getByRole('button', { name: /Right/ }).click();
   await expect(b.getByTestId('bet-panel')).toContainText('You bet 25 XP that');
   await expect(a.getByText('Someone bet on you!')).toBeVisible({ timeout: 15_000 });
-  for (const p of [a, b]) await p.locator('section[data-format] .tile').first().click();
+  // Everyone sees who has answered: the host answers, and a check pops on them on the friend's screen.
+  await expect(b.getByTestId('players-strip').locator('[data-answered="true"]')).toHaveCount(0);
+  await a.locator('section[data-format] .tile').first().click();
+  await expect(b.getByTestId('players-strip').locator('[data-answered="true"]')).toHaveCount(1, { timeout: 5000 });
+  await expect(b.getByTestId('players-strip')).toContainText('1 of 2 answered');
+  await b.screenshot({ path: 'e2e/screens/netlify-live-answered.png' });
+  const revealedAt = [a, b].map((p) => p.getByTestId('live-verdict').waitFor({ timeout: 20_000 }).then(() => Date.now()));
+  await b.locator('section[data-format] .tile').first().click();
+  // "And the answer is…", then both screens show the answer together.
+  await expect(b.getByTestId('live-suspense')).toBeVisible({ timeout: 10_000 });
+  await b.screenshot({ path: 'e2e/screens/netlify-live-suspense.png' });
+  const [ra, rb] = await Promise.all(revealedAt);
+  expect(Math.abs(ra - rb)).toBeLessThan(1000);
   // The answer screen says it plainly, in green or red, and shows the right answer on the tiles.
   for (const p of [a, b]) {
     await expect(p.getByTestId('live-verdict')).toBeVisible({ timeout: 15_000 });
@@ -276,6 +295,10 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   await expect(b.getByTestId('who-got-it').locator('li')).toHaveCount(2);
   await expect(b.getByTestId('who-got-it')).toContainText(/\d of 2 got it right/);
   await expect(b.getByTestId('who-got-it')).toContainText(bName);
+  // A reaction floats up on the other player's screen too.
+  await b.getByTestId('reaction-bar').getByRole('button', { name: 'React with 🔥' }).click();
+  await expect(a.getByTestId('floating-reaction').filter({ hasText: '🔥' })).toBeVisible({ timeout: 8000 });
+  await a.screenshot({ path: 'e2e/screens/netlify-live-reaction.png', fullPage: true });
   await b.screenshot({ path: 'e2e/screens/netlify-live-reveal.png', fullPage: true });
   await a.getByRole('button', { name: 'End game' }).click();
   await a.getByRole('button', { name: 'Tap to end' }).click();

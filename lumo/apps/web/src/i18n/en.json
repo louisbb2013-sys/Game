@@ -176,7 +176,8 @@
     "loading": "Loading…",
     "back": "Back",
     "retry": "Try again",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "close": "Close"
   },
   "learn": {
     "title": "My decks",
@@ -695,7 +696,8 @@
       "network": "Can’t reach Lumo. Check your connection.",
       "max_tier": "This pet is already Mythical.",
       "level_too_low": "Your pet needs a higher level first.",
-      "not_enough_coins": "Not enough coins yet."
+      "not_enough_coins": "Not enough coins yet.",
+      "team_full": "Your team is full (4 pets). Take one off first."
     },
     "feed_one": "Feed ({{count}} snack)",
     "feed_other": "Feed ({{count}} snacks)",
@@ -705,7 +707,46 @@
     "upgrade": "Upgrade",
     "upgradeHint": "Pets level up as you study and when you feed them.",
     "upgraded": "Your pet is {{rarity}} now!",
-    "maxTier": "Mythical: the highest rarity there is!"
+    "maxTier": "Mythical: the highest rarity there is!",
+    "collectionTitle": "Pet collection",
+    "teamBonus": "What your team adds",
+    "activeTitle": "Active pets ({{n}}/{{max}})",
+    "buddyTitle": "Your buddy",
+    "activeHint": "Their bonuses add up while you study",
+    "availableTitle": "Available pets ({{n}})",
+    "missingTitle": "Still to find ({{n}})",
+    "locked": "Not found yet: hatch eggs to find it",
+    "emptySlot": "Free spot: tap a pet below to add it",
+    "emptySlotHatch": "Free spot: hatch an egg to fill it",
+    "joinTeam": "Add to my team",
+    "leaveTeam": "Take off the team",
+    "makeBuddy": "Make my buddy",
+    "teamFull": "Your team is full (4 pets). Take one off first.",
+    "tooHungry": "Too hungry to help",
+    "tooHungryLong": "Too hungry to help. Feed it to get its bonus back!",
+    "studyEgg": "{{rarity}} egg",
+    "studyEggBody_one": "Answer {{count}} more question to hatch your egg!",
+    "studyEggBody_other": "Answer {{count}} more questions to hatch your egg!",
+    "buff": {
+      "xp": "+{{pct}}% XP bonus",
+      "heart": "+{{pct}}% chance to win a heart on a right answer",
+      "egg": "+{{pct}}% chance an answer warms your egg twice",
+      "coins_one": "+{{n}} coin per right answer",
+      "coins_other": "+{{n}} coins per right answer"
+    },
+    "buffShort": {
+      "xp": "+{{pct}}% XP",
+      "heart": "+{{pct}}% heart chance",
+      "egg": "+{{pct}}% faster egg",
+      "coins_one": "+{{n}} coin per right answer",
+      "coins_other": "+{{n}} coins per right answer"
+    },
+    "buffKind": {
+      "xp": "More XP",
+      "coins": "Coins",
+      "heart": "Hearts",
+      "egg": "Faster eggs"
+    }
   },
   "badges": {
     "first_steps": {
@@ -876,7 +917,15 @@
     "betWon": "Good call! You won {{xp}} XP on {{name}}.",
     "betLost": "Bad call: you lost {{xp}} XP on {{name}}.",
     "whoGotIt": "{{n}} of {{total}} got it right",
-    "you": "you"
+    "you": "you",
+    "timeUp": "Time's up!",
+    "everyoneAnswered": "Everyone answered!",
+    "getReady": "Get ready!",
+    "getReadyIn": "Starting in {{n}}",
+    "answeredCount": "{{n}} of {{total}} answered",
+    "andTheAnswer": "And the answer is…",
+    "react": "Reactions",
+    "reactWith": "React with {{e}}"
   },
   "friends": {
     "title": "Friends",
@@ -1342,7 +1391,8 @@
       "fix_other": "Fix {{count}} mistakes",
       "review": "To review",
       "close": "Close",
-      "finish": "Done"
+      "finish": "Done",
+      "petCoins": "+{{n}} from your pets"
     },
     "points": "{{n}} points",
     "pts": "pts",
@@ -1408,7 +1458,8 @@
       "partly": "Partly right"
     },
     "heartsLeft_one": "{{count}} heart left",
-    "heartsLeft_other": "{{count}} hearts left"
+    "heartsLeft_other": "{{count}} hearts left",
+    "petHeart": "{{name}} won you a heart!"
   },
   "write": {
     "title": "Lumo is writing your test",

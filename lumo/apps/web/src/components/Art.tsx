@@ -144,7 +144,7 @@ export function PetPortrait({ species, rarity, emoji, size = 56, className = '',
 
 /** Rarity colours, for chips and borders. */
 export const RARITY_TONE: Record<Rarity, string> = {
-  common: 'bg-slate-500 text-white',
+  common: 'bg-emerald-600 text-white',
   rare: 'bg-sky-600 text-white',
   epic: 'bg-fuchsia-600 text-white',
   legendary: 'bg-amber-400 text-night',

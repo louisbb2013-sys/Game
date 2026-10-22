@@ -18,6 +18,10 @@ import {
   ITEMS,
   petMood,
   petXpPerk,
+  MAX_ACTIVE_PETS,
+  petBuff,
+  petTooHungry,
+  teamBuffs,
   questDef,
   questsFor,
   repairStreak,
@@ -150,6 +154,8 @@ interface StoredSession {
     language: Locale;
     formats?: Format[];
     heartsLost: number;
+    /** Coins the team's coin pets paid during this round (already added). */
+    petCoins?: number;
     startedAt?: number;
     timeLimitMs?: number;
     skipped?: string[];
@@ -231,7 +237,10 @@ interface LocalPet {
   xp: number;
   fullness: number;
   fedAt: number;
+  /** The buddy shown on Home and in rounds (one of the team). */
   equipped: boolean;
+  /** On the team (up to 4): its bonus counts. Unset on pets from before teams existed. */
+  active?: boolean;
   /** Upgraded rarity (its species' rarity until then). */
   tier?: Rarity;
 }
@@ -506,6 +515,16 @@ function game(): GameData {
 }
 const petState = (p: LocalPet): PetState => ({ species: p.species, level: p.level, xp: p.xp, fullness: p.fullness, fedAt: p.fedAt, ...(p.tier ? { tier: p.tier } : {}) });
 const equipped = () => game().pets.find((p) => p.equipped);
+/** The active pets (up to 4). Before teams existed only the buddy helped: then the first 4 join, buddy first. */
+function team(): LocalPet[] {
+  const g = game();
+  if (g.pets.length && g.pets.every((p) => p.active === undefined)) {
+    const order = [...g.pets].sort((a, b) => Number(b.equipped) - Number(a.equipped));
+    for (const p of g.pets) p.active = order.indexOf(p) < MAX_ACTIVE_PETS;
+  }
+  return g.pets.filter((p) => p.active).slice(0, MAX_ACTIVE_PETS);
+}
+const buffsNow = () => teamBuffs(team().map(petState), now());
 
 function addItem(id: ItemId, qty: number) {
   const g = game();
@@ -529,7 +548,8 @@ function addPet(species: PetSpeciesId): { pet: LocalPet; duplicate: boolean } {
     Object.assign(have, addPetXp(petState(have), DUPLICATE_PET_XP[rarity]));
     return { pet: have, duplicate: true };
   }
-  const pet: LocalPet = { id: uid(), species, name: '', level: 1, xp: 0, fullness: 80, fedAt: now(), equipped: !g.pets.some((p) => p.equipped) };
+  // A new pet joins the team while there's room.
+  const pet: LocalPet = { id: uid(), species, name: '', level: 1, xp: 0, fullness: 80, fedAt: now(), equipped: !g.pets.some((p) => p.equipped), active: team().length < MAX_ACTIVE_PETS };
   g.pets.push(pet);
   return { pet, duplicate: false };
 }
@@ -557,19 +577,18 @@ function petView(p: LocalPet) {
     mood,
     perk: petXpPerk(st, mood),
     equipped: p.equipped,
+    active: team().includes(p),
+    /** What it adds while on the team (nothing while it's too hungry). */
+    buff: { ...petBuff(st), off: petTooHungry(st, t) },
     upgrade: cost && next ? { to: next, coins: cost.coins, level: cost.level } : null,
   };
 }
 
-/** XP multiplier bonus from an active boost and the pet you take along. */
+/** XP multiplier bonus from an active boost and the pets on the team. */
 function boostNow(): number {
   const g = game();
-  let b = g.boostUntil && g.boostUntil > now() ? XP_BOOST_BONUS : 0;
-  const p = equipped();
-  if (p) b += petViewPerk(p);
-  return b;
+  return (g.boostUntil && g.boostUntil > now() ? XP_BOOST_BONUS : 0) + buffsNow().xp;
 }
-const petViewPerk = (p: LocalPet) => petView(p).perk;
 
 function questPeriods() {
   const u = load().user;
@@ -787,7 +806,13 @@ const gameRoutes: [string, RegExp, Handler][] = [
   }],
   ['GET', /^\/api\/game\/inventory$/, () => inventoryView()],
   ['GET', /^\/api\/game\/quests$/, () => ({ quests: publicQuests() })],
-  ['GET', /^\/api\/game\/pets$/, () => ({ pets: [...game().pets].sort((a, b) => Number(b.equipped) - Number(a.equipped)).map(petView) })],
+  ['GET', /^\/api\/game\/pets$/, () => {
+    const t = team();
+    const g = game();
+    // The team first (in the order they joined it), then everyone else.
+    const pets = [...t, ...g.pets.filter((p) => !t.includes(p))].map(petView);
+    return { pets, buffs: buffsNow(), maxActive: MAX_ACTIVE_PETS, egg: { ...g.egg, emoji: EGG_EMOJI[g.egg.rarity] } };
+  }],
   ['POST', /^\/api\/game\/shop\/buy$/, (_m, b) => {
     const id = String(b.itemId) as ItemId;
     const def = ITEMS[id];
@@ -826,6 +851,20 @@ const gameRoutes: [string, RegExp, Handler][] = [
     const pet = g.pets.find((p) => p.id === m[1]);
     if (!pet) throw new LocalError(404, 'pet_not_found');
     if (b.name !== undefined) pet.name = checkPetName(String(b.name));
+    const onTeam = team();
+    // Join the team (up to 4) or leave it; the buddy is always one of the team.
+    if ((b.active === true || b.equipped) && !onTeam.includes(pet)) {
+      if (onTeam.length >= MAX_ACTIVE_PETS) throw new LocalError(409, 'team_full');
+      pet.active = true;
+    }
+    if (b.active === false && onTeam.includes(pet)) {
+      pet.active = false;
+      if (pet.equipped) {
+        pet.equipped = false;
+        const next = team()[0];
+        if (next) next.equipped = true;
+      }
+    }
     if (b.equipped) for (const p of g.pets) p.equipped = p === pet;
     return petView(pet);
   }],
@@ -888,9 +927,8 @@ function award(xp: number, events: GameEvent[]): Rewards {
       r.levelUp = { level, coins: lu.coins, chest: lu.chest };
       all.push({ type: 'level', level });
     }
-    // The pet you take along grows a little with every bit of study.
-    const pet = equipped();
-    if (pet) Object.assign(pet, addPetXp(petState(pet), xp * 0.2));
+    // The pets on the team grow a little with every bit of study.
+    for (const pet of team()) Object.assign(pet, addPetXp(petState(pet), xp * 0.15));
   }
   // Quests
   for (const q of currentQuests()) {
@@ -899,8 +937,12 @@ function award(xp: number, events: GameEvent[]): Rewards {
     if (q.st.progress < q.target && next >= q.target) r.questsCompleted.push(q.id);
     q.st.progress = next;
   }
-  // The study egg
-  const hatched = warmEgg(events.filter((e) => e.type === 'answer').length);
+  // The study egg (egg pets sometimes make an answer count twice)
+  const answers = events.filter((e) => e.type === 'answer').length;
+  const eggChance = buffsNow().egg;
+  let warmth = answers;
+  for (let i = 0; i < answers && eggChance > 0; i++) if (Math.random() < eggChance) warmth++;
+  const hatched = warmEgg(warmth);
   if (hatched) r.hatched = hatched;
   r.egg = { ...game().egg };
   const statsBefore = { ...emptyStats(), ...d.user.stats };
@@ -1181,7 +1223,8 @@ function finish(s: StoredSession) {
     accuracy,
     stars,
     xp: s.state.xp,
-    coins,
+    coins: coins + (s.state.petCoins ?? 0),
+    petCoins: s.state.petCoins ?? 0,
     bestCombo: s.state.bestCombo,
     streak: { days: st.state.days, extended: st.extended },
     heartsGained,
@@ -1238,6 +1281,23 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
     if (!missed.some((m) => m.prompt === q.prompt) && missed.length < 20) missed.push({ prompt: q.format === 'true_false' ? q.prompt : q.prompt, ...(q.context ? { context: q.context } : {}), answer: g.correctAnswer, explanation: g.explanation, ...(g.chosenNote ? { note: g.chosenNote } : {}) });
   }
 
+  // The team helps: coin pets pay for a right answer, heart pets sometimes win a heart back.
+  let petCoins = 0;
+  let petGift: { kind: 'heart'; name: string; species: string } | undefined;
+  if (g.correct) {
+    const buffs = buffsNow();
+    petCoins = buffs.coins;
+    u.coins += petCoins;
+    s.state.petCoins = (s.state.petCoins ?? 0) + petCoins;
+    const hearts = currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t).hearts;
+    if (buffs.heart > 0 && hearts < MAX_HEARTS && Math.random() < buffs.heart) {
+      const h = gainHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t, 1);
+      u.hearts = h.hearts;
+      u.heartsUpdatedAt = h.updatedAt;
+      const giver = team().find((p) => petBuff(petState(p)).kind === 'heart' && !petTooHungry(petState(p), t));
+      if (giver) petGift = { kind: 'heart', name: giver.name, species: giver.species };
+    }
+  }
   if (s.mode === 'challenge' && g.score < 0.5) {
     const h = loseHeart({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t);
     u.hearts = h.hearts;
@@ -1285,7 +1345,7 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   const { gradedBy: _g, ...result } = g;
   return {
     rewards,
-    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, points, damage, shield, chest, lightning },
+    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, points, damage, shield, chest, lightning, petCoins, petGift },
     session: publicSession(s),
     next: next ? publicQuestion(next) : null,
     summary,
@@ -1851,9 +1911,11 @@ const routes: [string, RegExp, Handler][] = [
       u.liveRewarded = [...(u.liveRewarded ?? []), code].slice(-50);
       const rank = Math.max(1, Number(b.rank) || 1);
       const players = Math.max(1, Math.min(50, Number(b.players) || 1));
-      const r = liveRewards(rank, players, Math.max(0, Math.min(100, Number(b.correct) || 0)));
-      u.coins += r.coins;
       const correct = Math.max(0, Math.min(100, Number(b.correct) || 0));
+      const base = liveRewards(rank, players, correct);
+      // Coin pets pay for right answers in Live too.
+      const r = { ...base, coins: base.coins + correct * buffsNow().coins };
+      u.coins += r.coins;
       // Bets: XP won adds to the reward; XP lost comes off, but never below the start of your level.
       const bet = Math.max(-2500, Math.min(2500, Math.round(Number(b.betXp) || 0)));
       if (bet < 0) {
