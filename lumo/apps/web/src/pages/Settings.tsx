@@ -5,7 +5,7 @@ import { clearOffline } from '../lib/offline';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { LanguageSwitch } from '../components/LanguageSwitch';
-import { api, type Settings as S, LOCAL } from '../lib/api';
+import { api, type Settings as S, LOCAL, NETLIFY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 export function Settings() {
@@ -13,12 +13,34 @@ export function Settings() {
   const { user, update, setUser, refresh } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState('');
+  const [failed, setFailed] = useState(false);
   if (!user) return null;
 
   const s = user.settings;
   const set = (patch: S) => void update({ settings: patch }).catch(() => {});
 
   const deleteAll = async () => {
+    setFailed(false);
+    if (NETLIFY) {
+      // Website account: delete it on the site too (an extra account then disappears for friends).
+      const { deleteAccount, loadSession } = await import('../netlify/cloud');
+      const session = loadSession();
+      if (session) {
+        try {
+          await deleteAccount(session);
+        } catch {
+          return setFailed(true);
+        }
+        try {
+          localStorage.removeItem(`lumo_local_v1:${session.uid}`);
+        } catch {
+          /* storage blocked: nothing kept here anyway */
+        }
+        clearOffline();
+        (await import('../netlify/Gate')).signOut();
+        return;
+      }
+    }
     await api('/api/me', { method: 'DELETE' });
     clearOffline();
     if (LOCAL) {
@@ -96,6 +118,11 @@ export function Settings() {
                 {t('settings.deleteButton')}
               </button>
             </div>
+            {failed && (
+              <p role="alert" className="text-sm font-bold text-bad">
+                {t('settings.deleteFailed')}
+              </p>
+            )}
           </div>
         )}
       </Card>

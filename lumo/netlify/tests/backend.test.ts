@@ -25,6 +25,7 @@ function site(identity: Record<string, string> = {}) {
     signup: (name: string, password: string) => call(auth, '/api/auth/signup', { name, password }),
     login: (name: string, password: string) => call(auth, '/api/auth/login', { name, password }),
     google: (token: string) => call(auth, '/api/auth/google', { token }),
+    remove: (token: string) => call(auth, '/api/auth/delete', {}, token),
     db: (token: string, body: unknown) => call(data, '/api/data', body, token),
     room: (token: string, body: unknown) => call(data, '/api/room', body, token),
   };
@@ -74,6 +75,74 @@ describe('accounts', () => {
     expect(b.body.uid).toBe(a.body.uid);
     expect((await s.google('forged')).status).toBe(401);
     expect([...s.kv.dump().values()].join()).not.toContain('kid@example.com'); // no e-mail kept
+  });
+
+  it('says which Google account it is (partly hidden), and only a new account is "fresh"', async () => {
+    const s = site({ 'idn-token-1': 'a1b2c3d4-0000-1111', 'idn-token-2': 'a1b2c3d4-0000-1111' });
+    const first = (await s.google('idn-token-1')).body;
+    expect(first.hint).toBe('ki•••@example.com');
+    expect(first.fresh).toBe('1');
+    const again = (await s.google('idn-token-2')).body;
+    expect(again.hint).toBe('ki•••@example.com');
+    expect(again.fresh).toBeUndefined(); // a second device: its guest progress must not replace the account
+  });
+});
+
+describe('one name per learner', () => {
+  it("won't let a second learner take a name someone already uses", async () => {
+    const s = site({ g1: 'idn-0001-aaaa', g2: 'idn-0002-bbbb' });
+    const a = (await s.google('g1')).body;
+    const b = (await s.google('g2')).body;
+    expect((await s.db(a.token, { op: 'set', path: `profiles/${a.uid}`, data: { username: 'Louis', xp: 1 } })).status).toBe(200);
+    // Same name, other case, other learner: refused.
+    const clash = await s.db(b.token, { op: 'set', path: `profiles/${b.uid}`, data: { username: 'louis', xp: 0 } });
+    expect(clash.status).toBe(409);
+    expect(clash.body.error).toBe('username_taken');
+    // Saving my own profile again under my own name is fine.
+    expect((await s.db(a.token, { op: 'update', path: `profiles/${a.uid}`, data: { username: 'Louis', xp: 2 } })).status).toBe(200);
+    // A name-and-password account can't take it either, and a Google learner can't take theirs.
+    expect((await s.signup('LOUIS', 'secret123')).body.error).toBe('name_taken');
+    await s.signup('Mia', 'secret123');
+    expect((await s.db(b.token, { op: 'set', path: `profiles/${b.uid}`, data: { username: 'Mia' } })).status).toBe(409);
+    // Once Louis picks another name, the old one is free again.
+    await s.db(a.token, { op: 'set', path: `profiles/${a.uid}`, data: { username: 'Louis_B' } });
+    expect((await s.db(b.token, { op: 'set', path: `profiles/${b.uid}`, data: { username: 'Louis' } })).status).toBe(200);
+  });
+
+  it('knows names chosen before this rule existed', async () => {
+    const s = site({ g1: 'idn-0001-aaaa', g2: 'idn-0002-bbbb' });
+    const a = (await s.google('g1')).body;
+    const b = (await s.google('g2')).body;
+    await s.kv.set(`d/profiles/${a.uid}`, JSON.stringify({ username: 'Nora' })); // saved by an older version
+    expect((await s.db(b.token, { op: 'set', path: `profiles/${b.uid}`, data: { username: 'nora' } })).status).toBe(409);
+    expect((await s.db(a.token, { op: 'update', path: `profiles/${a.uid}`, data: { xp: 3 } })).status).toBe(200);
+  });
+});
+
+describe('deleting an account', () => {
+  it('removes everything kept for it, frees its name, and the next Google sign-in starts fresh', async () => {
+    const s = site({ g1: 'idn-0001-aaaa', g1b: 'idn-0001-aaaa' });
+    const a = (await s.google('g1')).body;
+    const friend = (await s.signup('Ben', 'secret123')).body;
+    await s.db(a.token, { op: 'set', path: `profiles/${a.uid}`, data: { username: 'Louis' } });
+    await s.db(a.token, { op: 'set', path: `data/users/${a.uid}/main`, data: { xp: 5 } });
+    await s.db(a.token, { op: 'set', path: `data/users/${a.uid}/deck-1`, data: { title: 'Cells' } });
+    await s.db(a.token, { op: 'set', path: `decks/${a.uid}`, data: { list: [] } });
+    await s.db(a.token, { op: 'set', path: `inbox/${friend.uid}/req/${a.uid}`, data: { at: 1 } });
+    await s.db(friend.token, { op: 'set', path: `inbox/${a.uid}/req/${friend.uid}`, data: { at: 2 } });
+
+    expect((await s.remove('not-a-token')).status).toBe(401);
+    expect((await s.remove(a.token)).status).toBe(200);
+    const left = [...s.kv.dump().keys()];
+    expect(left.filter((k) => k.includes(a.uid) && !k.startsWith('a/x/'))).toEqual([]);
+    expect(left.some((k) => k.startsWith('a/g/'))).toBe(false);
+    // Another device still signed in to it is signed out at its next save.
+    expect((await s.db(a.token, { op: 'set', path: `data/users/${a.uid}/main`, data: { xp: 6 } })).status).toBe(401);
+    // Its name is free again, and the Google account gets a new, empty Lumo account.
+    const again = (await s.google('g1b')).body;
+    expect(again.uid).not.toBe(a.uid);
+    expect(again.fresh).toBe('1');
+    expect((await s.db(again.token, { op: 'set', path: `profiles/${again.uid}`, data: { username: 'Louis' } })).status).toBe(200);
   });
 });
 

@@ -17,6 +17,11 @@ Everything is kept in the site's own Netlify storage (Netlify Blobs). No Firebas
 2. Under **Registration** → **External providers**, click **Add provider** → **Google** → **Use default configuration** → **Enable**.
 3. Done: the Google button appears on the sign-in screen by itself. Google accounts keep no e-mail or real name in Lumo.
 
+One Google account is always one Lumo account, on every device. **Me** shows which Google account
+is signed in (partly hidden, like `lo•••@gmail.com`) and an **account code**: the same code on two
+devices means the same account. Lumo names are unique (checked by the site), and **Settings → Delete
+my account and data** removes an extra account completely.
+
 ## AI: free allowance or your own key
 
 - **Netlify credits (default):** Claude runs through Netlify's AI Gateway and uses the team's credits (Free: 300 a month; Personal: 1000), **shared with the team's other sites** (bakyos.ca). Netlify **pauses every site if they run out**, so Lumo stops using AI for the month once `LUMO_AI_MONTHLY_USD` has been spent (default $0.75; this site is set to **$1**, about 180 credits). The month starts on `LUMO_AI_RESET_DAY`, the day the team's credits renew (this site: **17**); without it, on the 1st.
@@ -32,7 +37,8 @@ Each published version of the site (a "production deploy") costs **15 credits**.
 ## How it's built (for developers)
 
 - `netlify.toml` (repository root): builds `apps/web` with `npm run build:netlify` and publishes `apps/web/dist-netlify`.
-- `netlify/functions/auth.mts` → `/api/auth/*`: sign up, log in (PBKDF2 password hashes), Google through Netlify Identity.
+- `netlify/functions/auth.mts` → `/api/auth/*`: sign up, log in (PBKDF2 password hashes), Google through Netlify Identity, delete an account.
+- `netlify/lib/names.ts`: one learner per Lumo name (`u/name/<name>` claims, checked when a profile's name changes).
 - `netlify/edge-functions/data.ts` → `/api/data`, `/api/room`: shared documents and live-room presence with the same access rules as the Claude page (everyone reads profiles/decks/games, each learner writes only their own; `data/users/<id>` is private).
 - `netlify/edge-functions/claude.ts` → `/api/claude`: Claude, streamed, for signed-in learners only, with the monthly gateway budget.
 - `apps/web/src/netlify/cloud.ts`: the page side (the same `window.claude.use(...)` surface the app uses inside Claude).

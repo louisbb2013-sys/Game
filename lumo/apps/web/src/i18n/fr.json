@@ -169,7 +169,8 @@
     "export": "Télécharger mes données",
     "exportHint": "Un fichier avec tout ce que Lumo garde sur toi.",
     "haptics": "Vibration aux réponses",
-    "music": "Musique de fond dans les jeux"
+    "music": "Musique de fond dans les jeux",
+    "deleteFailed": "Impossible de supprimer le compte. Vérifie ta connexion et réessaie."
   },
   "common": {
     "loading": "Chargement…",
@@ -273,7 +274,7 @@
     "sessionDone": "Séance terminée !",
     "sessionDoneBody": "Chaque question était nouvelle — c’est comme ça qu’on comprend vraiment.",
     "outOfHearts": "Plus de cœurs",
-    "outOfHeartsBody": "Pas grave ! Fais une révision pour recharger tes cœurs — on n’arrête jamais d’apprendre.",
+    "outOfHeartsBody": "Pas grave ! Joue une manche normale pour gagner un cœur, ou attends : il en revient un toutes les 30 minutes.",
     "accuracy": "Précision",
     "bestCombo": "Meilleur combo",
     "streakDays_one": "Série de {{count}} jour",
@@ -282,7 +283,7 @@
     "backToDeck": "Retour au paquet",
     "errors": {
       "error": "Un problème est survenu. Réessaie — si ça continue, recharge la page.",
-      "no_hearts": "Plus de cœurs. Fais une révision pour les recharger.",
+      "no_hearts": "Plus de cœurs. Joue une manche normale pour en gagner un, ou attends : il en revient un toutes les 30 minutes.",
       "stale_question": "Cette question a déjà été répondue.",
       "session_done": "Cette séance est déjà terminée.",
       "no_questions": "Impossible de créer des questions pour ce paquet.",
@@ -1272,7 +1273,10 @@
       "Noyau",
       "Mitochondrie",
       "Paroi cellulaire"
-    ]
+    ],
+    "signedInGoogleAs": "Connecté avec Google ({{hint}})",
+    "accountCode": "Code du compte : {{code}}",
+    "accountCodeHint": "Même code sur deux appareils, même compte."
   },
   "bank": {
     "writing": "Lumo écrit de vraies questions d’examen…",
@@ -1351,7 +1355,8 @@
       "learn": "Apprendre",
       "speed": "Course éclair",
       "boss": "Combat de boss",
-      "cards": "Cartes"
+      "cards": "Cartes",
+      "challenge": "Défi"
     },
     "lightning": "Éclair ! ×2 XP en 10 s",
     "again": "Encore",
@@ -1401,7 +1406,9 @@
       "right": "Bonne réponse !",
       "wrong": "Faux",
       "partly": "En partie juste"
-    }
+    },
+    "heartsLeft_one": "{{count}} cœur restant",
+    "heartsLeft_other": "{{count}} cœurs restants"
   },
   "write": {
     "title": "Lumo écrit ton examen",
@@ -1452,7 +1459,9 @@
     "bossWins_other": "{{count}} victoires",
     "cardsBody": "Retourne · retiens · répète",
     "more": "Nouvelles questions",
-    "moreBody": "Lumo en écrit d’autres"
+    "moreBody": "Lumo en écrit d’autres",
+    "challengeBody": "Une erreur coûte un cœur · finis-le : +15 pièces",
+    "challengeEmpty": "Plus de cœurs : le prochain dans {{minutes}} min"
   },
   "cards": {
     "done": "Paquet terminé !",

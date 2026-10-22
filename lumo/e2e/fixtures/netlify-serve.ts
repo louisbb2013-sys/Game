@@ -22,7 +22,7 @@ const auth = makeAuthHandler({
   rounds: 1000,
   fetch: (async (_url: unknown, init?: RequestInit) => {
     const id = identity.get(new Headers(init?.headers).get('authorization')?.replace('Bearer ', '') ?? '');
-    return id ? Response.json({ id }) : new Response('no', { status: 401 });
+    return id ? Response.json({ id, email: `${id}@gmail.com` }) : new Response('no', { status: 401 });
   }) as typeof fetch,
 });
 const data = makeDataHandler({ kv, env });

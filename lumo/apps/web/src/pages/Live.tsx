@@ -655,7 +655,7 @@ function WhoGotIt({ s, me }: { s: LivePublic; me: string }) {
   const { t } = useTranslation();
   const results = s.reveal!.results;
   const list = s.players
-    .map((p) => ({ p, r: results[p.id], none: !p.answered }))
+    .map((p) => ({ p, r: results[p.id], none: !p.answered, partly: !results[p.id]?.correct && (results[p.id]?.score ?? 0) > 0 }))
     .sort((a, b) => Number(!!b.r?.correct) - Number(!!a.r?.correct) || (b.r?.points ?? 0) - (a.r?.points ?? 0) || Number(a.none) - Number(b.none));
   const right = list.filter((x) => x.r?.correct).length;
   return (
@@ -664,16 +664,16 @@ function WhoGotIt({ s, me }: { s: LivePublic; me: string }) {
         {t('live.whoGotIt', { n: right, total: list.length })}
       </h2>
       <ul className="flex flex-wrap gap-1.5">
-        {list.map(({ p, r, none }) => (
+        {list.map(({ p, r, none, partly }) => (
           <li
             key={p.id}
-            className={`rounded-full px-3 py-1 text-sm font-black ring-1 ${r?.correct ? 'bg-good/20 text-good ring-good/50' : none ? 'bg-surface-2 text-muted ring-line' : 'bg-bad/15 text-bad ring-bad/40'}`}
-            data-result={r?.correct ? 'right' : none ? 'none' : 'wrong'}
+            className={`rounded-full px-3 py-1 text-sm font-black ring-1 ${r?.correct ? 'bg-good/20 text-good ring-good/50' : partly ? 'bg-amber-glow/20 ring-amber-glow/50' : none ? 'bg-surface-2 text-muted ring-line' : 'bg-bad/15 text-bad ring-bad/40'}`}
+            data-result={r?.correct ? 'right' : partly ? 'partly' : none ? 'none' : 'wrong'}
           >
-            <span aria-hidden>{r?.correct ? '✓' : none ? '–' : '✗'}</span> {p.name}
+            <span aria-hidden>{r?.correct ? '✓' : partly ? '½' : none ? '–' : '✗'}</span> {p.name}
             {p.id === me ? ` (${t('live.you')})` : ''}
-            {r?.correct && r.points > 0 ? ` +${r.points}` : ''}
-            <span className="sr-only">{r?.correct ? t('live.correct') : none ? t('live.noAnswer') : t('live.wrong')}</span>
+            {(r?.correct || partly) && r!.points > 0 ? ` +${r!.points}` : ''}
+            <span className="sr-only">{r?.correct ? t('live.correct') : partly ? t('live.partly') : none ? t('live.noAnswer') : t('live.wrong')}</span>
           </li>
         ))}
       </ul>

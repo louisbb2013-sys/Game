@@ -16,6 +16,10 @@ export interface SessionInfo {
   uid: string;
   name: string;
   kind: 'pw' | 'g';
+  /** Google: which account it is, partly hidden ("lo•••@gmail.com"), so two devices can be compared. */
+  hint?: string;
+  /** The site made this account just now (only then does a guest's progress move into it). */
+  fresh?: string;
 }
 
 const SESSION = 'lumo_session';
@@ -89,6 +93,10 @@ async function post<T>(path: string, body: unknown, token?: string): Promise<T> 
 export const signUp = (name: string, password: string) => post<SessionInfo>('/api/auth/signup', { name, password });
 export const logIn = (name: string, password: string) => post<SessionInfo>('/api/auth/login', { name, password });
 export const googleSignIn = (token: string) => post<SessionInfo>('/api/auth/google', { token });
+/** Delete the signed-in account and everything kept for it on the site. */
+export const deleteAccount = (s: SessionInfo) => post<{ ok: true }>('/api/auth/delete', {}, s.token);
+/** A short code for this account, to tell at a glance whether two devices are signed in to the same one. */
+export const accountCode = (uid: string) => uid.slice(-6).toUpperCase();
 
 /** Is Google sign-in switched on for this site (Netlify Identity with the Google provider)? */
 export async function googleAvailable(): Promise<boolean> {

@@ -318,3 +318,64 @@ test('a public deck: anyone on Lumo finds it, its link opens it; and a deck turn
   await expect(s.getByTestId('translate-deck')).toHaveCount(0);
   for (const p of [a, s]) await p.context().close();
 });
+
+test('one Google account on a laptop and an iPad is one Lumo account; names are unique; an extra account can be deleted', async ({ browser }) => {
+  test.setTimeout(150_000);
+  /** Sign in with a made-up Google account (the stand-in Identity takes it from ?as=). */
+  const google = async (p: Page, as: string) => {
+    await p.route('**/.netlify/identity/authorize**', (r) => r.continue({ url: `${r.request().url()}&as=${as}` }));
+    await p.getByRole('button', { name: 'Continue with Google' }).click();
+    await inApp(p);
+    await p.unroute('**/.netlify/identity/authorize**');
+  };
+  const me = async (p: Page) => {
+    await p.getByRole('link', { name: 'Me', exact: true }).click();
+    await expect(p.getByTestId('account-code')).toBeVisible();
+    return (await p.getByTestId('account-code').textContent())!.replace('Account code: ', '').trim();
+  };
+  const louis = `google-louis-${tag()}`;
+  const name = `Louis_${tag()}`;
+
+  // Laptop: Google, then a name.
+  const laptop = await open(browser, { width: 1280, height: 860 });
+  await google(laptop, louis);
+  const code = await me(laptop);
+  await expect(laptop.getByText('Signed in with Google (go•••@gmail.com)')).toBeVisible();
+  await laptop.locator('#username').fill(name);
+  await laptop.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(laptop.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible({ timeout: 10_000 });
+
+  // iPad: tried Lumo as a guest first, then signs in with the same Google account.
+  const ipad = await open(browser, { width: 820, height: 1180 });
+  await ipad.getByRole('button', { name: 'Try it first without an account' }).click();
+  await inApp(ipad);
+  await ipad.getByRole('link', { name: 'Learn', exact: true }).click();
+  await ipad.getByRole('button', { name: 'Try a sample deck' }).first().click();
+  await expect(ipad.getByRole('heading', { level: 1 })).toBeVisible();
+  await ipad.getByRole('link', { name: 'Home', exact: true }).click();
+  await ipad.getByRole('button', { name: 'Create an account to save everywhere' }).click();
+  await google(ipad, louis);
+  // The same account: same code, and the name chosen on the laptop (the guest's random name didn't replace it).
+  expect(await me(ipad)).toBe(code);
+  await expect(ipad.getByRole('main').getByText(name, { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+  await ipad.screenshot({ path: 'e2e/screens/netlify-same-account.png', fullPage: true });
+
+  // A different Google account (a school one, say) can't take that name…
+  await ipad.getByRole('button', { name: 'Sign out' }).click();
+  await google(ipad, `google-school-${tag()}`);
+  const other = await me(ipad);
+  expect(other).not.toBe(code);
+  await ipad.locator('#username').fill(name.toLowerCase());
+  await ipad.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(ipad.getByRole('status').filter({ hasText: 'Someone already has that username.' })).toBeVisible({ timeout: 10_000 });
+
+  // …and that extra account can be deleted; signing in with it again starts a new, empty one.
+  await ipad.getByRole('link', { name: 'Settings' }).click();
+  await ipad.getByRole('button', { name: 'Delete my account and data' }).click();
+  await ipad.getByLabel(/Type DELETE to confirm/).fill('DELETE');
+  await ipad.getByRole('button', { name: 'Delete forever' }).click();
+  await expect(ipad.getByRole('button', { name: 'Continue with Google' })).toBeVisible({ timeout: 15_000 });
+
+  await laptop.context().close();
+  await ipad.context().close();
+});

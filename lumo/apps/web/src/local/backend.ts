@@ -115,7 +115,7 @@ import {
 } from '@lumo/core';
 import { gradeOpenWithClaude } from './bank';
 import { judgeShort, withTimeout } from './reader';
-import { goOnline, plain, publishProfile, together } from './together';
+import { goOnline, plain, publishProfile, renameProfile, together } from './together';
 
 /**
  * Browser-only Lumo: the same rules as the server, run in the page and saved in this browser.
@@ -351,7 +351,10 @@ function boot(): Promise<void> {
       if (dk?.id && Array.isArray(dk.concepts)) cloudDecks.set(dk.id, dk);
     }
     if (main?.user) {
-      const accountWins = localIsNew || (main.savedAt ?? 0) >= (local.savedAt ?? 0);
+      // A copy born on this device (a guest's, or one made while the account couldn't be reached) never
+      // replaces the account: it only adds its decks and rounds. Same account: the newest copy wins.
+      const sameAccount = !main.user.id || local.user.id === main.user.id;
+      const accountWins = localIsNew || !sameAccount || (main.savedAt ?? 0) >= (local.savedAt ?? 0);
       const deleted = new Set([...(main.deletedDecks ?? []), ...(local.deletedDecks ?? [])]);
       // Every deck made on any device is kept (newest copy of each), unless it was deleted.
       const byId = new Map<string, Deck>();
@@ -1120,6 +1123,8 @@ function starsFor(s: StoredSession): number {
   return accuracy >= 0.4 ? 1 : 0;
 }
 
+const CHALLENGE_BONUS = 15;
+
 function finish(s: StoredSession) {
   const d = load();
   const u = d.user;
@@ -1129,6 +1134,8 @@ function finish(s: StoredSession) {
   u.streak = st.state;
   const accuracy = s.state.answered ? s.state.correct / s.state.answered : 0;
   let coins = studied ? 5 + s.state.correct * 2 + (accuracy === 1 && s.state.answered >= 5 ? 10 : 0) : 0;
+  // A Challenge played to the end with hearts to spare earns a bonus.
+  if (s.mode === 'challenge' && studied && s.state.endedReason !== 'out_of_hearts') coins += CHALLENGE_BONUS;
   let heartsGained = 0;
   if ((s.mode === 'review' || s.mode === 'practice') && studied) {
     const before = currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t).hearts;
@@ -1478,10 +1485,13 @@ function shareStats() {
   if (shareTimer) return;
   shareTimer = setTimeout(() => {
     shareTimer = null;
-    const u = load().user;
-    const wk = weekId(now());
-    void publishProfile({ username: u.username, level: levelFromXp(u.xp), xp: u.xp, weekId: wk, weeklyXp: u.week?.id === wk ? u.week.xp : 0, streak: u.streak.days, lastDay: u.streak.lastDay, decks: load().decks.length });
+    void publishProfile(myStats());
   }, 1500);
+}
+function myStats(username = load().user.username) {
+  const u = load().user;
+  const wk = weekId(now());
+  return { username, level: levelFromXp(u.xp), xp: u.xp, weekId: wk, weeklyXp: u.week?.id === wk ? u.week.xp : 0, streak: u.streak.days, lastDay: u.streak.lastDay, decks: load().decks.length };
 }
 
 // ------------------------------------------------------------------ router
@@ -1504,6 +1514,8 @@ const routes: [string, RegExp, Handler][] = [
           const snap = await t.db.collection('profiles').limit(1000).get().catch(() => null);
           const taken = snap?.docs.some((d: { id: string; data: () => { username?: string } }) => d.id !== t.me && d.data()?.username?.toLowerCase() === n.toLowerCase());
           if (taken) throw new LocalError(409, 'username_taken');
+          // The site has the final say (two people could pick the same name at once).
+          if (!(await renameProfile(myStats(n)))) throw new LocalError(409, 'username_taken');
         }
         u.username = n;
         void goOnline(n);

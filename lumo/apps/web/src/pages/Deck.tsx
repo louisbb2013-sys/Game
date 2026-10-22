@@ -1,7 +1,8 @@
-import type { Rarity } from '@lumo/core';
+import { MAX_HEARTS, type Rarity } from '@lumo/core';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { HeartIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { Creature3D } from '../components/Pet3D';
 import { READY_TO_PLAY, useWriting, WritingScreen } from '../components/play/Writing';
@@ -9,6 +10,7 @@ import { ShareDeckToggle } from '../components/SharedDecks';
 import { translateDeck } from '../local/translate';
 import { StudyPlan } from '../components/StudyPlan';
 import { api, ApiError, LOCAL } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { offlineDeck, saveDeckOffline } from '../lib/offline';
 import type { MasteryItem, Mode } from '../lib/quiz';
 import { deckColors, tilt } from '../lib/tilt';
@@ -262,6 +264,7 @@ export function Deck() {
               busy={starting === 'review'}
             />
           )}
+          <ChallengeTile onClick={() => void start('challenge')} busy={starting === 'challenge'} />
         </section>
       ) : (
         <section className="grid grid-cols-2 gap-3">
@@ -404,6 +407,40 @@ function MasteryRing({ pct, children }: { pct: number; children: React.ReactNode
       {children}
       <span className="absolute -bottom-1 rounded-full bg-night px-2 text-xs font-black text-[#f2d58a] ring-1 ring-[#e8c468]/60">{pct}%</span>
     </div>
+  );
+}
+
+/** Challenge: a normal round, but each miss costs one of your hearts (they come back with time). */
+function ChallengeTile({ onClick, busy }: { onClick: () => void; busy: boolean }) {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const n = user?.hearts.current ?? MAX_HEARTS;
+  const minutes = user?.hearts.nextRefillAt ? Math.max(1, Math.ceil((user.hearts.nextRefillAt - Date.now()) / 60_000)) : null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      data-testid="challenge-tile"
+      className="holo lux-frame rise-in col-span-2 flex items-center gap-3 rounded-3xl bg-gradient-to-br from-red-600 to-rose-950 p-3.5 text-left text-white shadow-lg active:scale-[0.98] disabled:opacity-60"
+      {...tilt}
+    >
+      <span className="text-3xl" aria-hidden>
+        {busy ? '⏳' : '❤️'}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="font-display block text-lg leading-tight font-black">{t('play.modes.challenge')}</span>
+        <span className="block text-xs font-bold opacity-90">{n > 0 ? t('hub.challengeBody') : minutes ? t('hub.challengeEmpty', { minutes }) : t('hub.challengeBody')}</span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end gap-0.5">
+        <span className="flex gap-0.5" role="img" aria-label={t('play.heartsLeft', { count: n })}>
+          {Array.from({ length: MAX_HEARTS }, (_, i) => (
+            <HeartIcon key={i} size={18} className={i < n ? 'text-heart drop-shadow' : 'text-black/35'} />
+          ))}
+        </span>
+        {n < MAX_HEARTS && minutes && <span className="text-[0.68rem] font-bold opacity-80">{t('stats.nextHeart', { minutes })}</span>}
+      </span>
+    </button>
   );
 }
 

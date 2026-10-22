@@ -85,7 +85,8 @@ export function Gate({ children }: { children: ReactNode }) {
     if (back && 'token' in back) {
       setBusy(true);
       googleSignIn(back.token)
-        .then((s) => enter(s, true))
+        // Only a brand-new account takes this device's guest progress; an existing one keeps its own.
+        .then((s) => enter(s, s.fresh === '1'))
         .catch((e: unknown) => {
           setError(`${t('gate.errors.google')} (${e instanceof CloudError ? e.code : 'network'})`);
           setBusy(false);
@@ -94,7 +95,7 @@ export function Gate({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function enter(s: SessionInfo, maybeNew: boolean) {
+  function enter({ fresh: _f, ...s }: SessionInfo, maybeNew: boolean) {
     if (maybeNew) adoptGuestProgress(s);
     saveSession(s);
     write(GUEST, null);

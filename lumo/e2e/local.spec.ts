@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { answerAndCheck, closeHatch, openChests } from './helpers';
+import { answerAndCheck, closeHatch, continueRound, ONE_TAP, openChests } from './helpers';
 
 // Browser-only build (no server). Run with LOCAL_URL pointing at a page that embeds dist-local/lumo.html.
 test.skip(!process.env.LOCAL_URL, 'needs the browser-only build');
@@ -100,4 +100,42 @@ test('pets climb the rarities: Common → Rare with enough level and coins (Myth
   await expect(page.getByTestId('pet-rarity')).toHaveText('Rare');
   await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Epic');
   await page.screenshot({ path: 'e2e/screens/local-pet-upgrade.png', fullPage: true });
+});
+
+test('Challenge: hearts show while you play, and a miss breaks one', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto(process.env.LOCAL_URL!);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('link', { name: 'Learn' }).first().click();
+  await page.getByRole('button', { name: 'Try a sample deck' }).first().click();
+  const tile = page.getByTestId('challenge-tile');
+  await expect(tile.getByRole('img', { name: '5 hearts left' })).toBeVisible();
+  await tile.click();
+  const hearts = page.getByTestId('challenge-hearts');
+  await expect(hearts).toHaveAttribute('data-hearts', '5');
+  // Answer carelessly until one is wrong.
+  for (let i = 0; i < 10 && (await hearts.getAttribute('data-hearts')) === '5'; i++) {
+    const section = page.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    const f = (await section.getAttribute('data-format'))!;
+    if (f === 'type_answer') {
+      await page.getByLabel('Your answer').fill('qqqq');
+      await page.getByRole('button', { name: 'Check' }).click();
+    } else if (ONE_TAP.includes(f)) {
+      const tiles = section.locator('.tile');
+      await tiles.nth(i % (await tiles.count())).click();
+    } else await answerAndCheck(page, f);
+    await expect(page.getByRole('status').getByRole('button', { name: /Continue|See results/ })).toBeVisible();
+    if ((await hearts.getAttribute('data-hearts')) !== '5') break;
+    if (await continueRound(page)) break;
+  }
+  await expect(hearts).toHaveAttribute('data-hearts', '4');
+  await expect(hearts).toHaveAccessibleName('4 hearts left');
+  await page.waitForTimeout(1000); // the broken heart's animation
+  await page.screenshot({ path: 'e2e/screens/local-challenge.png' });
+  // Back on the deck page, the Challenge tile shows what's left.
+  await page.getByRole('button', { name: 'Leave quiz' }).click();
+  await expect(page.getByTestId('challenge-tile').getByRole('img', { name: '4 hearts left' })).toBeVisible();
+  await page.getByTestId('challenge-tile').screenshot({ path: 'e2e/screens/local-challenge-tile.png' });
 });

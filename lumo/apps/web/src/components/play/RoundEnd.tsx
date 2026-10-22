@@ -68,6 +68,7 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
           <Lumo size={110} mood={won ? 'cheer' : 'sad'} glow={1} />
         </div>
         <h1 className="mt-2 text-3xl font-black">{title}</h1>
+        {summary.endedReason === 'out_of_hearts' && <p className="mt-1 max-w-sm text-sm font-bold text-white/80">{t('quiz.outOfHeartsBody')}</p>}
         {mode === 'speed' && (
           <p className="font-display text-gold mt-1 text-6xl font-black tabular-nums" aria-label={t('play.points', { n: summary.points ?? 0 })}>
             {points}

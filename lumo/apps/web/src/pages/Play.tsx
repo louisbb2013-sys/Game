@@ -1,8 +1,9 @@
-import { EGG_EMOJI, type Answer, type PublicQuestion, type Rarity } from '@lumo/core';
+import { EGG_EMOJI, MAX_HEARTS, type Answer, type PublicQuestion, type Rarity } from '@lumo/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { EggRing } from '../components/Egg';
+import { HeartIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { Creature3D } from '../components/Pet3D';
 import { ChoiceTiles, MatchTap, MultiTiles, OrderTap, TypeIn } from '../components/play/answers';
@@ -469,7 +470,7 @@ export function Play() {
   const reveal = phase === 'feedback' && result ? result : null;
   const locked = phase !== 'answering';
   // Moving on by itself after a right answer is for people who don't ask for reduced motion.
-  const autoNext = (mode === 'practice' || mode === 'review' || mode === 'wrong_only') && !reduced();
+  const autoNext = (mode === 'practice' || mode === 'review' || mode === 'wrong_only' || mode === 'challenge') && !reduced();
   const oneTap = q ? ONE_TAP.has(q.format) && mode !== 'exam' : false;
   const hintable = q && phase === 'answering' && mode !== 'speed' && mode !== 'exam' && (q.format === 'multiple_choice' || q.format === 'cause_effect' || (q.format === 'type_answer' && !typedHint));
   const bossSpecies = BOSSES[Math.abs([...s.deckId].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % BOSSES.length]!;
@@ -488,6 +489,7 @@ export function Play() {
         ) : (
           <Progress answered={s.answered} total={s.total} />
         )}
+        {mode === 'challenge' && <Hearts n={s.hearts} />}
         {mode !== 'exam' && mode !== 'speed' && <Combo n={s.combo} />}
         {mode === 'exam' && s.endsAt && <ExamClock endsAt={s.endsAt} sessionId={s.id} />}
         {egg && mode === 'practice' && (
@@ -767,6 +769,31 @@ function Shields({ n }: { n: number }) {
         <span key={`${i}-${i < n}`} className={`text-2xl ${i < n ? 'shield-crack' : 'opacity-25 grayscale'}`}>
           🛡️
         </span>
+      ))}
+    </div>
+  );
+}
+
+/** Challenge: your hearts; a miss breaks one, and the round ends when none are left. */
+function Hearts({ n }: { n: number }) {
+  const { t } = useTranslation();
+  const { refresh } = useAuth();
+  const before = useRef(n);
+  const [broke, setBroke] = useState<number | null>(null);
+  useEffect(() => {
+    const was = before.current;
+    before.current = n;
+    if (n >= was) return;
+    void refresh(); // the top bar and the deck page show the heart gone too
+    setBroke(n);
+    setTimeout(() => play('shield'), 150);
+    const id = setTimeout(() => setBroke(null), 900);
+    return () => clearTimeout(id);
+  }, [n, refresh]);
+  return (
+    <div className="flex shrink-0 items-center gap-0.5" role="img" aria-label={t('play.heartsLeft', { count: n })} data-testid="challenge-hearts" data-hearts={n}>
+      {Array.from({ length: MAX_HEARTS }, (_, i) => (
+        <HeartIcon key={i} size={22} className={i < n ? 'text-heart drop-shadow' : i === broke ? 'heart-break text-heart' : 'text-white/20'} />
       ))}
     </div>
   );

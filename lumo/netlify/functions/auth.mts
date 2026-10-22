@@ -11,4 +11,4 @@ export default (req: Request) => {
   return handler(req);
 };
 
-export const config = { path: ['/api/auth/signup', '/api/auth/login', '/api/auth/google'] };
+export const config = { path: ['/api/auth/signup', '/api/auth/login', '/api/auth/google', '/api/auth/delete'] };

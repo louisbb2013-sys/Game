@@ -100,6 +100,9 @@ export async function verifySession(kv: KV, env: Env, token: string | null | und
   }
 }
 
+/** Marks an account its learner deleted: its sign-ins can't save anything any more. */
+export const goneKey = (uid: string) => `a/x/${uid}`;
+
 export const bearer = (req: Request) => (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim() || null;
 
 export const json = (status: number, body: unknown) =>

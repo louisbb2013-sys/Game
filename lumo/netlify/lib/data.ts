@@ -1,5 +1,6 @@
 import type { KV } from './kv.ts';
-import { bearer, json, limiter, verifySession, type Session } from './session.ts';
+import { claimName, releaseName } from './names.ts';
+import { bearer, goneKey, json, limiter, verifySession, type Session } from './session.ts';
 
 /**
  * Shared data and live rooms for the standalone site (Netlify Edge Function at /api/data and
@@ -154,12 +155,26 @@ export function makeDataHandler(deps: DataDeps) {
     }
     if (op === 'delete') {
       if (!access.remove) return json(403, { error: 'denied' });
+      if (s[0] === 'profiles' && s.length === 2) {
+        const before = String(parse((await kv.get(key))?.value)?.username ?? '').toLowerCase();
+        if (before) await releaseName(kv, before, me.u);
+      }
       await kv.del(key);
       return json(200, { ok: true });
     }
     if (!access.write) return json(403, { error: 'denied' });
+    if (await kv.etag(goneKey(me.u))) return json(401, { error: 'account_deleted' }); // signs that device out
     const data = body.data;
     if (!data || typeof data !== 'object' || Array.isArray(data)) return json(400, { error: 'bad_request' });
+    // A Lumo name belongs to one learner: taking a new one checks nobody else has it.
+    if (s[0] === 'profiles' && s.length === 2 && typeof (data as { username?: unknown }).username === 'string') {
+      const want = String((data as { username: string }).username).trim().toLowerCase();
+      const before = String(parse((await kv.get(key))?.value)?.username ?? '').toLowerCase();
+      if (want && want !== before) {
+        if (!(await claimName(kv, want, me.u))) return json(409, { error: 'username_taken' });
+        if (before) await releaseName(kv, before, me.u);
+      }
+    }
     if (op === 'set') {
       const text = JSON.stringify(data);
       if (text.length > MAX_DOC) return json(413, { error: 'too_big' });

@@ -153,6 +153,25 @@ export async function publishProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>)
   }
 }
 
+/**
+ * Publish my profile under a new username right away. On the site, nobody else may already have the
+ * name: false when it's taken (true where names aren't checked, or there is no one to tell).
+ */
+export async function renameProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>): Promise<boolean> {
+  const t = await together();
+  if (!t?.canWrite) return true;
+  while (writing) await new Promise((r) => setTimeout(r, 50)); // let a write with the old name finish first
+  pendingProfile = null;
+  try {
+    await t.db.doc(`profiles/${t.me}`).set({ ...p, updatedAt: Date.now() });
+    return true;
+  } catch (e) {
+    if ((e as { code?: string } | null)?.code === 'username_taken') return false;
+    refused(e);
+    return true;
+  }
+}
+
 /** Everyone's public profiles, read now (not live). */
 export async function findProfiles(): Promise<PublicProfile[]> {
   const t = await together();

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { loadSession } from '../netlify/cloud';
+import { accountCode, loadSession } from '../netlify/cloud';
 import { Link } from 'react-router';
 import { GearIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
@@ -184,7 +184,16 @@ function NetlifyAccount() {
   };
   return (
     <div className="space-y-2 text-center">
-      <p className="text-xs text-muted">{s ? t(s.kind === 'g' ? 'gate.signedInGoogle' : 'gate.signedInAs', { name: s.name }) : t('local.savedHere')}</p>
+      <p className="text-xs text-muted">{s ? (s.kind === 'g' ? (s.hint ? t('gate.signedInGoogleAs', { hint: s.hint }) : t('gate.signedInGoogle')) : t('gate.signedInAs', { name: s.name })) : t('local.savedHere')}</p>
+      {s && (
+        // The same code on two devices means the same account (a different one means another sign-in).
+        <div className="text-xs text-muted">
+          <p className="font-black" data-testid="account-code">
+            {t('gate.accountCode', { code: accountCode(s.uid) })}
+          </p>
+          <p>{t('gate.accountCodeHint')}</p>
+        </div>
+      )}
       <button onClick={() => void out()} className={`w-full rounded-2xl py-3 font-extrabold ring-1 ring-line ${s ? 'text-bad' : 'text-brand'}`}>
         {s ? t('gate.signOut') : t('gate.makeAccount')}
       </button>

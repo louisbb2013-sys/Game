@@ -86,10 +86,12 @@ export function ChoiceTiles({ q, chosen, reveal, removed, onPick, locked }: { q:
   const tf = q.format === 'true_false';
   // Short options sit in a 2×2 grid (like Kahoot); long ones stack so they stay readable.
   const grid = tf || (opts.length === 4 && opts.every((o) => o.text.length <= 42));
+  // "Pick all that apply" has several right answers, listed together ("A • C").
+  const right = reveal ? (q.format === 'multiple_select' ? reveal.correctAnswer.split(' • ') : [reveal.correctAnswer]) : [];
   const stateOf = (o: Opt): TileState => {
     if (removed.includes(o.id)) return 'gone';
     if (!reveal) return chosen && chosen !== o.id ? 'dim' : 'idle';
-    if (o.text === reveal.correctAnswer) return 'right';
+    if (right.includes(o.text)) return 'right';
     if (o.id === chosen) return 'wrong';
     return 'dim';
   };

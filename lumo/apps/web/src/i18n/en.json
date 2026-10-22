@@ -169,7 +169,8 @@
     "export": "Download my data",
     "exportHint": "A file with everything Lumo stores about you.",
     "haptics": "Vibration on answers",
-    "music": "Background music in games"
+    "music": "Background music in games",
+    "deleteFailed": "Couldn't delete the account. Check your connection and try again."
   },
   "common": {
     "loading": "Loading…",
@@ -273,7 +274,7 @@
     "sessionDone": "Session complete!",
     "sessionDoneBody": "Every question was new — that’s how real understanding grows.",
     "outOfHearts": "Out of hearts",
-    "outOfHeartsBody": "No worries! Do a Review session to refill hearts — learning never stops.",
+    "outOfHeartsBody": "No worries! Play a normal round to win a heart back, or wait: one comes back every 30 minutes.",
     "accuracy": "Accuracy",
     "bestCombo": "Best combo",
     "streakDays_one": "{{count}} day streak",
@@ -282,7 +283,7 @@
     "backToDeck": "Back to deck",
     "errors": {
       "error": "Something went wrong. Try again — if it keeps happening, reload the page.",
-      "no_hearts": "No hearts left. Try a Review session to refill them.",
+      "no_hearts": "No hearts left. Play a normal round to win one back, or wait: one comes back every 30 minutes.",
       "stale_question": "This question was already answered.",
       "session_done": "This session is already finished.",
       "no_questions": "Couldn’t make questions for this deck.",
@@ -1272,7 +1273,10 @@
       "Nucleus",
       "Mitochondria",
       "Cell wall"
-    ]
+    ],
+    "signedInGoogleAs": "Signed in with Google ({{hint}})",
+    "accountCode": "Account code: {{code}}",
+    "accountCodeHint": "Same code on two devices means the same account."
   },
   "bank": {
     "writing": "Lumo is writing real test questions…",
@@ -1351,7 +1355,8 @@
       "learn": "Learn",
       "speed": "Speed run",
       "boss": "Boss battle",
-      "cards": "Flashcards"
+      "cards": "Flashcards",
+      "challenge": "Challenge"
     },
     "lightning": "Lightning! ×2 XP in 10 s",
     "again": "Again",
@@ -1401,7 +1406,9 @@
       "right": "Correct!",
       "wrong": "Wrong",
       "partly": "Partly right"
-    }
+    },
+    "heartsLeft_one": "{{count}} heart left",
+    "heartsLeft_other": "{{count}} hearts left"
   },
   "write": {
     "title": "Lumo is writing your test",
@@ -1452,7 +1459,9 @@
     "bossWins_other": "{{count}} wins",
     "cardsBody": "Flip · remember · repeat",
     "more": "New questions",
-    "moreBody": "Lumo writes different ones"
+    "moreBody": "Lumo writes different ones",
+    "challengeBody": "A miss costs a heart · finish it: +15 coins",
+    "challengeEmpty": "Out of hearts: next one in {{minutes}} min"
   },
   "cards": {
     "done": "Deck done!",
