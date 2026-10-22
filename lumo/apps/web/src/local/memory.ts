@@ -2,7 +2,7 @@ import type { Format } from '@lumo/core';
 import { api } from '../lib/api';
 
 /**
- * What Lumo knows about the learner, for Claude's prompts: what they told Lumo (their class, their
+ * What Revio knows about the learner, for Claude's prompts: what they told Revio (their class, their
  * book, what's hard, what they like) and how they like to study. Kept short; it fits the questions,
  * examples and explanations to them and is never repeated back.
  */
@@ -54,12 +54,12 @@ const FORMAT_NAMES: Partial<Record<Format, string>> = {
   matching: 'matching',
 };
 
-/** A short "about this student" paragraph for a prompt ('' when Lumo knows nothing yet). */
+/** A short "about this student" paragraph for a prompt ('' when Revio knows nothing yet). */
 export async function aboutLearner(): Promise<string> {
   const m = await loadMemory();
   if (!m) return '';
   const lines: string[] = [];
-  if (m.notes.length) lines.push(`What the student told Lumo about themselves (their class, books, level, interests):\n${m.notes.map((n) => `- ${n.text}`).join('\n').slice(0, 1500)}`);
+  if (m.notes.length) lines.push(`What the student told Revio about themselves (their class, books, level, interests):\n${m.notes.map((n) => `- ${n.text}`).join('\n').slice(0, 1500)}`);
   if (m.prefs.adapt) {
     const weak = m.noticed.weakFormats.map((f) => FORMAT_NAMES[f.format] ?? f.format.replace(/_/g, ' '));
     if (weak.length) lines.push(`They find these harder, so practise them a little more: ${weak.join(', ')}.`);
@@ -74,7 +74,7 @@ export async function aboutLearner(): Promise<string> {
   return `\nAbout this student (use it to fit the content: their level, their course and book, examples from what they like; never mention or repeat it):\n${lines.join('\n')}\n`;
 }
 
-/** How long Lumo's explanations should be for this learner. */
+/** How long Revio's explanations should be for this learner. */
 export async function explainStyle(): Promise<StudyPrefs['explain']> {
   return (await loadMemory())?.prefs.explain ?? 'normal';
 }

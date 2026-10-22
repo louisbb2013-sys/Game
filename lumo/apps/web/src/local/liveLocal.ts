@@ -190,7 +190,7 @@ class HostGame {
     void setLiveInvite(null); // the game has begun: invites close
   }
 
-  /** Invite friends: they get a "Join" pop-up wherever they are in Lumo. */
+  /** Invite friends: they get a "Join" pop-up wherever they are in Revio. */
   invite(ids: string[]) {
     for (const id of ids) this.invited.add(id);
     void setLiveInvite({ code: this.code, title: this.state.title, to: [...this.invited], at: Date.now() });

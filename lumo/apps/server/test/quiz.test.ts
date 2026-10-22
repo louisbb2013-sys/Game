@@ -89,7 +89,7 @@ describe('quiz sessions', () => {
       let res = await t.app.inject({ method: 'POST', url: `/api/sessions/${session.id}/answer`, headers: { cookie }, payload: { questionId: q.id, answer, timeMs: 4000 } });
       expect(res.statusCode, res.body).toBe(200);
       if (res.json().followUp) {
-        // Teach-back: answer Lumo's follow-up question.
+        // Teach-back: answer Revio's follow-up question.
         res = await t.app.inject({ method: 'POST', url: `/api/sessions/${session.id}/answer`, headers: { cookie }, payload: { questionId: q.id, answer: { kind: 'text', text: q.format === 'teach_back' && i >= 2 ? q.modelAnswer : '' } } });
       }
       const body = res.json();
@@ -130,7 +130,7 @@ describe('quiz sessions', () => {
     expect(ledger.rows[0].s).toBe(totalXp);
   });
 
-  it('teach-back keeps Lumo’s follow-up across a reload', async () => {
+  it('teach-back keeps Revio’s follow-up across a reload', async () => {
     const cookie = await login('teacher');
     const deckId = await sampleDeck(cookie);
     const s = (await t.app.inject({ method: 'POST', url: `/api/decks/${deckId}/sessions`, headers: { cookie }, payload: { length: 3, formats: ['teach_back'] } })).json();

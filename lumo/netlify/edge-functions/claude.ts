@@ -4,7 +4,7 @@ import { blobsKV, freshKV, type KV } from '../lib/kv.ts';
 import { bearer, json, limiter, verifySession } from '../lib/session.ts';
 
 /**
- * Lumo's Claude endpoint for the standalone site (Netlify Edge Function at /api/claude).
+ * Revio's Claude endpoint for the standalone site (Netlify Edge Function at /api/claude).
  *
  * Only learners signed in to the site can use it. Claude is reached either with the site's own
  * Anthropic key (ANTHROPIC_API_KEY set by the owner), or, with nothing set up, through Netlify's AI
@@ -20,7 +20,7 @@ import { bearer, json, limiter, verifySession } from '../lib/session.ts';
 
 const MEDIA = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const MAX_IMAGE_B64 = 6_000_000; // ~4.5 MB per photo
-const SYSTEM = 'You are the helper inside Lumo, a study app for school students (about 11-18 years old). Follow the instructions in the message exactly and reply in the format it asks for. Keep everything accurate, age-appropriate and focused on learning.';
+const SYSTEM = 'You are the helper inside Revio, a study app for school students (about 11-18 years old). Follow the instructions in the message exactly and reply in the format it asks for. Keep everything accurate, age-appropriate and focused on learning.';
 /** US dollars per million tokens (input, output), for keeping the monthly gateway budget. */
 const PRICES: Record<string, [number, number]> = {
   'claude-opus-5-5': [4, 20],

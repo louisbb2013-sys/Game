@@ -82,7 +82,7 @@ function clean(raw: unknown): ConceptInput[] {
   });
 }
 
-const PROMPT = (language: Locale, extra: string) => `You are Lumo, a study helper for school students. The attached files are a student's study material: photos of their notes or textbook pages, or a PDF (notes, slides, a worksheet).
+const PROMPT = (language: Locale, extra: string) => `You are Revio, a study helper for school students. The attached files are a student's study material: photos of their notes or textbook pages, or a PDF (notes, slides, a worksheet).
 Read them and pull out the important ideas a student must understand for a test. Skip page numbers, headers, admin info and decoration.
 Write everything in ${language === 'fr' ? 'French' : 'English'}.
 ${extra ? `The student says: """${extra.slice(0, 2000)}"""\n` : ''}
@@ -110,7 +110,7 @@ export async function readPhotos(files: File[], language: Locale, extra: string,
   return { title: str(raw.title, 120), subject: str(raw.subject, 80), summary: str(raw.summary, 1000), language, concepts };
 }
 
-const TOPIC_PROMPT = (topic: string, language: Locale, research: boolean) => `You are Lumo, a study helper for school students. A student typed what they want to study, with no notes:
+const TOPIC_PROMPT = (topic: string, language: Locale, research: boolean) => `You are Revio, a study helper for school students. A student typed what they want to study, with no notes:
 """${topic.slice(0, 500)}"""
 It may name a school level or program (for example "secondaire 2" is Québec grade 8, age 13-14; "Year 9", "5e", "Grade 10"). Match that level and that school system's curriculum.
 ${research ? 'First search the web for reliable sources on this topic at that level (curriculum pages, school or teacher sites, encyclopedias), then build the deck from what you found.' : 'Build the deck from what a teacher would expect at that level.'}
@@ -125,7 +125,7 @@ Reply with only one JSON object, no other text:
    "steps"?: string[] (only for processes, in order), "causeEffects"?: [{"cause": string, "effect": string}]}]}
 Aim for 12-20 concepts. If the request is not a school topic, reply {"title": "", "concepts": []}.`;
 
-const NOTES_PROMPT = (notes: string, language: Locale) => `You are Lumo, a study helper for school students. Below are a student's notes (typed or pasted).
+const NOTES_PROMPT = (notes: string, language: Locale) => `You are Revio, a study helper for school students. Below are a student's notes (typed or pasted).
 Pull out the important ideas a student must understand for a test, in clear words. Fix obvious typos; skip page numbers, dates of the class and admin info.
 Write everything in ${language === 'fr' ? 'French' : 'English'}.
 Notes:

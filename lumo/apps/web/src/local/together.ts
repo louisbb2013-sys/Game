@@ -18,7 +18,7 @@ type Any = any;
 
 /**
  * On the public website anyone can sign up, so learners only ever see the people they added as
- * friends (by typing their exact Lumo name): no list of strangers, no strangers' decks or games.
+ * friends (by typing their exact Revio name): no list of strangers, no strangers' decks or games.
  * Inside a Claude page, everyone it was shared with is already a known group.
  */
 export const FRIENDS_ONLY = import.meta.env.VITE_NETLIFY === '1';
@@ -119,7 +119,7 @@ export function useNames(ids: string[]) {
 
 export interface PublicProfile {
   id: string;
-  /** The Lumo username friends type to add each other. */
+  /** The Revio username friends type to add each other. */
   username: string;
   level: number;
   xp: number;
@@ -205,7 +205,7 @@ export function useProfiles() {
 
 let onlineSet = false;
 let onlineName = '';
-/** Show up as online to everyone with this Lumo open (presence in the page's lobby room). */
+/** Show up as online to everyone with this Revio open (presence in the page's lobby room). */
 export async function goOnline(username: string) {
   const t = await together();
   if (!t?.room) return;
@@ -216,7 +216,7 @@ export async function goOnline(username: string) {
 
 // ------------------------------------------------------------------ Live invites
 
-/** A Live game I'm hosting and the friends I invited to it, shown to them wherever they are in Lumo. */
+/** A Live game I'm hosting and the friends I invited to it, shown to them wherever they are in Revio. */
 export interface LiveInvite {
   code: string;
   title: string;
@@ -225,7 +225,7 @@ export interface LiveInvite {
 }
 
 /**
- * Invites travel in the host's presence in the lobby room, which every open Lumo already follows
+ * Invites travel in the host's presence in the lobby room, which every open Revio already follows
  * (for "who's online"), so they cost nothing extra and vanish when the host leaves.
  */
 export async function setLiveInvite(invite: LiveInvite | null) {
@@ -263,7 +263,7 @@ export function useLiveInvites() {
   return FRIENDS_ONLY ? list.filter((i) => (friends ?? []).includes(i.from)) : list;
 }
 
-/** Ids of people who have this Lumo open right now (not me). */
+/** Ids of people who have this Revio open right now (not me). */
 export function useOnlineNow() {
   const [ids, setIds] = useState<string[]>([]);
   useEffect(() => {
@@ -376,7 +376,7 @@ export interface PublicDeck {
   concepts: Concept[];
   /** The deck's test questions, so a friend's copy plays right away. */
   bank?: Question[];
-  /** Website: 'friends' (only people I added) or 'public' (anyone on Lumo, and a link). */
+  /** Website: 'friends' (only people I added) or 'public' (anyone on Revio, and a link). */
   visibility?: 'friends' | 'public';
   updatedAt: number;
 }

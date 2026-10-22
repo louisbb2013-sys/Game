@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { play } from '../lib/sound';
 import { useLiveInvites, useNames } from '../local/together';
 
-/** A friend invited me to a Live game: a pop-up wherever I am in Lumo, one tap to join (no code). */
+/** A friend invited me to a Live game: a pop-up wherever I am in Revio, one tap to join (no code). */
 export function LiveInvitePopup() {
   const { t } = useTranslation();
   const navigate = useNavigate();

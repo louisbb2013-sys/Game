@@ -1,7 +1,7 @@
 import type { PetSpeciesId, Rarity } from '@lumo/core';
 
 /**
- * How each Lumo pet looks in 3D: one of the five furry body shapes from the Minitaure engine
+ * How each Revio pet looks in 3D: one of the five furry body shapes from the Minitaure engine
  * (calf with horns, fox, otter, owl, bunny) in its own colours. Rarer pets glow and sparkle more.
  */
 type Forme = 'minotaure' | 'gribou' | 'bloop' | 'noki' | 'pipo';

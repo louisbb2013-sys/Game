@@ -647,7 +647,7 @@ let graine = 1;
 export class Creature {
   constructor(id, L, o = {}) {
     const q = { couches: 28, poils: 14000, fourrure: 0.075, segW: 64, segH: 40, ...o };
-    // Lumo: any colours (o.palette) on any of the five body shapes (o.forme).
+    // Revio: any colours (o.palette) on any of the five body shapes (o.forme).
     const P = o.palette || PALETTE[id];
     const forme = o.forme || id;
     this.id = id;
@@ -709,7 +709,7 @@ export class Creature {
     this.prochainSaut = 6 + Math.random() * 6;
   }
 
-  /* Lumo : un visage (yeux brillants qui clignent, joues, bouche ou bec ; sourcils froncés pour le boss). */
+  /* Revio : un visage (yeux brillants qui clignent, joues, bouche ou bec ; sourcils froncés pour le boss). */
   visage(forme, humeur, L) {
     const h = this.tete, glow = this.glow;
     const colere = humeur === "colere";

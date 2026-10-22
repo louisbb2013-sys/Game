@@ -10,7 +10,7 @@ const schema = z.object({
   GOOGLE_CLIENT_ID: z.string().default(''),
   GOOGLE_CLIENT_SECRET: z.string().default(''),
   SMTP_URL: z.string().default(''),
-  MAIL_FROM: z.string().default('Lumo <hello@example.com>'),
+  MAIL_FROM: z.string().default('Revio <hello@example.com>'),
   RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(300),
   ANTHROPIC_API_KEY: z.string().default(''),
   AI_MODEL: z.string().default('claude-opus-5-5'),

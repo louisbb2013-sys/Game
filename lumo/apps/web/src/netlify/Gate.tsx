@@ -59,7 +59,7 @@ export function signOut() {
 }
 
 /**
- * Standalone site: sign in (a Lumo name + password, or Google when the site has it on) so progress,
+ * Standalone site: sign in (a Revio name + password, or Google when the site has it on) so progress,
  * friends and Live games follow you to any device, or try it first without an account.
  */
 export function Gate({ children }: { children: ReactNode }) {
@@ -143,7 +143,7 @@ export function Gate({ children }: { children: ReactNode }) {
       </div>
       <section className="relative flex flex-col justify-between overflow-hidden px-6 pt-8 pb-6 sm:px-10 lg:px-16 lg:py-14">
         <span className="font-display text-3xl font-black italic">
-          lumo<span className="text-gold">.</span>
+          revio<span className="text-gold">.</span>
         </span>
         <div className="my-8 max-w-xl lg:my-6">
           <h1 className="font-display text-4xl leading-[1.05] font-black sm:text-5xl lg:text-6xl">{t('gate.headline')}</h1>

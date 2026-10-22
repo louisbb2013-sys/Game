@@ -115,7 +115,7 @@ test('parents & teachers link, reminders, data export', async ({ page, browser }
   await page.screenshot({ path: 'e2e/screens/settings-m6.png', fullPage: true });
 });
 
-test('audio mode: Lumo asks, you rate yourself', async ({ page }) => {
+test('audio mode: Revio asks, you rate yourself', async ({ page }) => {
   test.setTimeout(90_000);
   const u = await signIn(page);
   await page.goto(`/decks/${u.deckId}`);

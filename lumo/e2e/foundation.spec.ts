@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('sign in, see home, change settings, language and username', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/signin/);
-  await expect(page.getByRole('heading', { name: /Welcome to Lumo|Bienvenue/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Welcome to Revio|Bienvenue/ })).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/signin.png' });
 
   // Each run gets its own account so parallel workers never share state.

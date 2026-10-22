@@ -200,7 +200,7 @@ test('decks made on two devices are both kept', async ({ browser }) => {
   });
   await open(a, 'u_d');
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('link', { name: /Make a deck with Revio/ }).click();
   await a.getByRole('tab', { name: 'Paste notes' }).click();
   await a.getByRole('button', { name: 'Use an example' }).click();
   await a.getByRole('button', { name: /Make my deck/ }).click();
@@ -308,7 +308,7 @@ test('website: a deck from just a topic (Claude researches it)', async ({ browse
   await a.evaluate(() => localStorage.clear());
   await a.goto(`${process.env.MULTI_URL}?uid=u_h&sample=ok`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('link', { name: /Make a deck with Revio/ }).click();
   await a.getByRole('tab', { name: 'Topic' }).click();
   await a.getByLabel('Just type a topic').fill('récit psychologique français secondaire 2');
   await a.getByLabel('Just type a topic').press('Enter');
@@ -316,7 +316,7 @@ test('website: a deck from just a topic (Claude researches it)', async ({ browse
   await a.getByRole('button', { name: /^Play\b/ }).click();
   // Claude may still be writing: the writing screen lets you start as soon as a few are ready.
   const section = a.locator('section[data-format]');
-  const writing = a.getByRole('dialog', { name: 'Lumo is writing your test' });
+  const writing = a.getByRole('dialog', { name: 'Revio is writing your test' });
   await expect(section.or(writing).first()).toBeVisible({ timeout: 10_000 });
   if (await writing.count()) await writing.getByRole('button', { name: /Play now/ }).click({ timeout: 20_000 });
   await expect(section).toBeVisible();
@@ -333,7 +333,7 @@ test('website: Claude writes real test questions for a new deck, line by line, a
   });
   await a.goto(url);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('link', { name: /Make a deck with Revio/ }).click();
   await a.getByRole('tab', { name: 'Topic' }).click();
   await a.getByLabel('Just type a topic').fill('récit psychologique secondaire 2');
   await a.getByLabel('Just type a topic').press('Enter');
@@ -400,18 +400,18 @@ test('website: an older deck without questions gets them written the first time 
   });
   await a.goto(`${process.env.MULTI_URL}?uid=u_old`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('link', { name: /Make a deck with Revio/ }).click();
   await a.getByRole('tab', { name: 'Paste notes' }).click();
   await a.getByRole('button', { name: 'Use an example' }).click();
   await a.getByRole('button', { name: /Make my deck/ }).click();
   await expect(a.getByRole('heading', { name: 'The Water Cycle', level: 1 })).toBeVisible();
-  await expect(a.getByText(/Open Lumo inside Claude/)).toBeVisible();
+  await expect(a.getByText(/Open Revio inside Claude/)).toBeVisible();
   // Back inside Claude (slow to answer, not allowed yet): Play opens the writing screen.
   await a.goto(`${process.env.MULTI_URL}?uid=u_old&sample=slow`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByText('The Water Cycle').click();
   await a.getByRole('button', { name: /^Play\b/ }).click();
-  const writing = a.getByRole('dialog', { name: 'Lumo is writing your test' });
+  const writing = a.getByRole('dialog', { name: 'Revio is writing your test' });
   await expect(writing).toBeVisible();
   await expect(writing.getByRole('button', { name: /Almost there/ })).toBeDisabled();
   await writing.getByRole('button', { name: /Play now/ }).click({ timeout: 20_000 });
@@ -428,7 +428,7 @@ test('website: saying no to Claude explains how to allow it, and basic questions
   });
   await a.goto(`${process.env.MULTI_URL}?uid=u_no`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await a.getByRole('link', { name: /Make a deck with Revio/ }).click();
   await a.getByRole('tab', { name: 'Paste notes' }).click();
   await a.getByRole('button', { name: 'Use an example' }).click();
   await a.getByRole('button', { name: /Make my deck/ }).click();
@@ -437,7 +437,7 @@ test('website: saying no to Claude explains how to allow it, and basic questions
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
   await a.getByText('The Water Cycle').click();
   await a.getByRole('button', { name: /^Play\b/ }).click();
-  const writing = a.getByRole('dialog', { name: 'Lumo is writing your test' });
+  const writing = a.getByRole('dialog', { name: 'Revio is writing your test' });
   await expect(writing.getByText(/needs your OK to use Claude/)).toBeVisible({ timeout: 10_000 });
   await expect(writing.getByRole('button', { name: 'Allow Claude' })).toBeVisible();
   await writing.getByRole('button', { name: /basic questions/ }).click();
@@ -482,10 +482,10 @@ test('website: a friend who can only view the page in Claude is told why friends
   // Adding someone explains it too, instead of failing quietly.
   await a.getByLabel("Type a friend's username, press Enter").fill('nobody_here');
   await a.getByLabel("Type a friend's username, press Enter").press('Enter');
-  await expect(a.getByRole('status')).toContainText('use the Lumo website together', { timeout: 10_000 });
+  await expect(a.getByRole('status')).toContainText('use the Revio website together', { timeout: 10_000 });
 });
 
-test("website: Lumo's memory: tell Lumo about your class book, and it uses it to make the deck and write the test", async ({ browser }) => {
+test("website: Revio's memory: tell Revio about your class book, and it uses it to make the deck and write the test", async ({ browser }) => {
   test.setTimeout(90_000);
   const ctx = await browser.newContext();
   const a = await ctx.newPage();
@@ -493,7 +493,7 @@ test("website: Lumo's memory: tell Lumo about your class book, and it uses it to
   await a.evaluate(() => localStorage.clear());
   await a.goto(`${process.env.MULTI_URL}?uid=u_mem&sample=ok`);
   await a.getByTestId('memory-card').click();
-  await expect(a.getByRole('heading', { name: "Lumo's memory", level: 1 })).toBeVisible();
+  await expect(a.getByRole('heading', { name: "Revio's memory", level: 1 })).toBeVisible();
   await a.getByRole('button', { name: /My class book/ }).click();
   await expect(a.locator('#memory-text')).toHaveValue('In French class we use the book ');
   await a.locator('#memory-text').pressSequentially('« Zénith 2 », chapter 4');
@@ -502,10 +502,10 @@ test("website: Lumo's memory: tell Lumo about your class book, and it uses it to
   await a.getByRole('radio', { name: 'Short' }).click();
   await expect(a.getByRole('radio', { name: 'Short' })).toHaveAttribute('aria-checked', 'true');
 
-  // Making a deck: Lumo says it remembers, and the note goes into what Claude is asked.
+  // Making a deck: Revio says it remembers, and the note goes into what Claude is asked.
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
-  await a.getByRole('link', { name: /Make a deck with Lumo/ }).click();
-  await expect(a.getByTestId('memory-link')).toContainText('Lumo remembers 1 thing about you');
+  await a.getByRole('link', { name: /Make a deck with Revio/ }).click();
+  await expect(a.getByTestId('memory-link')).toContainText('Revio remembers 1 thing about you');
   await a.getByRole('tab', { name: 'Topic' }).click();
   await a.getByLabel('Just type a topic').fill('récit psychologique secondaire 2');
   await a.getByLabel('Just type a topic').press('Enter');
@@ -519,7 +519,7 @@ test("website: Lumo's memory: tell Lumo about your class book, and it uses it to
   await a.goto(`${process.env.MULTI_URL}?uid=u_mem&sample=ok`);
   await a.getByTestId('memory-card').click();
   await a.getByRole('button', { name: /Forget: In French class/ }).click();
-  await expect(a.getByText('Nothing yet. Tell Lumo about your class')).toBeVisible();
+  await expect(a.getByText('Nothing yet. Tell Revio about your class')).toBeVisible();
   await ctx.close();
 });
 

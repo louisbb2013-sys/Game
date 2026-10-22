@@ -15,7 +15,7 @@
     "shop": "Shop"
   },
   "signin": {
-    "title": "Welcome to Lumo",
+    "title": "Welcome to Revio",
     "subtitle": "Turn your notes into quizzes that help you truly understand.",
     "google": "Continue with Google",
     "or": "or",
@@ -37,7 +37,7 @@
       "state": "Sign-in expired. Try again.",
       "network": "Something went wrong. Check your connection and try again."
     },
-    "guest": "Try Lumo now — no account needed",
+    "guest": "Try Revio now — no account needed",
     "guestHint": "No email, no name. Come back on this device to keep your progress."
   },
   "home": {
@@ -45,10 +45,10 @@
     "greeting_afternoon": "Hi {{name}}!",
     "greeting_evening": "Good evening, {{name}}!",
     "streakNone": "Study today to light your first streak flame.",
-    "streakSafe": "Your streak is safe today. Lumo is glowing!",
+    "streakSafe": "Your streak is safe today. Revio is glowing!",
     "streakAtRisk": "Study today to keep your {{count}}-day streak!",
     "streakBroken": "Your streak went out. Let's light a new one!",
-    "createTitle": "Make a deck with Lumo",
+    "createTitle": "Make a deck with Revio",
     "createBody": "Send photos of your notes and tell me about your exam.",
     "reviewTitle": "Study a deck",
     "reviewBody": "Practice, review and fix mistakes — new questions every time.",
@@ -72,7 +72,7 @@
     "levelProgress": "Progress to the next level",
     "jumpIn": "Jump back in",
     "createAsk": "What do you want to study?",
-    "createHint": "Type a topic, or bring your notes, a PDF or photos of your textbook. Lumo writes the questions.",
+    "createHint": "Type a topic, or bring your notes, a PDF or photos of your textbook. Revio writes the questions.",
     "createPlaceholder": "e.g. The French Revolution, photosynthesis, Spanish verbs…",
     "generate": "Generate",
     "fromFile": "Upload a PDF or photos",
@@ -83,8 +83,8 @@
     "liveTitle": "Play with friends",
     "liveBody": "Start a Live game and race your class on the same questions.",
     "friendsTitle": "Friends",
-    "friendsBody": "Add friends by their Lumo name and see who's studying.",
-    "guestTitle": "You're trying Lumo without an account.",
+    "friendsBody": "Add friends by their Revio name and see who's studying.",
+    "guestTitle": "You're trying Revio without an account.",
     "guestBody": "Your progress stays on this device. Make a free account to use AI, play with friends and keep everything on any device.",
     "takePhoto": "Take a photo"
   },
@@ -167,7 +167,7 @@
     "shareRevoke": "Turn off",
     "tooManyLinks": "You can have up to 5 links. Turn one off first.",
     "export": "Download my data",
-    "exportHint": "A file with everything Lumo stores about you.",
+    "exportHint": "A file with everything Revio stores about you.",
     "haptics": "Vibration on answers",
     "music": "Background music in games",
     "deleteFailed": "Couldn't delete the account. Check your connection and try again."
@@ -181,7 +181,7 @@
   "learn": {
     "title": "My decks",
     "empty": "No decks yet",
-    "emptyBody": "Type a topic, paste your notes or snap a photo of them: Lumo turns it into a game with real test questions. Or try a sample deck.",
+    "emptyBody": "Type a topic, paste your notes or snap a photo of them: Revio turns it into a game with real test questions. Or try a sample deck.",
     "trySample": "Try a sample deck",
     "concepts_one": "{{count}} concept",
     "concepts_other": "{{count}} concepts",
@@ -230,12 +230,12 @@
     "translateFailed": "Couldn't translate it this time. Try again."
   },
   "quiz": {
-    "preparing": "Lumo is preparing your questions…",
+    "preparing": "Revio is preparing your questions…",
     "loadError": "Couldn’t load this quiz.",
     "exit": "Leave quiz",
     "check": "Check",
     "checking": "Checking…",
-    "reply": "Reply to Lumo",
+    "reply": "Reply to Revio",
     "continue": "Continue",
     "finish": "See results",
     "correct": "Nice! That’s right.",
@@ -252,7 +252,7 @@
     "selectAll": "Select all that apply.",
     "yourAnswer": "Your answer",
     "typeHere": "Type your answer",
-    "teachPlaceholder": "Explain it to Lumo like a friend…",
+    "teachPlaceholder": "Explain it to Revio like a friend…",
     "explainPlaceholder": "Write it in your own words…",
     "ownWords": "Your own words count — no need to match the textbook.",
     "blank": "Blank {{n}}",
@@ -270,7 +270,7 @@
     "correction": "Correction",
     "showWork": "Show your work (optional)",
     "notANumber": "Enter a number",
-    "followUpLabel": "Your reply to Lumo",
+    "followUpLabel": "Your reply to Revio",
     "sessionDone": "Session complete!",
     "sessionDoneBody": "Every question was new — that’s how real understanding grows.",
     "outOfHearts": "Out of hearts",
@@ -288,7 +288,7 @@
       "session_done": "This session is already finished.",
       "no_questions": "Couldn’t make questions for this deck.",
       "invalid_answer": "That answer couldn’t be read. Try again.",
-      "network": "Can’t reach Lumo. Check your connection."
+      "network": "Can’t reach Revio. Check your connection."
     },
     "placeHere": "Put it here"
   },
@@ -308,7 +308,7 @@
     "apply": "Apply it",
     "calculation": "Calculate",
     "compare": "Compare",
-    "teach_back": "Teach Lumo"
+    "teach_back": "Teach Revio"
   },
   "bloom": {
     "remember": "Recall",
@@ -323,20 +323,20 @@
     "mastered": "Mastered"
   },
   "chat": {
-    "title": "Make a deck with Lumo",
+    "title": "Make a deck with Revio",
     "subtitle": "Photos, PDFs or text → the important ideas → a deck and quiz.",
     "start": "New deck from my notes",
     "untitled": "New conversation",
     "deckReady": "deck ready",
     "inProgress": "in progress",
     "notFound": "This conversation doesn’t exist.",
-    "placeholder": "Message Lumo… e.g. “science test Friday on cells”",
+    "placeholder": "Message Revio… e.g. “science test Friday on cells”",
     "send": "Send",
     "attach": "Attach photos, PDF or text",
     "takePhoto": "Take a photo",
     "removeFile": "Remove file",
-    "reading": "Lumo is reading your notes…",
-    "thinking": "Lumo is thinking…",
+    "reading": "Revio is reading your notes…",
+    "thinking": "Revio is thinking…",
     "understood": "What I understood",
     "deckTitle": "Deck title",
     "ignored": "{{n}} things I left out (not exam material)",
@@ -372,13 +372,13 @@
       "empty_message": "Write something or attach your notes.",
       "already_built": "This deck is already built.",
       "invalid_draft": "Something in the deck isn’t valid — check the titles and meanings.",
-      "network": "Can’t reach Lumo. Check your connection."
+      "network": "Can’t reach Revio. Check your connection."
     }
   },
   "sandbox": {
     "title": "Study Sandbox",
     "subtitle": "Study any way you like — every format makes you think.",
-    "needDeck": "Make a deck first (send Lumo your notes), then pick any format here.",
+    "needDeck": "Make a deck first (send Revio your notes), then pick any format here.",
     "fromDeck": "From deck",
     "askLabel": "Ask for any format",
     "askPlaceholder": "“Make me a crossword about osmosis”",
@@ -408,7 +408,7 @@
     },
     "desc": {
       "video": "Narrated animation that pauses for you to predict.",
-      "podcast": "Lumo & Nova discuss it — with quick checks.",
+      "podcast": "Revio & Nova discuss it — with quick checks.",
       "story": "Solve a mystery by using the ideas.",
       "crossword": "Clues are meanings, answers are terms.",
       "word_search": "Find the hidden terms from their clues.",
@@ -427,7 +427,7 @@
     "notForDeck": "Not possible with this deck’s notes.",
     "recent": "Recently made",
     "notFound": "This activity doesn’t exist.",
-    "making": "Lumo is making it…",
+    "making": "Revio is making it…",
     "right": "Yes! Exactly.",
     "notQuite": "Not quite!",
     "finish": "Finish",
@@ -496,7 +496,7 @@
       "unknown_format": "I didn’t catch the format — try “video”, “crossword”, “escape room”…",
       "format_not_possible": "That format doesn’t work with these notes — try another one!",
       "no_deck": "Make a deck first.",
-      "network": "Can’t reach Lumo. Check your connection."
+      "network": "Can’t reach Revio. Check your connection."
     }
   },
   "quests": {
@@ -631,7 +631,7 @@
       "cannot_repair": "This streak can’t be repaired anymore.",
       "not_done": "Finish the quest first!",
       "already_claimed": "Already claimed.",
-      "network": "Can’t reach Lumo. Check your connection."
+      "network": "Can’t reach Revio. Check your connection."
     }
   },
   "pets": {
@@ -692,7 +692,7 @@
       "bad_pet_name": "Please choose a kind name (1–16 letters).",
       "already_has_pet": "You already adopted a pet.",
       "not_enough_items": "No snacks left — get some in the shop.",
-      "network": "Can’t reach Lumo. Check your connection.",
+      "network": "Can’t reach Revio. Check your connection.",
       "max_tier": "This pet is already Mythical.",
       "level_too_low": "Your pet needs a higher level first.",
       "not_enough_coins": "Not enough coins yet."
@@ -846,9 +846,9 @@
       "deck_too_small": "This deck needs a few more ideas for a game.",
       "invalid": "Something's not right. Try again.",
       "server_error": "Something went wrong. Try again.",
-      "network": "Can't reach Lumo. Check your connection.",
+      "network": "Can't reach Revio. Check your connection.",
       "slow_down": "Slow down a little and try again in a few seconds.",
-      "read_only": "Claude doesn’t let you save on this page, so you can’t host here. Join a friend’s game, or use the Lumo website.",
+      "read_only": "Claude doesn’t let you save on this page, so you can’t host here. Join a friend’s game, or use the Revio website.",
       "already_bet": "You already bet on this question.",
       "bad_bet": "That bet isn't possible."
     },
@@ -859,7 +859,7 @@
     "noFriendsToInvite": "Add friends to invite them here.",
     "invite": "Invite",
     "invited": "Invited",
-    "inviteHint": "They get a pop-up anywhere in Lumo and join with one tap. No code needed.",
+    "inviteHint": "They get a pop-up anywhere in Revio and join with one tap. No code needed.",
     "invitedBy": "{{name}} invites you to play Live!",
     "joinNow": "Join",
     "notNow": "Not now",
@@ -909,7 +909,7 @@
       "cannot_add_self": "That's you! 😄",
       "request_not_found": "That request is gone.",
       "invalid": "Type a username.",
-      "network": "Can't reach Lumo. Check your connection."
+      "network": "Can't reach Revio. Check your connection."
     }
   },
   "groups": {
@@ -947,7 +947,7 @@
       "deck_not_found": "You can only share your own decks.",
       "no_group_decks": "Share a deck with the group first.",
       "invalid": "Check the code and try again.",
-      "network": "Can't reach Lumo. Check your connection."
+      "network": "Can't reach Revio. Check your connection."
     }
   },
   "exam": {
@@ -985,7 +985,7 @@
   },
   "plan": {
     "title": "Study plan",
-    "intro": "Tell Lumo when your exam is. You'll get a day-by-day plan: new ideas first, smart reviews, and a mock exam two days before.",
+    "intro": "Tell Revio when your exam is. You'll get a day-by-day plan: new ideas first, smart reviews, and a mock exam two days before.",
     "examDate": "Exam date",
     "minutes": "Time per day",
     "minutesValue": "{{m}} min",
@@ -1015,7 +1015,7 @@
     "errors": {
       "bad_date": "Pick a valid date.",
       "date_in_past": "That date has already passed.",
-      "network": "Can't reach Lumo. Check your connection."
+      "network": "Can't reach Revio. Check your connection."
     }
   },
   "offline": {
@@ -1044,16 +1044,16 @@
   "audio": {
     "title": "Audio mode",
     "cantLoad": "This deck isn't available. Save it for offline first.",
-    "noVoice": "This browser has no voice: Lumo will show the words instead.",
+    "noVoice": "This browser has no voice: Revio will show the words instead.",
     "modeLabel": "How do you want to study?",
     "mode": {
       "quiz": "Quiz me",
-      "quizBody": "Lumo asks, you answer out loud.",
+      "quizBody": "Revio asks, you answer out loud.",
       "listen": "Just listen",
       "listenBody": "Like a podcast of your deck."
     },
     "mic": "Answer with my voice",
-    "micHint": "Lumo listens for your answer and for “yes” or “no”.",
+    "micHint": "Revio listens for your answer and for “yes” or “no”.",
     "speed": "Speaking speed",
     "start": "Start ({{count}} ideas)",
     "again": "Play again",
@@ -1084,7 +1084,7 @@
   "local": {
     "savedHere": "Your decks and progress are saved in this browser only.",
     "newDeckTitle": "New deck from your notes",
-    "newDeckBody": "Paste your notes and Lumo turns them into a deck and quizzes.",
+    "newDeckBody": "Paste your notes and Revio turns them into a deck and quizzes.",
     "deckName": "Deck name",
     "deckNamePlaceholder": "e.g. The water cycle",
     "language": "Language",
@@ -1093,50 +1093,50 @@
     "useExample": "Use an example",
     "notesTip": "Tip: write one idea per line, like “Evaporation is when water turns into vapour.” or “Runoff - water that flows into rivers”. Numbered lists become step-by-step processes, and “For example…” lines become examples.",
     "makeDeck": "Make my deck",
-    "nothingFound": "Lumo couldn't find ideas in these notes. Try one definition per line, like “Osmosis is …”.",
+    "nothingFound": "Revio couldn't find ideas in these notes. Try one definition per line, like “Osmosis is …”.",
     "exampleEn": "# The Water Cycle\n\nEvaporation is when water turns into vapour because of the sun's heat.\nCondensation is the process where water vapour cools and turns into droplets, forming clouds.\nPrecipitation: water falling from clouds as rain, snow or hail.\nFor example, morning dew on grass is condensation.\nIf the temperature drops, more water vapour condenses.\n\nStages of the water cycle:\n1. Water evaporates from oceans\n2. Vapour rises and cools\n3. Clouds form by condensation\n4. Rain falls back to the ground\n\nTranspiration - water released by plants through their leaves\nRunoff - water that flows over the ground into rivers",
     "exampleFr": "# Le cycle de l’eau\n\nL’évaporation est le passage de l’eau à l’état de vapeur grâce à la chaleur du soleil.\nLa condensation désigne le refroidissement de la vapeur d’eau qui forme des gouttelettes et des nuages.\nPrécipitations : eau qui tombe des nuages sous forme de pluie, neige ou grêle.\nPar exemple, la rosée du matin sur l’herbe est de la condensation.\n\nÉtapes du cycle de l’eau :\n1. L’eau des océans s’évapore\n2. La vapeur monte et se refroidit\n3. Les nuages se forment par condensation\n4. La pluie retombe au sol\n\nTranspiration - eau rejetée par les feuilles des plantes\nRuissellement - eau qui coule sur le sol jusqu’aux rivières",
-    "createBody": "Type a topic, paste your notes or send photos of them: Lumo turns it into a game with real test questions.",
+    "createBody": "Type a topic, paste your notes or send photos of them: Revio turns it into a game with real test questions.",
     "photosTitle": "From photos of your notes",
-    "photosBody": "Take or choose photos of your notes or textbook. Lumo reads them and builds the deck.",
+    "photosBody": "Take or choose photos of your notes or textbook. Revio reads them and builds the deck.",
     "choosePhotos": "Choose photos",
     "photosChosen_one": "{{count}} photo chosen — tap to change",
     "photosChosen_other": "{{count}} photos chosen — tap to change",
     "photoAlt": "Photo {{n}}",
     "readPhotos": "Read my photos",
-    "reading": "Lumo is reading your notes… this can take up to a minute.",
+    "reading": "Revio is reading your notes… this can take up to a minute.",
     "stop": "Stop",
     "photosPrivacy": "Your photos are sent to Claude only when you tap “Read my photos”. It uses your own Claude account, and Claude asks you first.",
     "orNotes": "Or paste your notes",
     "photoErrors": {
-      "nothing_found": "Lumo couldn't find study notes in these photos. Try clearer, closer photos.",
+      "nothing_found": "Revio couldn't find study notes in these photos. Try clearer, closer photos.",
       "not_granted": "Photo reading needs your OK to use Claude. You can allow it from the page's permissions.",
       "sampling_disabled": "Claude isn't available on this account, so photos can't be read here.",
       "rate_limited": "Too many requests right now. Wait a minute and try again.",
       "image_rejected": "One of the photos couldn't be used. Try JPG or PNG photos.",
       "images_unavailable": "Photo reading isn't available here.",
       "unavailable": "Photo reading isn't available here.",
-      "invalid_json": "Lumo's answer came back incomplete. Try again with fewer photos.",
-      "refused": "Lumo couldn't read these photos. Try different ones.",
+      "invalid_json": "Revio's answer came back incomplete. Try again with fewer photos.",
+      "refused": "Revio couldn't read these photos. Try different ones.",
       "session_expired": "Please sign in to Claude again.",
       "upstream_error": "Something went wrong while reading. Try again."
     },
     "topicTitle": "Just type a topic",
-    "topicBody": "No notes? Type what you're studying and your grade — Lumo researches it and makes the quiz.",
+    "topicBody": "No notes? Type what you're studying and your grade — Revio researches it and makes the quiz.",
     "topicPlaceholder": "e.g. Récit psychologique, français secondaire 2",
     "makeFromTopic": "Research and make my quiz",
-    "researching": "Lumo is researching your topic… (about 20–40 seconds)",
+    "researching": "Revio is researching your topic… (about 20–40 seconds)",
     "topicErrors": {
-      "nothing_found": "Lumo couldn't build a study deck from that. Try naming the subject and your grade.",
-      "unavailable": "Researching a topic needs Lumo's AI, which isn't available here.",
-      "not_granted": "Allow Lumo to use Claude to research topics.",
+      "nothing_found": "Revio couldn't build a study deck from that. Try naming the subject and your grade.",
+      "unavailable": "Researching a topic needs Revio's AI, which isn't available here.",
+      "not_granted": "Allow Revio to use Claude to research topics.",
       "rate_limited": "Too many requests right now. Try again in a minute."
     },
-    "readingNotes": "Lumo is reading your notes…"
+    "readingNotes": "Revio is reading your notes…"
   },
   "together": {
     "helpTitle": "Play together",
-    "helpBody": "Friends, shared decks and Live games need everyone to be able to save. In Claude, that works for people in your own Claude team, or friends you invite by email as Editor (with the public link turned off). The easiest way for everyone is the Lumo website.",
+    "helpBody": "Friends, shared decks and Live games need everyone to be able to save. In Claude, that works for people in your own Claude team, or friends you invite by email as Editor (with the public link turned off). The easiest way for everyone is the Revio website.",
     "joinHint": "Friends join from their Live tab: tap the game in “Games now” or type this code.",
     "openGames": "Games now",
     "hostedBy_one": "Hosted by {{name}} · {{count}} player",
@@ -1149,33 +1149,33 @@
     "playLiveWith": "Play {{deck}} Live",
     "addToMine": "Add to my decks",
     "shareDeck": "Who can see this deck",
-    "shareDeckBody": "Everyone you shared this Lumo page with can copy it and play it Live.",
+    "shareDeckBody": "Everyone you shared this Revio page with can copy it and play it Live.",
     "nowPublic": "Your friends can see this deck now.",
     "nowPrivate": "This deck is private again.",
-    "cantShare": "Couldn't share: Claude doesn't let you save on this page. Ask the owner to invite you by email as Editor, or use the Lumo website.",
+    "cantShare": "Couldn't share: Claude doesn't let you save on this page. Ask the owner to invite you by email as Editor, or use the Revio website.",
     "friendsIntro": "Add friends to compare streaks and XP, and challenge them to a Live game.",
     "thisWeek": "This week",
     "noFriendsYet": "Add friends below to see who studies the most this week.",
     "challenge": "Challenge friends to a Live game",
-    "peopleHere": "People on this Lumo",
+    "peopleHere": "People on this Revio",
     "searchName": "Search by name",
-    "nobodyElse": "Nobody else yet. Friends appear here after they open Lumo once.",
-    "howToInvite": "Friends on their own Claude account can only save here if you invite them by email as Editor (Share menu, with the public link turned off). Otherwise, use the Lumo website together.",
+    "nobodyElse": "Nobody else yet. Friends appear here after they open Revio once.",
+    "howToInvite": "Friends on their own Claude account can only save here if you invite them by email as Editor (Share menu, with the public link turned off). Otherwise, use the Revio website together.",
     "yourUsername": "Your username (friends type this to add you)",
     "typeUsername": "Type a friend's username, press Enter",
     "added": "{{name}} is now your friend!",
     "cantAdd": "Couldn't add this friend: Claude doesn't let you save on this page.",
-    "notFound": "Nobody is called “{{name}}” here yet. Check the spelling, or ask them to open Lumo once. Friends who can only view this page in Claude can’t be added here: use the Lumo website together.",
+    "notFound": "Nobody is called “{{name}}” here yet. Check the spelling, or ask them to open Revio once. Friends who can only view this page in Claude can’t be added here: use the Revio website together.",
     "alreadyFriends": "{{name}} is already your friend.",
     "online": "Online",
     "onlineNow_one": "Online now ({{count}})",
     "onlineNow_other": "Online now ({{count}})",
-    "nobodyOnline": "Nobody else has Lumo open right now.",
+    "nobodyOnline": "Nobody else has Revio open right now.",
     "friend": "Friend",
     "readOnlyTitle": "Claude only lets you look at this page",
-    "readOnlyBody": "You opened a link shared from someone else’s Claude account, so Claude won’t save your friends or your profile here. Ask the owner to invite you by email as Editor (Share menu, with the public link turned off), or use the Lumo website: friends work there for everyone.",
-    "noFriendsOnline": "None of your friends are on Lumo right now.",
-    "howToInviteSite": "Only the friends you add can see you, your decks and your games. Give classmates your Lumo name so they can add you.",
+    "readOnlyBody": "You opened a link shared from someone else’s Claude account, so Claude won’t save your friends or your profile here. Ask the owner to invite you by email as Editor (Share menu, with the public link turned off), or use the Revio website: friends work there for everyone.",
+    "noFriendsOnline": "None of your friends are on Revio right now.",
+    "howToInviteSite": "Only the friends you add can see you, your decks and your games. Give classmates your Revio name so they can add you.",
     "shareDeckBodySite": "Your friends can copy it and play it Live with you.",
     "requests": "Friend requests ({{count}})",
     "addedYou": "added you as a friend",
@@ -1184,11 +1184,11 @@
     "addedSite": "{{name}} is now your friend! They'll get a request to add you back.",
     "inviteBody": "Send your invite link: friends who open it are added right away.",
     "inviteButton": "Invite friends",
-    "inviteText": "Study with me on Lumo! My Lumo name is {{name}}.",
+    "inviteText": "Study with me on Revio! My Revio name is {{name}}.",
     "inviteTitle": "Adding your friend…",
     "inviteDone": "{{name}} is now your friend!",
     "inviteSelf": "That's your own invite link. Send it to a friend!",
-    "inviteNotFound": "No one called “{{name}}” on Lumo. Check the name and try again.",
+    "inviteNotFound": "No one called “{{name}}” on Revio. Check the name and try again.",
     "fromFriends": "From your friends",
     "publicDecks": "Public decks",
     "vis": {
@@ -1199,8 +1199,8 @@
     "visBody": {
       "private": "Only you can see this deck.",
       "friends": "Your friends can copy it and play it Live with you.",
-      "friendsClaude": "Everyone you shared this Lumo page with can copy it and play it Live.",
-      "public": "Anyone on Lumo can find it under Public decks, and you can send its link."
+      "friendsClaude": "Everyone you shared this Revio page with can copy it and play it Live.",
+      "public": "Anyone on Revio can find it under Public decks, and you can send its link."
     },
     "now": {
       "private": "This deck is private again.",
@@ -1226,12 +1226,12 @@
   },
   "gate": {
     "tagline": "Turn your notes, a photo of your textbook or just a topic into quizzes — then play them until you actually get it.",
-    "point1": "Notes, photos, PDFs or just a topic: Lumo writes the questions",
+    "point1": "Notes, photos, PDFs or just a topic: Revio writes the questions",
     "point2": "Hatch eggs, collect pets, open chests, climb the league",
     "point3": "Play Live against your friends",
     "google": "Continue with Google",
     "guest": "Try it first without an account",
-    "privacy": "Other players only ever see your Lumo name. No e-mail or real name needed.",
+    "privacy": "Other players only ever see your Revio name. No e-mail or real name needed.",
     "error": "Couldn't sign in. Try again.",
     "signOut": "Sign out",
     "signedInAs": "Signed in as {{name}}",
@@ -1240,7 +1240,7 @@
     "signupTab": "Create account",
     "loginTab": "Log in",
     "or": "or",
-    "name": "Lumo name",
+    "name": "Revio name",
     "namePlaceholder": "e.g. NovaFox",
     "nameHint": "3–20 letters, numbers or _. Friends add you with it, so don't use your real name.",
     "password": "Password",
@@ -1251,16 +1251,16 @@
     "signedInGoogle": "Signed in with Google",
     "makeAccount": "Create an account to save everywhere",
     "errors": {
-      "google": "Google sign-in didn't finish. Try again, or use a Lumo name and password.",
-      "network": "Couldn't reach Lumo. Check your connection and try again.",
-      "unavailable": "Lumo is busy right now. Try again in a minute.",
+      "google": "Google sign-in didn't finish. Try again, or use a Revio name and password.",
+      "network": "Couldn't reach Revio. Check your connection and try again.",
+      "unavailable": "Revio is busy right now. Try again in a minute.",
       "name_taken": "That name is taken. Try another one.",
       "wrong_login": "That name and password don't match.",
       "locked": "Too many tries. Wait 10 minutes, then try again.",
       "rate_limited": "Too many tries. Wait a little, then try again.",
       "weak_password": "Use at least 6 characters for your password.",
       "bad_name": "That name can't be used. Try another one.",
-      "name_length": "Your Lumo name needs 3 to 20 characters.",
+      "name_length": "Your Revio name needs 3 to 20 characters.",
       "name_characters": "Use only letters, numbers and _ (no spaces or accents).",
       "name_blocked": "That name can't be used. Try another one.",
       "name_personal_info": "Leave out birth years and long numbers: keep your info private."
@@ -1279,19 +1279,19 @@
     "accountCodeHint": "Same code on two devices means the same account."
   },
   "bank": {
-    "writing": "Lumo is writing real test questions…",
+    "writing": "Revio is writing real test questions…",
     "writingBody": "Scenarios, excerpts, \"why\" questions and short answers, like on a real exam. You can already practise meanwhile.",
     "ready_one": "{{count}} real test question",
     "ready_other": "{{count}} real test questions",
     "readyBody": "Written for this deck like a teacher would, beyond your notes.",
     "cta": "Get real test questions",
-    "ctaBody": "Lumo writes exam-style questions for this deck (about 30 seconds).",
+    "ctaBody": "Revio writes exam-style questions for this deck (about 30 seconds).",
     "make": "Write them",
     "redo": "New ones",
     "errors": {
       "upstream_error": "Couldn't write the questions right now. Try again.",
-      "unavailable": "This needs Lumo's AI, which isn't available here.",
-      "not_granted": "Allow Lumo to use Claude to write questions.",
+      "unavailable": "This needs Revio's AI, which isn't available here.",
+      "not_granted": "Allow Revio to use Claude to write questions.",
       "rate_limited": "Too many requests. Try again in a minute.",
       "nothing_found": "Couldn't write questions for this deck. Try again."
     }
@@ -1363,7 +1363,7 @@
     "hint": "Hint",
     "hintCost": "Hint: costs {{n}} coins",
     "document": "Document",
-    "grading": "Lumo is grading…",
+    "grading": "Revio is grading…",
     "ask": {
       "tf": "True or false?",
       "mcq": "Choose the answer",
@@ -1396,8 +1396,8 @@
     "matchLeft": "Match these",
     "matchRight": "…with these",
     "explainMore": "Explain it to me differently",
-    "explainTitle": "Lumo explains",
-    "explaining": "Lumo is thinking…",
+    "explainTitle": "Revio explains",
+    "explaining": "Revio is thinking…",
     "explainFailed": "Couldn’t explain right now. Tap to try again.",
     "progress": "Round progress",
     "rightAnswer": "✓ Right answer",
@@ -1411,7 +1411,7 @@
     "heartsLeft_other": "{{count}} hearts left"
   },
   "write": {
-    "title": "Lumo is writing your test",
+    "title": "Revio is writing your test",
     "readyTitle": "Your test is ready!",
     "failedTitle": "Couldn’t write the questions",
     "lines": [
@@ -1425,17 +1425,17 @@
     "count_other": "{{count}} questions ready",
     "playNow": "Play now",
     "almost": "Almost there… ({{n}} more)",
-    "keepsWriting": "Lumo keeps writing more while you play.",
+    "keepsWriting": "Revio keeps writing more while you play.",
     "why": "Real test questions take about a minute. Worth it!",
     "warmup": "Warm up with flashcards",
     "allow": "Allow Claude",
     "retry": "Try again",
     "basic": "Play with basic questions instead",
     "errors": {
-      "not_granted": "Lumo needs your OK to use Claude. Tap “Allow Claude”, then allow it in the window.",
-      "rate_limited": "Lumo is busy right now. Try again in a minute.",
-      "unavailable": "Lumo's AI isn't available here.",
-      "nothing_found": "Lumo didn't manage it this time. Try again.",
+      "not_granted": "Revio needs your OK to use Claude. Tap “Allow Claude”, then allow it in the window.",
+      "rate_limited": "Revio is busy right now. Try again in a minute.",
+      "unavailable": "Revio's AI isn't available here.",
+      "nothing_found": "Revio didn't manage it this time. Try again.",
       "session_expired": "Sign in to Claude again, then try again.",
       "sampling_disabled": "Claude is turned off for this account.",
       "cancelled": "Stopped.",
@@ -1447,11 +1447,11 @@
     "ideas_other": "{{count}} ideas",
     "questions_one": "{{count}} test question",
     "questions_other": "{{count}} test questions",
-    "writing": "Lumo is writing… {{count}}",
-    "noClaude": "Open Lumo inside Claude to get real test questions written for your notes. Until then you get basic questions.",
+    "writing": "Revio is writing… {{count}}",
+    "noClaude": "Open Revio inside Claude to get real test questions written for your notes. Until then you get basic questions.",
     "play": "Play",
     "playBody": "10 questions · learn and earn",
-    "playWrite": "Lumo writes your test first",
+    "playWrite": "Revio writes your test first",
     "modes": "Game modes",
     "speedBody": "60 s · beat your record",
     "bossBody": "Hard questions · 3 shields",
@@ -1459,7 +1459,7 @@
     "bossWins_other": "{{count}} wins",
     "cardsBody": "Flip · remember · repeat",
     "more": "New questions",
-    "moreBody": "Lumo writes different ones",
+    "moreBody": "Revio writes different ones",
     "challengeBody": "A miss costs a heart · finish it: +15 coins",
     "challengeEmpty": "Out of hearts: next one in {{minutes}} min"
   },
@@ -1478,7 +1478,7 @@
   "create": {
     "eyebrow": "Create",
     "title": "Make a study set",
-    "body": "Bring anything: Lumo pulls out what a test would ask and turns it into questions you can play.",
+    "body": "Bring anything: Revio pulls out what a test would ask and turns it into questions you can play.",
     "from": "Make it from",
     "tabs": {
       "topic": "Topic",
@@ -1496,7 +1496,7 @@
     "dropBodyPdf": "A PDF (notes, slides, a worksheet), photos of your notes or textbook, or a .txt file — up to {{count}} files.",
     "tooBig": "“{{name}}” is too big. Try a smaller file (under 4 MB), or fewer pages.",
     "remove": "Remove {{name}}",
-    "focus": "Anything Lumo should focus on? (optional)",
+    "focus": "Anything Revio should focus on? (optional)",
     "focusPlaceholder": "e.g. Only chapter 3, my test is on Friday",
     "privacySite": "Your files are only used to build this deck. Other players never see them.",
     "useNotes": "Paste notes instead",
@@ -1504,8 +1504,8 @@
     "howTitle": "How it works",
     "how": [
       "Pick a topic, upload a PDF or photos, or paste your notes.",
-      "Lumo finds the key ideas and writes real test questions.",
-      "Play until every idea turns gold. Lumo brings back what you miss."
+      "Revio finds the key ideas and writes real test questions.",
+      "Play until every idea turns gold. Revio brings back what you miss."
     ],
     "lumoTip": "Tip: the more specific you are (“grade 9, chapter 4”), the better the questions.",
     "generating": "Building your deck…",
@@ -1528,11 +1528,11 @@
     },
     "ai": {
       "guestTitle": "AI needs a free account",
-      "guestBody": "Lumo's AI reads topics, PDFs and photos for learners with an account (it's free and takes 20 seconds). Without one, you can still paste your notes.",
-      "offTitle": "Lumo's AI isn't available here",
+      "guestBody": "Revio's AI reads topics, PDFs and photos for learners with an account (it's free and takes 20 seconds). Without one, you can still paste your notes.",
+      "offTitle": "Revio's AI isn't available here",
       "offBody": "You can still make a deck from your notes.",
-      "budget": "Lumo's AI has used up this month's free allowance on this site. Paste your notes instead, or ask the site owner to add an Anthropic key.",
-      "not_configured": "Lumo's AI isn't set up on this site yet. Paste your notes instead."
+      "budget": "Revio's AI has used up this month's free allowance on this site. Paste your notes instead, or ask the site owner to add an Anthropic key.",
+      "not_configured": "Revio's AI isn't set up on this site yet. Paste your notes instead."
     },
     "readFiles": "Read my files",
     "takePhoto": "Take a photo of your notes",
@@ -1544,9 +1544,9 @@
     "fr": "French"
   },
   "memory": {
-    "title": "Lumo's memory",
-    "subtitle": "Tell Lumo about your class, your books and what you like. Lumo uses it when it makes your decks, writes your tests and explains answers.",
-    "tellTitle": "Tell Lumo something",
+    "title": "Revio's memory",
+    "subtitle": "Tell Revio about your class, your books and what you like. Revio uses it when it makes your decks, writes your tests and explains answers.",
+    "tellTitle": "Tell Revio something",
     "placeholder": "e.g. In French class we use the book « Zénith 2 », chapter 4.",
     "add": "Remember this",
     "ideas": {
@@ -1563,22 +1563,22 @@
       "like": "I like ",
       "tests": "My teacher's tests usually "
     },
-    "saved": "Got it! Lumo will remember that.",
+    "saved": "Got it! Revio will remember that.",
     "privacy": "Only you see this. Don't write private things like your address, phone number or passwords.",
-    "suggestTitle": "Lumo noticed",
+    "suggestTitle": "Revio noticed",
     "keep": "Remember",
     "no": "No",
-    "notesTitle_one": "What Lumo remembers ({{count}})",
-    "notesTitle_other": "What Lumo remembers ({{count}})",
-    "empty": "Nothing yet. Tell Lumo about your class, your books or what you like.",
+    "notesTitle_one": "What Revio remembers ({{count}})",
+    "notesTitle_other": "What Revio remembers ({{count}})",
+    "empty": "Nothing yet. Tell Revio about your class, your books or what you like.",
     "forgetLabel": "Forget: {{text}}",
-    "noticedTitle": "What Lumo noticed",
-    "noticedEmpty": "Play a few rounds and Lumo will learn how you study.",
+    "noticedTitle": "What Revio noticed",
+    "noticedEmpty": "Play a few rounds and Revio will learn how you study.",
     "answered_one": "You've answered {{count}} question.",
     "answered_other": "You've answered {{count}} questions.",
     "accuracy": "Lately you get {{pct}}% right.",
     "strong": "You're strongest at: {{list}}.",
-    "weak": "Harder for you: {{list}}. Lumo gives you a bit more practice there.",
+    "weak": "Harder for you: {{list}}. Revio gives you a bit more practice there.",
     "time": {
       "morning": "You usually study in the morning.",
       "afternoon": "You usually study in the afternoon.",
@@ -1587,7 +1587,7 @@
     },
     "subjects": "Your subjects: {{list}}.",
     "weakIdeas": "Ideas to work on: {{list}}.",
-    "adaptTitle": "How Lumo adapts",
+    "adaptTitle": "How Revio adapts",
     "adapt": "Adapt to me",
     "adaptBody": "Your weak spots come back more often, and questions get deeper when you're on a roll.",
     "level": "Questions",
@@ -1602,13 +1602,13 @@
       "normal": "Normal",
       "detailed": "Detailed"
     },
-    "homeTitle": "Tell Lumo about you",
-    "homeCount_one": "Lumo remembers {{count}} thing about you",
-    "homeCount_other": "Lumo remembers {{count}} things about you",
-    "homeBody": "Your class, your books, what you find hard: Lumo fits your decks and tests to you.",
-    "createHint_one": "Lumo remembers {{count}} thing about you and uses it here.",
-    "createHint_other": "Lumo remembers {{count}} things about you and uses them here.",
-    "createHintEmpty": "Tell Lumo about your class and your books, and your decks fit you better.",
+    "homeTitle": "Tell Revio about you",
+    "homeCount_one": "Revio remembers {{count}} thing about you",
+    "homeCount_other": "Revio remembers {{count}} things about you",
+    "homeBody": "Your class, your books, what you find hard: Revio fits your decks and tests to you.",
+    "createHint_one": "Revio remembers {{count}} thing about you and uses it here.",
+    "createHint_other": "Revio remembers {{count}} things about you and uses them here.",
+    "createHintEmpty": "Tell Revio about your class and your books, and your decks fit you better.",
     "edit": "Edit",
     "errors": {
       "too_many": "That's a lot! Forget a few things first.",
