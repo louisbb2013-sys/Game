@@ -4,13 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0F0C29" />
-    <meta name="description" content="Lumo turns your notes into quizzes that help you truly understand." />
+    <meta name="description" content="Lumo Study turns your notes, a photo of your textbook or any topic into quiz games you play until you truly understand: Live games with friends, pets to hatch, streaks. Free, in English and French." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <title>Lumo</title>
+    <title>Lumo Study: turn your notes into a study game</title>
+    <style>
+      /* Shown for a moment while the app loads (and to anyone reading the page without running it). */
+      .boot { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 2rem 1.25rem; background: #0f0c29; color: #f5f3ff; font-family: system-ui, sans-serif; text-align: center; }
+      .boot-logo { font: italic 900 2.5rem Georgia, serif; margin: 0; }
+      .boot-logo span { color: #e8c468; }
+      .boot h1 { font-size: 1.25rem; margin: 0; }
+      .boot p { max-width: 34rem; margin: 0; line-height: 1.5; opacity: 0.8; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="boot">
+        <p class="boot-logo">lumo<span>.</span></p>
+        <h1>Lumo Study: turn your notes into a study game</h1>
+        <p>Snap your notes or a page of your textbook, or just type a topic. Lumo writes real test questions, then you play them until you actually get it: Live games with friends, pets to hatch, streaks and chests.</p>
+        <p lang="fr">Lumo Study : transforme tes notes en jeu d’étude. Gratuit, en français et en anglais.</p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

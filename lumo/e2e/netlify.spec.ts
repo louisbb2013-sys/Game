@@ -402,3 +402,19 @@ test('one Google account on a laptop and an iPad is one Lumo account; names are 
   await laptop.context().close();
   await ipad.context().close();
 });
+
+test('Google can find the site: title, description, site info, robots.txt and sitemap', async ({ request }) => {
+  const html = await (await request.get(process.env.NETLIFY_URL!)).text();
+  expect(html).toContain('<title>Lumo Study: turn your notes into a study game</title>');
+  expect(html).toMatch(/<meta name="description" content="Lumo Study turns your notes/);
+  expect(html).toMatch(/<link rel="canonical" href="https:\/\/[^"]+\/" \/>/);
+  const ld = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]!);
+  expect(ld.name).toBe('Lumo Study');
+  expect(ld.alternateName).toContain('Study Lumo');
+  // The words people search for are on the page itself, before any script runs.
+  expect(html).toContain('<h1>Lumo Study: turn your notes into a study game</h1>');
+  const robots = await (await request.get(`${process.env.NETLIFY_URL}robots.txt`)).text();
+  expect(robots).toContain('Allow: /');
+  expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
+  expect(await (await request.get(`${process.env.NETLIFY_URL}sitemap.xml`)).text()).toContain('<urlset');
+});

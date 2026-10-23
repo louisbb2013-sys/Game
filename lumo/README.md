@@ -1,6 +1,8 @@
 # Lumo ✨ — study smarter, understand deeper
 
 Lumo turns your notes into quizzes that help you **truly understand**, not memorize by heart.
+
+**Play Lumo Study:** https://lumo-study-qwd6.netlify.app
 Mascot: **Lumo the firefly**, whose light grows as you master ideas.
 
 See [PLAN.md](PLAN.md) for architecture, data model and milestones.
