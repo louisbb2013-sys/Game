@@ -8,7 +8,7 @@ interface Props {
   title?: string;
 }
 
-/** Lumo the firefly. Original artwork, pure SVG so it scales and themes cleanly. */
+/** Lumoly the firefly. Original artwork, pure SVG so it scales and themes cleanly. */
 export function Lumo({ mood = 'happy', size = 96, glow = 0.7, className = '', title = 'Lumo' }: Props) {
   const g = Math.max(0.15, Math.min(1, glow));
   return (

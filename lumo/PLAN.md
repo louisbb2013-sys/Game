@@ -1,7 +1,7 @@
-# Lumo — Plan
+# Lumoly — Plan
 
-**Lumo** is a study app that helps students *understand* their material, not memorize it.
-Mascot: **Lumo the firefly** — a small glowing firefly whose light grows as you master ideas.
+**Lumoly** is a study app that helps students *understand* their material, not memorize it.
+Mascot: **Lumoly the firefly** — a small glowing firefly whose light grows as you master ideas.
 Palette: warm amber (`#F5A524`) on deep indigo (`#1E1B4B`), soft cream background in light mode.
 
 ---
@@ -128,7 +128,7 @@ mind map, cheat sheet, memory tricks and timeline all end in a self-test. Genera
 
 ## 8. Milestones
 1. **Foundation** — monorepo, `core` (SRS, mastery, XP/levels, streaks, hearts, leagues) with tests; server with
-   migrations, Google + email + dev auth, `/me`; web PWA shell with Lumo branding, EN/FR, dark mode,
+   migrations, Google + email + dev auth, `/me`; web PWA shell with Lumoly branding, EN/FR, dark mode,
    dyslexia font, large text; sign-in → home → profile.
 2. **Decks & quiz engine** — concept model, planner, all 16 formats (generator + graders), mock + Claude
    providers, solo quiz UI with drag-and-drop, explanations, retries, combo effects, mastery map.

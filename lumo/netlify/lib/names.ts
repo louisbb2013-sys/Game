@@ -1,7 +1,7 @@
 import type { KV } from './kv.ts';
 
 /**
- * A Lumo name belongs to one learner, because friends add each other by it. A name is held by a
+ * A Lumoly name belongs to one learner, because friends add each other by it. A name is held by a
  * name-and-password account (a/n/<name>), or claimed by the learner whose profile uses it
  * (u/name/<name>). Names are compared in lower case.
  */

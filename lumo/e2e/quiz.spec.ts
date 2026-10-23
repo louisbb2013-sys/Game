@@ -36,8 +36,8 @@ for (const format of FORMATS) {
       await checkCurrent(page, format);
     }
     if (format === 'teach_back') {
-      await page.getByLabel('Your reply to Lumo').fill('For example, perfume spreads across a room.');
-      await page.getByRole('button', { name: 'Reply to Lumo' }).click();
+      await page.getByLabel('Your reply to Lumoly').fill('For example, perfume spreads across a room.');
+      await page.getByRole('button', { name: 'Reply to Lumoly' }).click();
     }
     const feedback = page.getByRole('status').filter({ has: page.getByRole('button', { name: /Continue|See results/ }) });
     await expect(feedback).toBeVisible();
@@ -67,8 +67,8 @@ test('full session from the deck page through the summary', async ({ page }) => 
     await answerCurrent(page, question.format);
     await checkCurrent(page, question.format);
     if (question.format === 'teach_back') {
-      await page.getByLabel('Your reply to Lumo').fill('Here is an example from real life.');
-      await page.getByRole('button', { name: 'Reply to Lumo' }).click();
+      await page.getByLabel('Your reply to Lumoly').fill('Here is an example from real life.');
+      await page.getByRole('button', { name: 'Reply to Lumoly' }).click();
     }
     if (await continueRound(page)) break;
   }

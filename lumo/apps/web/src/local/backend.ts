@@ -122,7 +122,7 @@ import { judgeShort, withTimeout } from './reader';
 import { goOnline, plain, publishProfile, renameProfile, together } from './together';
 
 /**
- * Browser-only Lumo: the same rules as the server, run in the page and saved in this browser.
+ * Browser-only Lumoly: the same rules as the server, run in the page and saved in this browser.
  * Only what makes sense for one learner on one device is here (no friends, Live games or AI).
  */
 
@@ -223,7 +223,7 @@ interface DB {
   game?: GameData;
   /** When each bank question (by variant key) was last asked, so they come back spaced out. */
   seen?: Record<string, number>;
-  /** What the learner told Lumo about themselves, and how they like to study. */
+  /** What the learner told Lumoly about themselves, and how they like to study. */
   memory?: Memory;
   /** Personal bests per deck. */
   bests?: Record<string, { speed?: number; bossWins?: number }>;
@@ -686,7 +686,7 @@ function warmEgg(answers: number): Hatched | undefined {
   return { species, emoji: s.emoji, rarity: s.rarity, duplicate };
 }
 
-// ------------------------------------------------------------------ memory: what Lumo knows about you
+// ------------------------------------------------------------------ memory: what Lumoly knows about you
 
 interface MemoryNote {
   id: string;
@@ -696,9 +696,9 @@ interface MemoryNote {
 export interface StudyPrefs {
   /** How long explanations should be. */
   explain: 'short' | 'normal' | 'detailed';
-  /** auto = Lumo picks the depth from how you're doing. */
+  /** auto = Lumoly picks the depth from how you're doing. */
   level: 'auto' | 'easier' | 'harder';
-  /** Lumo adapts questions to you (weak spots, depth). */
+  /** Lumoly adapts questions to you (weak spots, depth). */
   adapt: boolean;
 }
 interface Memory {
@@ -724,7 +724,7 @@ function recentAnswers(limit: number) {
     .slice(-limit);
 }
 
-/** What Lumo noticed from how you play (only from this account's own answers). */
+/** What Lumoly noticed from how you play (only from this account's own answers). */
 function noticed() {
   const d = load();
   const answers = recentAnswers(400);
@@ -755,7 +755,7 @@ function noticed() {
   };
 }
 
-/** Things Lumo could remember, spotted in what you made (a grade, your subjects): one tap to keep. */
+/** Things Lumoly could remember, spotted in what you made (a grade, your subjects): one tap to keep. */
 function suggestions(): string[] {
   const d = load();
   const m = memory();
@@ -773,7 +773,7 @@ function suggestions(): string[] {
 }
 
 /**
- * How Lumo adapts a round to you: which question depth to aim for and which formats to give a bit
+ * How Lumoly adapts a round to you: which question depth to aim for and which formats to give a bit
  * more of (your weak spots), from your settings and your latest answers.
  */
 function adaptation(): { shift: number; boost: Partial<Record<Format, number>> } {
@@ -1568,7 +1568,7 @@ const routes: [string, RegExp, Handler][] = [
       if (typeof b.username === 'string') {
         const n = b.username.trim();
         if (n.length < 3 || n.length > 20 || !/^[A-Za-z0-9_]+$/.test(n)) throw new LocalError(400, 'username_characters');
-        // Friends add each other by username, so it must be unique among people on this Lumo.
+        // Friends add each other by username, so it must be unique among people on this Lumoly.
         const t = await together();
         if (t && n.toLowerCase() !== u.username.toLowerCase()) {
           const snap = await t.db.collection('profiles').limit(1000).get().catch(() => null);

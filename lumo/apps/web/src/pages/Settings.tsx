@@ -186,7 +186,7 @@ function ShareLinks() {
     try {
       const r = await api<{ url: string }>('/api/me/shares', { method: 'POST', body: { label } });
       setLabel('');
-      const how = await shareOrCopy(r.url, 'Lumo');
+      const how = await shareOrCopy(r.url, 'Lumoly');
       if (how !== 'failed') setMsg(t(`live.${how}`));
     } catch {
       setMsg(t('settings.tooManyLinks'));
@@ -214,7 +214,7 @@ function ShareLinks() {
               <span className="block truncate font-black">{l.label || t('settings.shareUnnamed')}</span>
               <span className="text-xs text-muted">{l.lastViewedAt ? t('settings.shareViewed', { date: new Date(l.lastViewedAt).toLocaleDateString() }) : t('settings.shareNotViewed')}</span>
             </span>
-            <button onClick={() => void shareOrCopy(l.url, 'Lumo').then((h) => h !== 'failed' && setMsg(t(`live.${h}`)))} className="font-black text-brand">
+            <button onClick={() => void shareOrCopy(l.url, 'Lumoly').then((h) => h !== 'failed' && setMsg(t(`live.${h}`)))} className="font-black text-brand">
               {t('settings.shareCopy')}
             </button>
             <button onClick={() => void api(`/api/me/shares/${l.token}`, { method: 'DELETE' }).then(load)} className="font-black text-bad">

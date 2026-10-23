@@ -30,7 +30,7 @@ export class EmailCodes {
        ON CONFLICT (email) DO UPDATE SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at, attempts = 0`,
       [email, this.hash(email, code), new Date(Date.now() + CODE_TTL_MS)],
     );
-    const subject = locale === 'fr' ? `Ton code Lumo : ${code}` : `Your Lumo code: ${code}`;
+    const subject = locale === 'fr' ? `Ton code Lumoly : ${code}` : `Your Lumoly code: ${code}`;
     const text =
       locale === 'fr'
         ? `Ton code de connexion est ${code}. Il expire dans 10 minutes.`

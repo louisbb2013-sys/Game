@@ -312,7 +312,7 @@ export async function explainAgain(x: { language: Locale; context?: string; prom
   if (!s) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
   const [style, about] = await Promise.all([explainStyle(), aboutLearner()]);
   const prompt = [
-    `You are Lumo, a friendly tutor for a student aged 12-18. Write in ${x.language === 'fr' ? 'French (Québec school vocabulary)' : 'English'}.`,
+    `You are Lumoly, a friendly tutor for a student aged 12-18. Write in ${x.language === 'fr' ? 'French (Québec school vocabulary)' : 'English'}.`,
     'The student just answered this test question:',
     x.context ? `Document: ${x.context.slice(0, 1200)}` : '',
     `Question: ${x.prompt.slice(0, 800)}`,
@@ -332,7 +332,7 @@ export async function explainAgain(x: { language: Locale; context?: string; prom
 const TOPUP_EVERY = 12 * 3_600_000;
 
 /**
- * Questions always feel new: when a learner has met almost all of a deck's questions, Lumo quietly
+ * Questions always feel new: when a learner has met almost all of a deck's questions, Lumoly quietly
  * writes different ones in the background (at most twice a day per deck).
  */
 export async function topUpIfLow(deckId: string) {

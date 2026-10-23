@@ -57,10 +57,10 @@ export function Layout() {
 
       {/* Computer: sidebar */}
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-gold/15 bg-surface/55 px-4 py-6 backdrop-blur-xl lg:flex">
-        <Link to="/" className="flex items-center gap-2 px-2" aria-label="Lumo">
+        <Link to="/" className="flex items-center gap-2 px-2" aria-label="Lumoly">
           <Lumo size={40} mood="happy" />
           <span className="font-display text-[1.9rem] leading-none font-black italic">
-            lumo<span className="text-gold">.</span>
+            lumoly<span className="text-gold">.</span>
           </span>
         </Link>
         <Link to="/chat" className="btn-gold flex items-center justify-center gap-2 rounded-2xl py-3 text-base font-black">
@@ -98,7 +98,7 @@ export function Layout() {
         {/* Phone: top bar */}
         <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-line bg-bg/85 px-4 py-2 backdrop-blur lg:hidden">
           <Link to="/" className="font-display text-2xl font-black tracking-tight text-ink italic">
-            lumo<span className="text-gold">.</span>
+            lumoly<span className="text-gold">.</span>
           </Link>
           <div className="flex items-center gap-1.5">{stats}</div>
         </header>

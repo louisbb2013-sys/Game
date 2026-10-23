@@ -17,7 +17,7 @@ async function open(browser: Browser, viewport = PHONE): Promise<Page> {
 }
 const inApp = (p: Page) => expect(p.getByRole('link', { name: 'Learn', exact: true })).toBeVisible({ timeout: 15_000 });
 
-/** A learner makes an account with a Lumo name and password. */
+/** A learner makes an account with a Lumoly name and password. */
 async function signUp(browser: Browser, name: string, viewport = PHONE): Promise<Page> {
   const p = await open(browser, viewport);
   await expect(p.getByRole('tab', { name: 'Create account' })).toHaveAttribute('aria-selected', 'true');
@@ -96,7 +96,7 @@ test('Google sign-in and a name/password friend: add a friend, share a deck, pla
   await b.getByRole('link', { name: 'Me', exact: true }).click();
   await b.getByRole('link', { name: /Friends/ }).first().click();
   // Strangers are never listed on the website: only people you add.
-  await expect(b.getByText('People on this Lumo')).toHaveCount(0);
+  await expect(b.getByText('People on this Lumoly')).toHaveCount(0);
   await b.getByLabel("Type a friend's username, press Enter").fill(hostName);
   await b.getByLabel("Type a friend's username, press Enter").press('Enter');
   await expect(b.getByRole('status')).toContainText(`${hostName} is now your friend!`, { timeout: 10_000 });
@@ -137,7 +137,7 @@ test('try without an account, make a deck from notes, then keep it in a new acco
   const p = await open(browser, { width: 1440, height: 900 });
   await p.getByRole('button', { name: 'Try it first without an account' }).click();
   await inApp(p);
-  await expect(p.getByText("You're trying Lumo without an account.")).toBeVisible();
+  await expect(p.getByText("You're trying Lumoly without an account.")).toBeVisible();
   // AI needs an account: the create page says so and offers notes.
   await p.getByRole('link', { name: 'Create', exact: true }).click();
   await expect(p.getByText('AI needs a free account')).toBeVisible();
@@ -308,7 +308,7 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   for (const p of [a, b]) await p.context().close();
 });
 
-test('a public deck: anyone on Lumo finds it, its link opens it; and a deck turns into French in one tap', async ({ browser }) => {
+test('a public deck: anyone on Lumoly finds it, its link opens it; and a deck turns into French in one tap', async ({ browser }) => {
   test.setTimeout(150_000);
   const a = await signUp(browser, `Pub_${tag()}`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
@@ -330,7 +330,7 @@ test('a public deck: anyone on Lumo finds it, its link opens it; and a deck turn
   await s.getByRole('button', { name: 'Add to my decks' }).click();
   await expect(s.getByRole('button', { name: /^Play\b/ })).toBeVisible({ timeout: 15_000 });
 
-  // Switch Lumo to French: the English deck offers to turn itself into French.
+  // Switch Lumoly to French: the English deck offers to turn itself into French.
   const myDeck = s.url();
   await s.goto(`${process.env.NETLIFY_URL}settings`);
   await s.getByRole('button', { name: 'fr', exact: true }).click();
@@ -342,7 +342,7 @@ test('a public deck: anyone on Lumo finds it, its link opens it; and a deck turn
   for (const p of [a, s]) await p.context().close();
 });
 
-test('one Google account on a laptop and an iPad is one Lumo account; names are unique; an extra account can be deleted', async ({ browser }) => {
+test('one Google account on a laptop and an iPad is one Lumoly account; names are unique; an extra account can be deleted', async ({ browser }) => {
   test.setTimeout(150_000);
   /** Sign in with a made-up Google account (the stand-in Identity takes it from ?as=). */
   const google = async (p: Page, as: string) => {
@@ -368,7 +368,7 @@ test('one Google account on a laptop and an iPad is one Lumo account; names are 
   await laptop.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(laptop.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible({ timeout: 10_000 });
 
-  // iPad: tried Lumo as a guest first, then signs in with the same Google account.
+  // iPad: tried Lumoly as a guest first, then signs in with the same Google account.
   const ipad = await open(browser, { width: 820, height: 1180 });
   await ipad.getByRole('button', { name: 'Try it first without an account' }).click();
   await inApp(ipad);
@@ -405,14 +405,14 @@ test('one Google account on a laptop and an iPad is one Lumo account; names are 
 
 test('Google can find the site: title, description, site info, robots.txt and sitemap', async ({ request }) => {
   const html = await (await request.get(process.env.NETLIFY_URL!)).text();
-  expect(html).toContain('<title>Lumo Study: turn your notes into a study game</title>');
-  expect(html).toMatch(/<meta name="description" content="Lumo Study turns your notes/);
+  expect(html).toContain('<title>Lumoly Study: turn your notes into a study game</title>');
+  expect(html).toMatch(/<meta name="description" content="Lumoly Study turns your notes/);
   expect(html).toMatch(/<link rel="canonical" href="https:\/\/[^"]+\/" \/>/);
   const ld = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]!);
-  expect(ld.name).toBe('Lumo Study');
-  expect(ld.alternateName).toContain('Study Lumo');
+  expect(ld.name).toBe('Lumoly Study');
+  expect(ld.alternateName).toContain('Study Lumoly');
   // The words people search for are on the page itself, before any script runs.
-  expect(html).toContain('<h1>Lumo Study: turn your notes into a study game</h1>');
+  expect(html).toContain('<h1>Lumoly Study: turn your notes into a study game</h1>');
   const robots = await (await request.get(`${process.env.NETLIFY_URL}robots.txt`)).text();
   expect(robots).toContain('Allow: /');
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);

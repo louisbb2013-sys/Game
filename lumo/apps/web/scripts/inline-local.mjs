@@ -13,8 +13,8 @@ const js = [...html.matchAll(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/sc
 if (!js) throw new Error('no script found in dist-local/index.html');
 
 const page = [
-  '<title>Lumo</title>',
-  '<meta name="description" content="Lumo turns your notes into quizzes that help you truly understand.">',
+  '<title>Lumoly</title>',
+  '<meta name="description" content="Lumoly turns your notes into quizzes that help you truly understand.">',
   `<style>${css}</style>`,
   '<div id="root"></div>',
   // An inline script must never contain a closing script tag.

@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// VITE_LOCAL=1 builds the browser-only Lumo: one self-contained page, no server, no service worker.
+// VITE_LOCAL=1 builds the browser-only Lumoly: one self-contained page, no server, no service worker.
 // VITE_NETLIFY=1 (with VITE_LOCAL=1) builds the same app as a standalone, installable site.
 const netlify = process.env.VITE_NETLIFY === '1';
 const local = process.env.VITE_LOCAL === '1' && !netlify;
@@ -13,14 +13,14 @@ const local = process.env.VITE_LOCAL === '1' && !netlify;
  * while building), what search engines and link previews show, robots.txt and a sitemap.
  */
 const site = (process.env.URL || 'https://lumo-study-qwd6.netlify.app').replace(/\/$/, '');
-const DESCRIPTION = 'Lumo Study turns your notes, a photo of your textbook or any topic into quiz games you play until you truly understand: Live games with friends, pets to hatch, streaks. Free, in English and French.';
+const DESCRIPTION = 'Lumoly Study turns your notes, a photo of your textbook or any topic into quiz games you play until you truly understand: Live games with friends, pets to hatch, streaks. Free, in English and French.';
 const verify = (process.env.GOOGLE_SITE_VERIFICATION ?? '').replace(/[^\w-]/g, '');
 function findable(): Plugin {
   const app = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Lumo Study',
-    alternateName: ['Lumo', 'Study Lumo', 'Lumo study game'],
+    name: 'Lumoly Study',
+    alternateName: ['Lumoly', 'Study Lumoly', 'Lumoly study game'],
     url: `${site}/`,
     description: DESCRIPTION,
     applicationCategory: 'EducationalApplication',
@@ -33,8 +33,8 @@ function findable(): Plugin {
     `<link rel="canonical" href="${site}/" />`,
     '<meta name="robots" content="index, follow" />',
     '<meta property="og:type" content="website" />',
-    '<meta property="og:site_name" content="Lumo Study" />',
-    '<meta property="og:title" content="Lumo Study: turn your notes into a study game" />',
+    '<meta property="og:site_name" content="Lumoly Study" />',
+    '<meta property="og:title" content="Lumoly Study: turn your notes into a study game" />',
     `<meta property="og:description" content="${DESCRIPTION}" />`,
     `<meta property="og:url" content="${site}/" />`,
     `<meta property="og:image" content="${site}/icon-512.png" />`,
@@ -81,8 +81,8 @@ export default defineConfig({
           registerType: 'autoUpdate',
           includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
           manifest: {
-            name: 'Lumo Study',
-            short_name: 'Lumo',
+            name: 'Lumoly Study',
+            short_name: 'Lumoly',
             description: 'Turn your notes into quiz games that make you truly understand.',
             theme_color: '#0F0C29',
             background_color: '#0F0C29',

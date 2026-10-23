@@ -98,7 +98,7 @@ describe('Claude writes the deck’s questions', () => {
     expect(Object.values(mcq.optionNotes ?? {})).toContain('Ça, c’est le poids qui diminue.');
     // Fresh answers every time (a regenerate must not replay a cached reply).
     expect(calls[0]!.opts.cache).toBe(false);
-    // What the student told Lumo goes into the writing prompt; the first small batch is quick.
+    // What the student told Lumoly goes into the writing prompt; the first small batch is quick.
     expect(calls[0]!.input).toContain('We use the book Zénith 2');
     expect(calls[0]!.opts.modelTier).toBe('quick');
   });

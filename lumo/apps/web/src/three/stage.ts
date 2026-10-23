@@ -4,7 +4,7 @@ import { Creature, Etincelles, lumieres, ombre, solide, THREE, webgl2Dispo } fro
 import { lookFor } from './looks';
 
 /**
- * Lumo's 3D stage. One WebGL canvas covers the window; every element that shows a 3D creature
+ * Lumoly's 3D stage. One WebGL canvas covers the window; every element that shows a 3D creature
  * or egg gets its own little scene, drawn exactly inside that element's rectangle (the
  * "many elements, one canvas" technique from the Minitaure site). Nothing renders while
  * nothing moves, and it stops when the tab is hidden.

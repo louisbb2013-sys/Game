@@ -18,7 +18,7 @@ const TEXT_FILE = /\.(txt|md|markdown|csv)$/i;
 /**
  * Create a deck, Gizmo-style: a topic, a file (PDF or photos of notes) or pasted notes. Claude reads
  * it, picks out the ideas a test asks about and writes the questions; then it's straight to playing.
- * Without Claude (trying the site without an account), notes still work with Lumo's own reader.
+ * Without Claude (trying the site without an account), notes still work with Lumoly's own reader.
  */
 export function NewDeck() {
   const { t, i18n } = useTranslation();

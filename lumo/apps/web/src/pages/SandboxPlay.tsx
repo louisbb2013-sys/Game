@@ -66,7 +66,7 @@ export function SandboxPlay() {
       </div>
     );
   }
-  // The voice reads in the activity's own language (an English deck in a French Lumo stays English).
+  // The voice reads in the activity's own language (an English deck in a French Lumoly stays English).
   const lang = a.language ?? guessLanguage(JSON.stringify(a.data));
   const props = { language: lang as 'en' | 'fr', onComplete: (s: number) => void complete(s) };
 
