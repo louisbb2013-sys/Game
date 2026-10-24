@@ -535,6 +535,8 @@ function team(): LocalPet[] {
   return g.pets.filter((p) => p.active).slice(0, MAX_ACTIVE_PETS);
 }
 const buffsNow = () => teamBuffs(team().map(petState), now());
+/** Coins earned, with the team's extra share on top (Lumo power: +50 %). */
+const withGold = (coins: number) => Math.round(coins * (1 + buffsNow().gold));
 
 function addItem(id: ItemId, qty: number) {
   const g = game();
@@ -608,6 +610,8 @@ function petView(p: LocalPet) {
     active: team().includes(p),
     /** What it adds while on the team (nothing while it's too hungry). */
     buff: { ...petBuff(st), off: petTooHungry(st, t) },
+    /** Lumo rarity: Lumo power on top (see LUMO_POWER). */
+    lumoPower: tier === 'lumo',
     upgrade: cost && next ? { to: next, coins: cost.coins, level: cost.level } : null,
   };
 }
@@ -1242,7 +1246,7 @@ function openGift(sessionId: string, id: string) {
   s.state.gift = null;
   const roll = Math.random();
   if (roll < 0.55) {
-    const coins = 3 + Math.floor(Math.random() * 6);
+    const coins = withGold(3 + Math.floor(Math.random() * 6));
     load().user.coins += coins;
     return { kind: 'coins' as const, coins, total: load().user.coins };
   }
@@ -1284,6 +1288,7 @@ function finish(s: StoredSession) {
     mine.bossWins = (mine.bossWins ?? 0) + 1;
     coins += 15;
   }
+  coins = withGold(coins);
   u.coins += coins;
   s.status = 'done';
   s.current = null;
@@ -1375,7 +1380,7 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   let petGift: { kind: 'heart'; name: string; species: string } | undefined;
   if (g.correct) {
     const buffs = buffsNow();
-    petCoins = buffs.coins;
+    petCoins = withGold(buffs.coins);
     u.coins += petCoins;
     s.state.petCoins = (s.state.petCoins ?? 0) + petCoins;
     const hearts = currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t).hearts;
@@ -2027,7 +2032,7 @@ const routes: [string, RegExp, Handler][] = [
       const correct = Math.max(0, Math.min(100, Number(b.correct) || 0));
       const base = liveRewards(rank, players, correct);
       // Coin pets pay for right answers in Live too.
-      const r = { ...base, coins: base.coins + correct * buffsNow().coins };
+      const r = { ...base, coins: withGold(base.coins + correct * buffsNow().coins) };
       u.coins += r.coins;
       // Bets: XP won adds to the reward; XP lost comes off, but never below the start of your level.
       const bet = Math.max(-2500, Math.min(2500, Math.round(Number(b.betXp) || 0)));

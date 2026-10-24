@@ -738,14 +738,16 @@
       "heart": "+{{pct}}% chance to win a heart on a right answer",
       "egg": "+{{pct}}% chance an answer warms your egg twice",
       "coins_one": "+{{n}} coin per right answer",
-      "coins_other": "+{{n}} coins per right answer"
+      "coins_other": "+{{n}} coins per right answer",
+      "gold": "+{{pct}}% coins on everything you earn"
     },
     "buffShort": {
       "xp": "+{{pct}}% XP",
       "heart": "+{{pct}}% heart chance",
       "egg": "+{{pct}}% faster egg",
       "coins_one": "+{{n}} coin per right answer",
-      "coins_other": "+{{n}} coins per right answer"
+      "coins_other": "+{{n}} coins per right answer",
+      "gold": "+{{pct}}% coins"
     },
     "buffKind": {
       "xp": "More XP",
@@ -754,7 +756,9 @@
       "egg": "Faster eggs"
     },
     "lumoTier": "Lumo rarity: a gift from the creator. Nobody can hatch it.",
-    "giftOnly": "Lumo rarity: only the creator can give it"
+    "giftOnly": "Lumo rarity: only the creator can give it",
+    "lumoPower": "Lumo power",
+    "lumoPowerHint": "On top of its own bonus, while it’s on your team. One Lumo power per team."
   },
   "badges": {
     "first_steps": {
@@ -1696,7 +1700,7 @@
   "gifts": {
     "fromCreator": "A gift from the creator!",
     "title": "You got {{name}}!",
-    "body": "It's Lumo rarity, the rarest there is. Nobody can hatch it: only the creator gives it.",
+    "body": "Lumo rarity, the rarest there is, with Lumo power: +50% XP and +50% coins. Nobody can hatch it: only the creator gives it.",
     "thanks": "Awesome!",
     "creatorTitle": "Creator: give a Lumo pet",
     "creatorBody": "Type a learner’s Lumo name and pick a pet. They get it at Lumo rarity next time they open Lumo.",

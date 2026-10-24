@@ -1,4 +1,4 @@
-import { PET_BUFF, PET_SPECIES, petXpForLevel, RARITIES, STARTER_PETS, type PetBuffKind, type Rarity } from '@lumo/core';
+import { LUMO_POWER, PET_BUFF, PET_SPECIES, petXpForLevel, RARITIES, STARTER_PETS, type PetBuffKind, type Rarity, type TeamBuffKind } from '@lumo/core';
 import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -32,6 +32,8 @@ export interface PetView {
   active?: boolean;
   /** Its bonus (website and Claude page); `off` while it's too hungry to help. */
   buff?: { kind: PetBuffKind; value: number; off: boolean };
+  /** Lumo rarity: Lumo power on top of its own bonus (website and Claude page). */
+  lumoPower?: boolean;
   /** The next tier and what it takes, or null at the top (mythical). */
   upgrade?: { to: Rarity; coins: number; level: number } | null;
 }
@@ -70,7 +72,7 @@ export function PetAvatar({ pet, size = 'lg', three = false }: { pet: Pick<PetVi
 interface PetsData {
   pets: PetView[];
   /** What the team adds up to (website and Claude page). */
-  buffs?: Record<PetBuffKind, number>;
+  buffs?: Record<TeamBuffKind, number>;
   /** How many pets can be on the team (website and Claude page; the server version has one buddy). */
   maxActive?: number;
   egg?: { rarity: Rarity; progress: number; target: number };
@@ -162,7 +164,7 @@ export function Pets() {
         {buffs && (
           // What the whole team adds while you study.
           <ul className="flex flex-wrap gap-1.5" aria-label={t('pets.teamBonus')} data-testid="team-buffs">
-            {(['xp', 'coins', 'heart', 'egg'] as const)
+            {(['xp', 'gold', 'coins', 'heart', 'egg'] as const)
               .filter((k) => buffs[k] > 0)
               .map((k) => (
                 <li key={k} className="rounded-full bg-amber-glow/15 px-3 py-1 text-sm font-black ring-1 ring-amber-glow/40">
@@ -327,10 +329,12 @@ function CreatorPanel() {
   );
 }
 
-const BUFF_ICON: Record<PetBuffKind, string> = { xp: '⚡', coins: '🪙', heart: '💖', egg: '🥚' };
+const BUFF_ICON: Record<TeamBuffKind, string> = { xp: '⚡', gold: '💰', coins: '🪙', heart: '💖', egg: '🥚' };
+/** Lumo power's bonuses, biggest first. */
+const LUMO_KINDS = (['xp', 'gold', 'heart', 'egg'] as const).filter((k) => LUMO_POWER[k] > 0);
 
 /** "+7% chance to win a heart on a right answer" (or the short form for the team summary). */
-function buffLine(t: TFunction, b: { kind: PetBuffKind; value: number }, short = false) {
+function buffLine(t: TFunction, b: { kind: TeamBuffKind; value: number }, short = false) {
   const key = `pets.buff${short ? 'Short' : ''}.${b.kind}`;
   return t(key, { pct: Math.round(b.value * 100), n: b.value, count: b.value });
 }
@@ -348,6 +352,7 @@ function PetCard({ pet, active = false, onOpen }: { pet: PetView; active?: boole
         <LevelShield level={pet.level} rarity={pet.rarity} className="absolute -right-2 bottom-1" />
       </span>
       {buff && <span className={`text-sm leading-snug font-bold ${buff.off ? 'text-bad' : ''}`}>{buff.off ? `😋 ${t('pets.tooHungry')}` : buffLine(t, buff)}</span>}
+      {pet.lumoPower && !buff?.off && <span className="rarity-lumo rounded-full px-2 py-0.5 text-xs font-black text-night">✨ {t('pets.lumoPower')}</span>}
     </button>
   );
 }
@@ -478,6 +483,21 @@ function PetSheet({
           </p>
         ) : (
           <p className="rounded-xl bg-amber-glow/15 px-3 py-1.5 text-sm font-bold">✨ {t('pets.perk', { pct: Math.round(pet.perk * 100) })}</p>
+        )}
+        {pet.lumoPower && (
+          <div className="rounded-2xl p-[2px] rarity-lumo" data-testid="lumo-power">
+            <div className="rounded-[14px] bg-surface px-3 py-2.5 text-left">
+              <p className="font-black">✨ {t('pets.lumoPower')}</p>
+              <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-sm font-bold">
+                {LUMO_KINDS.map((k) => (
+                  <li key={k}>
+                    {BUFF_ICON[k]} {buffLine(t, { kind: k, value: LUMO_POWER[k] }, true)}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-muted">{t('pets.lumoPowerHint')}</p>
+            </div>
+          </div>
         )}
         {teamMode && (
           <div className="flex w-full gap-2">

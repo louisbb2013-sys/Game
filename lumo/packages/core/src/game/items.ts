@@ -323,16 +323,29 @@ export function petBuff(p: Pick<PetState, 'species' | 'tier' | 'level'>): PetBuf
 
 export const petTooHungry = (p: PetState, now: Millis) => currentFullness(p, now) < HUNGRY_BUFF_LIMIT;
 
-export type TeamBuffs = Record<PetBuffKind, number>;
+/** What a team can add: the pets' own bonuses, plus `gold` (a share more coins on everything earned). */
+export type TeamBuffKind = PetBuffKind | 'gold';
+export type TeamBuffs = Record<TeamBuffKind, number>;
+
+/**
+ * Lumo power: what a Lumo-rarity pet adds on top of its own bonus. Huge, but once per team (two Lumo
+ * pets don't double it) and capped, so it never maxes everything out.
+ */
+export const LUMO_POWER: TeamBuffs = { xp: 0.5, gold: 0.5, heart: 0.2, egg: 0.5, coins: 0 };
+/** With Lumo power, the team's bonuses go up to these (instead of BUFF_CAP). */
+export const LUMO_CAP: TeamBuffs = { xp: 0.75, gold: 0.5, heart: 0.6, egg: 1, coins: 8 };
 
 /** Everything the active pets add up to (hungry ones don't help; each kind is capped). */
 export function teamBuffs(team: PetState[], now: Millis): TeamBuffs {
-  const sum: TeamBuffs = { xp: 0, coins: 0, heart: 0, egg: 0 };
+  const sum: TeamBuffs = { xp: 0, coins: 0, heart: 0, egg: 0, gold: 0 };
+  let lumo = false;
   for (const p of team.slice(0, MAX_ACTIVE_PETS)) {
     if (!speciesOf(p.species) || petTooHungry(p, now)) continue;
     const b = petBuff(p);
     sum[b.kind] += b.value;
+    if (petTier(p) === 'lumo') lumo = true;
   }
-  for (const k of Object.keys(sum) as PetBuffKind[]) sum[k] = Math.min(BUFF_CAP[k], Math.round(sum[k] * 100) / 100);
+  for (const k of Object.keys(BUFF_CAP) as PetBuffKind[]) sum[k] = Math.min(BUFF_CAP[k], Math.round(sum[k] * 100) / 100);
+  if (lumo) for (const k of Object.keys(sum) as TeamBuffKind[]) sum[k] = Math.min(LUMO_CAP[k], Math.round((sum[k] + LUMO_POWER[k]) * 100) / 100);
   return sum;
 }

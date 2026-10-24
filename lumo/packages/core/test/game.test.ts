@@ -127,9 +127,23 @@ describe('pet team bonuses (like Gizmo)', () => {
   it('adds up the 4 active pets, skips hungry ones, and caps each bonus', () => {
     const team = [pet('moss_turtle', 3), pet('crystal_cat', 2), pet('pixel_owl'), pet('acorn_squirrel'), pet('ember_dragon')];
     expect(MAX_ACTIVE_PETS).toBe(4);
-    expect(teamBuffs(team, 0)).toEqual({ heart: 0.07 + 0.09, xp: 0.04, coins: 1, egg: 0 }); // the 5th pet isn't on the team
+    expect(teamBuffs(team, 0)).toEqual({ heart: 0.07 + 0.09, xp: 0.04, coins: 1, egg: 0, gold: 0 }); // the 5th pet isn't on the team
     expect(teamBuffs([pet('moss_turtle', 3, { fullness: 0 })], 0).heart).toBe(0); // too hungry to help
     const xpTeam = Array.from({ length: 4 }, () => pet('galaxy_dragon', 50));
     expect(teamBuffs(xpTeam, 0).xp).toBe(0.4);
+  });
+
+  it('a Lumo pet adds Lumo power: +50% XP, +50% coins, more hearts, faster eggs; once per team, capped', () => {
+    const firefly = pet('lumo_firefly', 1, { tier: 'lumo' });
+    // Its own +25% XP, plus Lumo power.
+    expect(teamBuffs([firefly], 0)).toEqual({ xp: 0.75, gold: 0.5, heart: 0.2, egg: 0.5, coins: 0 });
+    // A second Lumo pet doesn't double it, and XP never goes past +75%.
+    const two = teamBuffs([firefly, pet('comet_fox', 1, { tier: 'lumo' }), pet('galaxy_dragon', 50)], 0);
+    expect(two).toMatchObject({ xp: 0.75, gold: 0.5, heart: 0.2, egg: 0.5 });
+    expect(two.coins).toBe(5); // the fox's own bonus still counts
+    // Too hungry: no help at all, Lumo power included.
+    expect(teamBuffs([pet('lumo_firefly', 1, { tier: 'lumo', fullness: 0 })], 0)).toEqual({ xp: 0, gold: 0, heart: 0, egg: 0, coins: 0 });
+    // Only Lumo rarity has it.
+    expect(teamBuffs([pet('galaxy_dragon', 1, { tier: 'galaxial' })], 0).gold).toBe(0);
   });
 });

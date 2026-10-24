@@ -738,14 +738,16 @@
       "heart": "+{{pct}} % de chances de gagner un cœur sur une bonne réponse",
       "egg": "+{{pct}} % de chances qu’une réponse réchauffe ton œuf deux fois",
       "coins_one": "+{{n}} pièce par bonne réponse",
-      "coins_other": "+{{n}} pièces par bonne réponse"
+      "coins_other": "+{{n}} pièces par bonne réponse",
+      "gold": "+{{pct}} % de pièces sur tout ce que tu gagnes"
     },
     "buffShort": {
       "xp": "+{{pct}} % d’XP",
       "heart": "+{{pct}} % de chances de cœur",
       "egg": "+{{pct}} % œuf plus rapide",
       "coins_one": "+{{n}} pièce par bonne réponse",
-      "coins_other": "+{{n}} pièces par bonne réponse"
+      "coins_other": "+{{n}} pièces par bonne réponse",
+      "gold": "+{{pct}} % de pièces"
     },
     "buffKind": {
       "xp": "Plus d’XP",
@@ -754,7 +756,9 @@
       "egg": "Œufs plus rapides"
     },
     "lumoTier": "Rareté Lumo : un cadeau du créateur. Personne ne peut le faire éclore.",
-    "giftOnly": "Rareté Lumo : seul le créateur peut la donner"
+    "giftOnly": "Rareté Lumo : seul le créateur peut la donner",
+    "lumoPower": "Pouvoir Lumo",
+    "lumoPowerHint": "En plus de son propre bonus, quand il est dans ton équipe. Un seul pouvoir Lumo par équipe."
   },
   "badges": {
     "first_steps": {
@@ -1696,7 +1700,7 @@
   "gifts": {
     "fromCreator": "Un cadeau du créateur !",
     "title": "Tu as reçu {{name}} !",
-    "body": "Il est de rareté Lumo, la plus rare qui existe. Personne ne peut le faire éclore : seul le créateur le donne.",
+    "body": "Rareté Lumo, la plus rare qui existe, avec le pouvoir Lumo : +50 % d’XP et +50 % de pièces. Personne ne peut le faire éclore : seul le créateur le donne.",
     "thanks": "Génial !",
     "creatorTitle": "Créateur : donner un compagnon Lumo",
     "creatorBody": "Écris le nom Lumo d’un élève et choisis un compagnon. Il le reçoit en rareté Lumo la prochaine fois qu’il ouvre Lumo.",

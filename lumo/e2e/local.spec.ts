@@ -237,6 +237,16 @@ test('while playing, a surprise gift drops in now and then: tap it before it flo
   await page.reload();
   await page.getByRole('link', { name: 'Learn' }).click();
   await page.getByRole('button', { name: 'Try a sample deck' }).click();
+  // (The study egg stays far from hatching, so its pop-up never covers the gift.)
+  await page.evaluate(() => {
+    const k = 'lumo_local_v1';
+    const d = JSON.parse(localStorage.getItem(k)!);
+    if (d.game?.egg) d.game.egg.target = 999;
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  await page.reload();
+  await page.getByRole('link', { name: 'Learn' }).click();
+  await page.getByText('Cells — the basics').first().click();
   await page.getByRole('button', { name: /^Play\b/ }).click();
   const gift = page.getByTestId('surprise-gift');
   for (let i = 0; i < 10 && !(await gift.count()); i++) {
@@ -256,4 +266,33 @@ test('while playing, a surprise gift drops in now and then: tap it before it flo
   await expect(page.getByTestId('gift-won')).toHaveText('🪙 +3 coins!');
   await expect(gift).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.coins)).toBe(before + 3);
+});
+
+test('a Lumo-rarity pet has Lumo power: +50% XP and +50% coins on top of its own bonus', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto(process.env.LOCAL_URL!);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  await page.getByLabel('Give it a name').fill('Pip');
+  await page.getByRole('button', { name: 'Adopt!' }).click();
+  await expect(page.getByTestId('pet-card')).toHaveCount(1);
+  // The creator gave this learner a Lumo Firefly.
+  await page.evaluate(() => {
+    const k = 'lumo_local_v1';
+    const d = JSON.parse(localStorage.getItem(k)!);
+    d.game.pets = [{ ...d.game.pets[0], species: 'lumo_firefly', tier: 'lumo', name: '' }];
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  const team = page.getByTestId('team-buffs');
+  await expect(team).toContainText('+75% XP'); // its own +25 %, plus Lumo power
+  await expect(team).toContainText('+50% coins');
+  await expect(team).toContainText('+20% heart chance');
+  await expect(team).toContainText('+50% faster egg');
+  await expect(page.getByTestId('pet-card')).toContainText('Lumo power');
+  await page.getByTestId('pet-card').click();
+  await expect(page.getByTestId('lumo-power')).toContainText('+50% XP');
+  await page.screenshot({ path: 'e2e/screens/local-lumo-power.png' });
 });

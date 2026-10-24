@@ -449,6 +449,9 @@ test('the creator gives Lumo-rarity pets: one for the creator, and one for a lea
   await b.getByTestId('pet-card').click();
   await expect(b.getByTestId('pet-rarity')).toHaveText('Lumo');
   await expect(b.getByTestId('pet-screen')).toContainText('Lumo rarity: a gift from the creator. Nobody can hatch it.');
+  // Lumo power on top of its own bonus.
+  await expect(b.getByTestId('lumo-power')).toContainText('+50% XP');
+  await expect(b.getByTestId('lumo-power')).toContainText('+50% coins');
   // A gift only arrives once.
   await b.reload();
   await expect(b.getByRole('link', { name: 'Learn', exact: true })).toBeVisible();
