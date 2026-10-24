@@ -1268,7 +1268,9 @@
     },
     "copyDeckLink": "Share the deck's link",
     "deckGone": "This deck isn't shared any more.",
-    "friendCoins": "+{{n}} coins for a new friend! 🪙"
+    "friendCoins": "+{{n}} coins for a new friend! 🪙",
+    "leaderboard": "Leaderboard",
+    "allTime": "All time"
   },
   "egg": {
     "title": "{{rarity}} egg",
@@ -1706,7 +1708,14 @@
       "not_creator": "Only the creator can give Lumo pets.",
       "no_such_learner": "Nobody on Lumo has that name.",
       "bad_species": "Pick a pet from the list.",
-      "network": "Can’t reach Lumo. Check your connection."
-    }
+      "network": "Can’t reach Lumo. Check your connection.",
+      "bad_code": "That code isn’t right.",
+      "rate_limited": "Too many tries. Wait 10 minutes and try again."
+    },
+    "codeTitle": "Creator code",
+    "unlock": "Unlock",
+    "unlocked": "Creator mode is on! Your Lumo pet is on its way.",
+    "isCreator": "Creator mode is on for this account. Give Lumo pets from the Pets page.",
+    "codeHint": "Only for the person who made Lumo."
   }
 }

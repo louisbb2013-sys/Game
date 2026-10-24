@@ -1,11 +1,12 @@
 import { DEFAULT_REMINDER } from '@lumo/core';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { shareOrCopy } from '../components/QrCode';
 import { clearOffline } from '../lib/offline';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { LanguageSwitch } from '../components/LanguageSwitch';
-import { api, type Settings as S, LOCAL, NETLIFY } from '../lib/api';
+import { api, ApiError, type Settings as S, LOCAL, NETLIFY } from '../lib/api';
+import { checkGifts, useGifts } from '../lib/gifts';
 import { useAuth } from '../lib/auth';
 
 export function Settings() {
@@ -126,7 +127,65 @@ export function Settings() {
           </div>
         )}
       </Card>
+
+      {NETLIFY && <CreatorCode />}
     </div>
+  );
+}
+
+/** Website: the game's creator turns on creator mode (and gets a Lumo pet) by typing the creator code once per account. */
+function CreatorCode() {
+  const { t } = useTranslation();
+  const { creator } = useGifts();
+  const [code, setCode] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const unlock = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!code.trim() || busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api('/api/game/gifts/unlock', { method: 'POST', body: { code } });
+      setCode('');
+      setMsg({ ok: true, text: t('gifts.unlocked') });
+      await checkGifts(true); // the Lumo pet pops up
+    } catch (err) {
+      setMsg({ ok: false, text: t(`gifts.errors.${err instanceof ApiError ? err.code : 'network'}`, { defaultValue: t('signin.errors.network') }) });
+    }
+    setBusy(false);
+  };
+  return (
+    <Card title={t('gifts.codeTitle')}>
+      {creator ? (
+        <p className="font-bold" data-testid="creator-on">
+          👑 {t('gifts.isCreator')}
+        </p>
+      ) : (
+        <form onSubmit={(e) => void unlock(e)} className="flex gap-2">
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            aria-label={t('gifts.codeTitle')}
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={40}
+            className="min-w-0 flex-1 rounded-xl border-2 border-line bg-bg px-3 py-2 font-mono"
+          />
+          <button type="submit" disabled={busy || !code.trim()} className="rounded-xl bg-brand px-4 font-black text-brand-ink disabled:opacity-40">
+            {t('gifts.unlock')}
+          </button>
+        </form>
+      )}
+      {!creator && <p className="text-xs text-muted">{t('gifts.codeHint')}</p>}
+      {msg && (
+        <p role="status" className={`text-sm font-bold ${msg.ok ? 'text-good' : 'text-bad'}`}>
+          {msg.text}
+        </p>
+      )}
+    </Card>
   );
 }
 

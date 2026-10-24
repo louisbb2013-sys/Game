@@ -414,14 +414,19 @@ test('the creator gives Lumo-rarity pets: one for the creator, and one for a lea
   await expect(b.getByRole('heading', { name: 'Choose your study buddy' })).toBeVisible();
   await expect(b.getByTestId('creator-panel')).toHaveCount(0);
 
-  // The site names `maker` the creator; next time the app opens, the creator's own Lumo pet arrives.
-  expect((await a.request.post(`${process.env.NETLIFY_URL}__test/creator?name=${maker}`)).ok()).toBe(true);
-  await a.reload();
+  // The creator types the creator code in Settings (a wrong one does nothing): creator mode, and their own Lumo pet pops up.
+  await a.goto(`${process.env.NETLIFY_URL}settings`);
+  await a.getByLabel('Creator code').fill('AAAA-BBBB-CCCC-DDDD');
+  await a.getByRole('button', { name: 'Unlock' }).click();
+  await expect(a.getByRole('status').filter({ hasText: 'That code isn’t right.' })).toBeVisible();
+  await a.getByLabel('Creator code').fill('test-code-2468-wxyz');
+  await a.getByRole('button', { name: 'Unlock' }).click();
   const mine = a.getByTestId('creator-gift');
   await expect(mine).toContainText('You got Lumo Firefly!', { timeout: 20_000 });
   await a.waitForTimeout(800);
   await a.screenshot({ path: 'e2e/screens/web-creator-gift.png' });
   await mine.getByRole('link', { name: 'See my pets' }).click();
+  await expect(a.getByTestId('creator-gift')).toHaveCount(0);
   await expect(a.getByTestId('pet-card')).toContainText('Lumo Firefly');
 
   // The creator gives a Comet Fox to the learner, by name.

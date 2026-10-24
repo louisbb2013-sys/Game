@@ -909,6 +909,16 @@ const gameRoutes: [string, RegExp, Handler][] = [
     }
     return { creator: r.creator, gifts: got };
   }],
+  ['POST', /^\/api\/game\/gifts\/unlock$/, async (_m, b) => {
+    // The creator's code turns on creator mode for this account (website only).
+    const call = giftsApi();
+    if (!call) throw new LocalError(403, 'bad_code');
+    try {
+      return await call({ op: 'unlock', code: String(b.code ?? '') });
+    } catch (e) {
+      throw new LocalError(400, (e as { code?: string }).code ?? 'network');
+    }
+  }],
   ['POST', /^\/api\/game\/gifts\/give$/, async (_m, b) => {
     const call = giftsApi();
     if (!call) throw new LocalError(403, 'not_creator');

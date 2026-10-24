@@ -1268,7 +1268,9 @@
     },
     "copyDeckLink": "Partager le lien du paquet",
     "deckGone": "Ce paquet n'est plus partagé.",
-    "friendCoins": "+{{n}} pièces pour un nouvel ami ! 🪙"
+    "friendCoins": "+{{n}} pièces pour un nouvel ami ! 🪙",
+    "leaderboard": "Classement",
+    "allTime": "Depuis toujours"
   },
   "egg": {
     "title": "Œuf {{rarity}}",
@@ -1706,7 +1708,14 @@
       "not_creator": "Seul le créateur peut donner des compagnons Lumo.",
       "no_such_learner": "Personne sur Lumo n’a ce nom.",
       "bad_species": "Choisis un compagnon dans la liste.",
-      "network": "Impossible de joindre Lumo. Vérifie ta connexion."
-    }
+      "network": "Impossible de joindre Lumo. Vérifie ta connexion.",
+      "bad_code": "Ce code n’est pas le bon.",
+      "rate_limited": "Trop d’essais. Attends 10 minutes et réessaie."
+    },
+    "codeTitle": "Code du créateur",
+    "unlock": "Débloquer",
+    "unlocked": "Le mode créateur est activé ! Ton compagnon Lumo arrive.",
+    "isCreator": "Le mode créateur est activé pour ce compte. Donne des compagnons Lumo depuis la page Compagnons.",
+    "codeHint": "Seulement pour la personne qui a créé Lumo."
   }
 }

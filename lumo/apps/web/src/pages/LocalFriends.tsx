@@ -32,6 +32,22 @@ export function LocalFriends() {
   const [typed, setTyped] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // The ranking: XP this week, or all the XP ever earned (remembered on this device).
+  const [range, setRange] = useState<'week' | 'all'>(() => {
+    try {
+      return localStorage.getItem('lumo.board') === 'all' ? 'all' : 'week';
+    } catch {
+      return 'week';
+    }
+  });
+  const pickRange = (r: 'week' | 'all') => {
+    setRange(r);
+    try {
+      localStorage.setItem('lumo.board', r);
+    } catch {
+      /* fine: it's just not remembered */
+    }
+  };
   const requests = useFriendRequests();
   // A request from someone I already added is just cleared.
   useEffect(() => {
@@ -61,7 +77,8 @@ export function LocalFriends() {
   const myFriends = new Set(friends ?? []);
   const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
   const nameOf = (id: string) => byId.get(id)?.username || avatars[id]?.name || t('together.someone');
-  const board = (profiles ?? []).filter((p) => p.id === me || myFriends.has(p.id)).sort((a, b) => weekly(b) - weekly(a));
+  const score = (p: PublicProfile) => (range === 'all' ? (p.xp ?? 0) : weekly(p));
+  const board = (profiles ?? []).filter((p) => p.id === me || myFriends.has(p.id)).sort((a, b) => score(b) - score(a));
   // On the website only friends show up (see FRIENDS_ONLY); inside a Claude page, everyone it's shared with.
   const onlineNow = online.filter((id) => byId.has(id) && (!FRIENDS_ONLY || myFriends.has(id)));
   const everyoneElse = FRIENDS_ONLY ? [] : (profiles ?? []).filter((p) => p.id !== me && !myFriends.has(p.id) && !online.includes(p.id));
@@ -266,7 +283,23 @@ export function LocalFriends() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="font-black">🏆 {t('together.thisWeek')}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-black">🏆 {t('together.leaderboard')}</h2>
+          <div role="radiogroup" aria-label={t('together.leaderboard')} className="flex rounded-full bg-surface-2 p-1 text-sm font-black ring-1 ring-line" data-testid="board-range">
+            {(['week', 'all'] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                role="radio"
+                aria-checked={range === r}
+                onClick={() => pickRange(r)}
+                className={`rounded-full px-3 py-1 ${range === r ? 'bg-brand text-brand-ink' : 'text-muted'}`}
+              >
+                {t(r === 'week' ? 'together.thisWeek' : 'together.allTime')}
+              </button>
+            ))}
+          </div>
+        </div>
         {board.length <= 1 ? (
           <div className="flex items-center gap-3 rounded-2xl bg-surface p-4 ring-1 ring-line">
             <Lumo size={48} mood="happy" />
@@ -286,7 +319,7 @@ export function LocalFriends() {
                   <FlameIcon size={14} />
                   {p.streak}
                 </span>
-                <span className="font-black tabular-nums">{weekly(p)} XP</span>
+                <span className="font-black tabular-nums">{score(p).toLocaleString()} XP</span>
                 {p.id !== me && (
                   <button disabled={busy} onClick={() => void remove(p.id)} aria-label={t('friends.remove', { name: nameOf(p.id) })} className="px-1 text-muted hover:text-bad">
                     ✕

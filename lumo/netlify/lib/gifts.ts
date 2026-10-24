@@ -1,20 +1,21 @@
 import type { KV } from './kv.ts';
-import { json, randomId, type Session } from './session.ts';
+import { json, limiter, randomId, type Session } from './session.ts';
 
 /**
  * Gifts from the game's creator: Lumo-rarity pets nobody can hatch or upgrade to. Only a creator can
  * give one (by the receiver's Lumo name); the receiver's page picks it up and claims it once.
  *
  *   g/<uid>/<giftId>   { id, species, tier, from, at, claimed? }
+ *   c/<uid>            { at }   this learner unlocked creator mode with the creator code
  *
- * Creators: the learners listed in LUMO_CREATORS (comma-separated ids), and the creator's own
- * accounts from before gifts existed: those named Louis made before CREATOR_CUTOFF (each also gets
- * one Lumo pet the first time it looks).
+ * Creators: the learners listed in LUMO_CREATORS (comma-separated ids), and any account where the
+ * creator typed the creator code (only its SHA-256 is here; LUMO_CREATOR_CODE_HASH can replace it).
+ * Each creator account also gets one Lumo pet.
  */
 
-const CREATOR_NAME = 'louis';
-const CREATOR_CUTOFF = Date.UTC(2026, 9, 24); // accounts made before 24 Oct 2026
+const CREATOR_CODE_HASH = '18ca0707ef32b0f8fd4588152e1de8363b61981a3422c0f0ca8b40a21e292793';
 const FIRST_GIFT = 'creator-lumo';
+const tries = limiter(10, 10 * 60_000);
 const GIFT_SPECIES = new Set(['lumo_firefly', 'moss_turtle', 'cloud_sheep', 'pixel_owl', 'comet_fox', 'crystal_cat', 'star_jelly', 'bubble_octo', 'ember_dragon', 'puddle_frog', 'acorn_squirrel', 'snow_penguin', 'lucky_bunny', 'rock_dino', 'mystic_unicorn', 'cosmic_whale', 'aurora_peacock', 'celestial_phoenix', 'galaxy_dragon', 'prism_axolotl', 'nebula_manta']);
 
 type Env = (k: string) => string | undefined;
@@ -38,26 +39,16 @@ const read = async (kv: KV, key: string) => {
 };
 const nameOf = async (kv: KV, uid: string) => String((await read(kv, `d/profiles/${uid}`))?.v.username ?? '');
 
-/** When this learner's account was made (name-and-password or Google), or null if unknown. */
-async function createdAt(kv: KV, uid: string, name: string, kind: Session['k']): Promise<number | null> {
-  if (kind === 'pw') {
-    const rec = await read(kv, `a/n/${encodeURIComponent(name.toLowerCase())}`);
-    return rec?.v.uid === uid ? Number(rec.v.created) || null : null;
-  }
-  for (const { key } of await kv.list('a/g/')) {
-    const rec = await read(kv, key);
-    if (rec?.v.uid === uid) return Number(rec.v.created) || null;
-  }
-  return null;
-}
-
 export async function isCreator(kv: KV, env: Env, me: Session): Promise<boolean> {
   const listed = (env('LUMO_CREATORS') ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-  if (listed.includes(me.u)) return true;
-  const name = me.k === 'pw' ? me.n : await nameOf(kv, me.u);
-  if (name.toLowerCase() !== CREATOR_NAME) return false;
-  const made = await createdAt(kv, me.u, me.k === 'pw' ? me.n : name, me.k);
-  return made !== null && made < CREATOR_CUTOFF;
+  return listed.includes(me.u) || (await kv.etag(`c/${me.u}`)) !== null;
+}
+
+/** The creator code as typed ("abcd-efgh …"), boiled down and hashed. */
+async function codeHash(code: string): Promise<string> {
+  const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clean));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Who has this Lumo name now (its claim, else any profile using it). */
@@ -77,6 +68,14 @@ async function uidForName(kv: KV, name: string): Promise<string | null> {
 /** /api/gifts: list mine (and whether I'm a creator), claim one, or (creators) give one. */
 export async function gifts(kv: KV, env: Env, body: Record<string, unknown>, me: Session, now: number): Promise<Response> {
   const op = body.op;
+  if (op === 'unlock') {
+    // The creator types the creator code once on each of their accounts.
+    if (!tries(me.u, now)) return json(429, { error: 'rate_limited' });
+    const code = String(body.code ?? '').slice(0, 64);
+    if (!code || (await codeHash(code)) !== (env('LUMO_CREATOR_CODE_HASH') ?? CREATOR_CODE_HASH)) return json(403, { error: 'bad_code' });
+    await kv.set(`c/${me.u}`, JSON.stringify({ at: now }));
+    return json(200, { ok: true });
+  }
   if (op === 'list') {
     const creator = await isCreator(kv, env, me);
     // The creator's own accounts get their Lumo pet the first time they look.

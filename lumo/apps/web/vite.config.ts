@@ -9,7 +9,7 @@ const netlify = process.env.VITE_NETLIFY === '1';
 const local = process.env.VITE_LOCAL === '1' && !netlify;
 
 /*
- * The website, findable on Google ("study lumo", "lumo study"): its address (Netlify gives it as URL
+ * The website, findable on Google ("study lumo", "lumo study", "lumo firefly": public/lumo-firefly/): its address (Netlify gives it as URL
  * while building), what search engines and link previews show, robots.txt and a sitemap.
  */
 const site = (process.env.URL || 'https://lumo-study-qwd6.netlify.app').replace(/\/$/, '');
@@ -53,7 +53,7 @@ function findable(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',
-        source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${site}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n</urlset>\n`,
+        source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${site}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>${site}/lumo-firefly/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>\n</urlset>\n`,
       });
     },
   };
@@ -96,7 +96,8 @@ export default defineConfig({
           },
           workbox: {
             // Sign-in with Google (Netlify Identity) and the site's endpoints must reach the server, never the cached app.
-            navigateFallbackDenylist: [/^\/api/, /^\/\.netlify\//],
+            // The Lumo Firefly page is a plain page of its own (for Google), not part of the app.
+            navigateFallbackDenylist: [/^\/api/, /^\/\.netlify\//, /^\/lumo-firefly/],
             globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
           },
         }),

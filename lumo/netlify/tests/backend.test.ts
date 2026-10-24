@@ -252,12 +252,22 @@ describe('live rooms', () => {
 describe('gifts from the creator (Lumo-rarity pets)', () => {
   const named = async (s: ReturnType<typeof site>, token: string, uid: string, username: string) => s.db(token, { op: 'set', path: `profiles/${uid}`, data: { username } });
 
-  it("gives the creator's own older accounts (named Louis) one Lumo pet each, claimed once", async () => {
-    const s = site({ g1: 'idn-0001-aaaa', g2: 'idn-0002-bbbb' });
+  // A made-up creator code for these tests (the site keeps only the real code's hash).
+  const CODE = 'TEST-CODE-2468-WXYZ';
+  const vars = async () => ({ LUMO_CREATOR_CODE_HASH: [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('TESTCODE2468WXYZ')))].map((b) => b.toString(16).padStart(2, '0')).join('') });
+
+  it('the creator code turns on creator mode for that account, with one Lumo pet, claimed once', async () => {
+    const s = site({ g1: 'idn-0001-aaaa', g2: 'idn-0002-bbbb' }, await vars());
     const louis = (await s.google('g1')).body;
     const other = (await s.google('g2')).body;
     await named(s, louis.token, louis.uid, 'Louis');
     await named(s, other.token, other.uid, 'Mia');
+    // Being called Louis isn't enough; a wrong code does nothing.
+    expect((await s.gifts(louis.token, { op: 'list' })).body).toEqual({ creator: false, gifts: [] });
+    expect((await s.gifts(louis.token, { op: 'unlock', code: 'AAAA-BBBB-CCCC-DDDD' })).status).toBe(403);
+    expect((await s.gifts(louis.token, { op: 'list' })).body.creator).toBe(false);
+    // The right code, however it's typed (spaces, lower case).
+    expect((await s.gifts(louis.token, { op: 'unlock', code: ' test code 2468 wxyz ' })).status).toBe(200);
     const mine = (await s.gifts(louis.token, { op: 'list' })).body;
     expect(mine.creator).toBe(true);
     expect(mine.gifts).toHaveLength(1);
@@ -267,15 +277,15 @@ describe('gifts from the creator (Lumo-rarity pets)', () => {
     expect((await s.gifts(louis.token, { op: 'claim', id: mine.gifts[0].id })).status).toBe(409); // another device can't take it again
     expect((await s.gifts(louis.token, { op: 'list' })).body.gifts).toHaveLength(0);
     // Everyone else: no creator powers, no free Lumo pet.
-    const theirs = (await s.gifts(other.token, { op: 'list' })).body;
-    expect(theirs).toEqual({ creator: false, gifts: [] });
+    expect((await s.gifts(other.token, { op: 'list' })).body).toEqual({ creator: false, gifts: [] });
     expect((await s.gifts(other.token, { op: 'give', username: 'Louis' })).status).toBe(403);
   });
 
-  it('lets a creator give a Lumo pet by Lumo name; a new account named Louis is not a creator', async () => {
-    const s = site({ g1: 'idn-0001-aaaa', g3: 'idn-0003-cccc' });
+  it('a creator gives a Lumo pet by Lumo name; guessing the code is cut off', async () => {
+    const s = site({ g1: 'idn-0001-aaaa', g3: 'idn-0003-cccc' }, await vars());
     const louis = (await s.google('g1')).body;
     await named(s, louis.token, louis.uid, 'Louis');
+    expect((await s.gifts(louis.token, { op: 'unlock', code: CODE })).status).toBe(200);
     const mia = (await s.signup('Mia', 'secret123')).body;
     await named(s, mia.token, mia.uid, 'Mia');
     expect((await s.gifts(louis.token, { op: 'give', username: 'mia', species: 'galaxy_dragon' })).status).toBe(200);
@@ -284,11 +294,10 @@ describe('gifts from the creator (Lumo-rarity pets)', () => {
     const got = (await s.gifts(mia.token, { op: 'list' })).body;
     expect(got.creator).toBe(false);
     expect(got.gifts).toEqual([expect.objectContaining({ species: 'galaxy_dragon', tier: 'lumo', from: louis.uid })]);
-    // Accounts made after gifts existed can't become a creator by taking the name.
-    s.tick(Date.UTC(2027, 0, 1));
-    const late = (await s.google('g3')).body;
-    await s.kv.set(`d/profiles/${late.uid}`, JSON.stringify({ username: 'louis' }));
-    expect((await s.gifts(late.token, { op: 'list' })).body.creator).toBe(false);
+    // Ten wrong guesses, then even the right code has to wait.
+    const guesser = (await s.google('g3')).body;
+    for (let i = 0; i < 10; i++) expect((await s.gifts(guesser.token, { op: 'unlock', code: `GUESS-${i}` })).status).toBe(403);
+    expect((await s.gifts(guesser.token, { op: 'unlock', code: CODE })).status).toBe(429);
   });
 
   it('also makes the learners listed in LUMO_CREATORS creators', async () => {
