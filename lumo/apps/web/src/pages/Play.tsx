@@ -66,6 +66,12 @@ export function Play() {
   const [buddy, setBuddy] = useState<{ species: string; rarity: Rarity } | null>(null);
   const [bossDown, setBossDown] = useState(false);
   const [petGift, setPetGift] = useState<AnswerResult['petGift'] | null>(null);
+  // Little surprises while playing: a gift to tap, a golden question, the buddy cheering.
+  const [gift, setGift] = useState<string | null>(null);
+  const [giftWon, setGiftWon] = useState<GiftResult | null>(null);
+  const [golden, setGolden] = useState(false);
+  const [cheer, setCheer] = useState<string | null>(null);
+  const misses = useRef(0);
   const [leftMs, setLeftMs] = useState<number | null>(null);
   const [lightLeft, setLightLeft] = useState<number | null>(null);
   const [endRewards, setEndRewards] = useState<Rewards | null>(null);
@@ -261,6 +267,23 @@ export function Play() {
     advance();
   }, [chests, summary, advance]);
 
+  const say = useCallback((key: string) => {
+    setCheer(key);
+    setTimeout(() => setCheer((c) => (c === key ? null : c)), 2200);
+  }, []);
+  const giftGone = useCallback(() => setGift(null), []);
+  const giftOpened = useCallback(
+    (r: GiftResult) => {
+      setGift(null);
+      setGiftWon(r);
+      play(r.kind === 'golden' ? 'star' : 'chest');
+      if (r.kind === 'golden') setGolden(true);
+      if (r.kind === 'coins' && typeof r.total === 'number') setData((d) => (d ? { ...d, session: { ...d.session, coins: r.total } } : d));
+      setTimeout(() => setGiftWon((g) => (g === r ? null : g)), 2600);
+    },
+    [],
+  );
+
   const effects = useCallback(
     (r: AnswerResult) => {
       const target = document.querySelector('.tile[data-state="right"]') ?? document.querySelector('[data-answer-area]');
@@ -280,6 +303,8 @@ export function Play() {
         }
         buddyRef.current?.jump(r.combo >= 3 ? 1.1 : 0.8);
         buddyRef.current?.burst(r.combo >= 3 ? 36 : 18);
+        misses.current = 0;
+        if (r.combo === 3 || r.combo === 5 || r.combo === 10) say(`play.cheer.combo${r.combo}`);
         if ([3, 5, 10, 15, 20].includes(r.combo)) {
           setBanner(`combo:${r.combo}`);
           play('combo', r.combo);
@@ -290,6 +315,8 @@ export function Play() {
         haptic([30, 50, 30]);
         flash('bad');
         shake(document.querySelector('.tile[data-state="wrong"]'));
+        // Two misses in a row: the buddy has a kind word (not after every miss).
+        if (++misses.current === 2) say('play.cheer.miss');
       }
       if (mode === 'boss') {
         if (r.damage) {
@@ -303,7 +330,7 @@ export function Play() {
         if (r.shield === 'mended') setTimeout(() => play('heal'), 250);
       }
     },
-    [mode],
+    [mode, say],
   );
 
   const submit = useCallback(
@@ -352,6 +379,8 @@ export function Play() {
           return;
         }
         setResult(res.result);
+        if (res.result.gift) setGift(res.result.gift);
+        if (res.result.golden) setGolden(false);
         setNext(res.next);
         setSummary(res.summary);
         setData((d) => (d ? { ...d, session: res.session } : d));
@@ -418,6 +447,9 @@ export function Play() {
       setEndRewards(null);
       setBossDown(false);
       setEgg(null);
+      setGift(null);
+      setGolden(false);
+      misses.current = 0;
       endsAt.current = null;
       ending.current = false;
       setLeftMs(null);
@@ -533,6 +565,14 @@ export function Play() {
           </div>
         </div>
       )}
+      {gift && <SurpriseGift key={gift} sessionId={s.id} id={gift} onOpened={giftOpened} onGone={giftGone} />}
+      {giftWon && (
+        <div className="pointer-events-none fixed inset-x-0 top-40 z-40 flex justify-center px-4" role="status" data-testid="gift-won">
+          <div className="combo-pop rounded-full bg-amber-300 px-5 py-2 text-center text-lg font-black text-night shadow-xl">
+            {giftWon.kind === 'coins' ? `🪙 ${t('play.gift.coins', { n: giftWon.coins })}` : giftWon.kind === 'snack' ? `🍎 ${t('play.gift.snack')}` : `✨ ${t('play.gift.golden')}`}
+          </div>
+        </div>
+      )}
       {banner && (
         <div className="pointer-events-none fixed inset-x-0 top-24 z-40 flex justify-center" aria-live="polite">
           <div className={`combo-pop rounded-full px-5 py-2 text-xl font-black shadow-xl ${banner === 'lightning' ? 'bg-yellow-300 text-night' : 'combo-hot'}`}>
@@ -546,6 +586,11 @@ export function Play() {
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black tracking-wide text-white/90 uppercase">{askLabel(q, t)}</span>
             {s.retry && <span className="rounded-full bg-amber-300/90 px-2.5 py-1 text-xs font-black text-night">🔁 {t('play.again')}</span>}
+            {golden && (
+              <span className="golden-chip rounded-full px-2.5 py-1 text-xs font-black text-night" data-testid="golden">
+                ✨ {t('play.gift.goldenChip')}
+              </span>
+            )}
             {lightLeft !== null && lightLeft > 0 && phase === 'answering' && <Ring left={lightLeft} total={s.lightning ?? 10_000} />}
             <span className="flex-1" />
             {hintable && (
@@ -570,6 +615,11 @@ export function Play() {
                   <Lumo size={44} mood={reveal ? (reveal.correct ? 'cheer' : 'sad') : 'happy'} />
                 </Creature3D>
               </div>
+            )}
+            {cheer && mode !== 'boss' && (
+              <p className="combo-pop absolute -top-9 right-14 max-w-[60vw] rounded-2xl rounded-br-sm bg-white px-3 py-1.5 text-sm font-black text-night shadow-lg" role="status" data-testid="buddy-cheer">
+                {t(cheer)}
+              </p>
             )}
           </div>
 
@@ -692,6 +742,36 @@ export function Play() {
 }
 
 /** Rewards held back during a round, added up. */
+type GiftResult = { kind: 'coins'; coins: number; total?: number } | { kind: 'snack' } | { kind: 'golden' };
+
+/** A surprise that drops in now and then after a right answer: tap it before it floats away. */
+function SurpriseGift({ sessionId, id, onOpened, onGone }: { sessionId: string; id: string; onOpened: (r: GiftResult) => void; onGone: () => void }) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [left] = useState(() => 10 + Math.random() * 62);
+  useEffect(() => {
+    play('whoosh');
+    const gone = setTimeout(onGone, 7000);
+    return () => clearTimeout(gone);
+  }, [onGone]);
+  const open = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      onOpened(await api<GiftResult>(`/api/sessions/${sessionId}/gift`, { method: 'POST', body: { id } }));
+    } catch {
+      onGone();
+    }
+  };
+  return (
+    <button type="button" onClick={() => void open()} aria-label={t('play.gift.tap')} title={t('play.gift.tap')} data-testid="surprise-gift" className="gift-drop fixed top-24 z-50 grid size-20 place-items-center" style={{ left: `${left}%` }}>
+      <span className="gift-bob text-6xl drop-shadow-[0_6px_14px_rgb(250_204_21/0.6)]" aria-hidden>
+        🎁
+      </span>
+    </button>
+  );
+}
+
 function mergeRewards(a: Rewards | null, b: Rewards): Rewards {
   if (!a) return { ...b, badges: b.badges ?? [], questsCompleted: b.questsCompleted ?? [] };
   return {

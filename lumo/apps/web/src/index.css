@@ -645,3 +645,50 @@ html[data-reduce-motion='true'] .flip-inner { transition: none; }
   .float-react { animation: float-react-still 2s linear forwards; }
 }
 @keyframes float-react-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Rarities past Mythical: Exotic (acid teal), Galaxial (deep space with stars), Lumo (radiant gold, creator-only). */
+.rarity-exotic { background: linear-gradient(90deg, #a3e635, #2dd4bf, #22d3ee, #a3e635); background-size: 300% 100%; animation: myth-flow 4s linear infinite; }
+.rarity-galaxial { background: radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 70% 60%, #fff 0 1px, transparent 1.5px), linear-gradient(90deg, #1e1b4b, #4338ca, #a21caf, #1e1b4b); background-size: 12px 12px, 17px 17px, 300% 100%; animation: myth-flow 6s linear infinite; }
+.rarity-lumo { background: linear-gradient(90deg, #fde68a, #facc15, #fff7cc, #facc15, #fde68a); background-size: 300% 100%; animation: myth-flow 3s linear infinite; box-shadow: 0 0 10px rgb(250 204 21 / 0.7); }
+.rarity-ring-exotic { box-shadow: 0 0 0 3px rgb(45 212 191), 0 0 0 6px rgb(163 230 53 / 0.6), 0 0 26px rgb(34 211 238 / 0.7); }
+.rarity-ring-galaxial { box-shadow: 0 0 0 3px rgb(99 102 241), 0 0 0 6px rgb(217 70 239 / 0.6), 0 0 30px rgb(67 56 202 / 0.8); }
+.rarity-ring-lumo { box-shadow: 0 0 0 3px rgb(250 204 21), 0 0 0 7px rgb(255 247 204 / 0.7), 0 0 36px rgb(250 204 21 / 0.9); }
+.pet-card[data-rarity='exotic'] { --rc: 45 212 191; }
+.pet-card[data-rarity='galaxial'] { --rc: 129 140 248; }
+.pet-card[data-rarity='lumo'] { --rc: 250 204 21; }
+.pet-card[data-rarity='galaxial'][data-active='true'] { background: radial-gradient(circle at 15% 20%, rgb(255 255 255 / 0.5) 0 1px, transparent 1.5px), radial-gradient(circle at 80% 70%, rgb(255 255 255 / 0.4) 0 1px, transparent 1.5px), var(--color-surface); background-size: 23px 23px, 31px 31px, auto; }
+.pet-card[data-rarity='lumo'] { animation: lumo-glow 2.4s ease-in-out infinite; }
+@keyframes lumo-glow { 0%, 100% { box-shadow: 0 0 14px rgb(250 204 21 / 0.45); } 50% { box-shadow: 0 0 34px rgb(250 204 21 / 0.85), inset 0 0 30px rgb(250 204 21 / 0.18); } }
+.level-shield[data-rarity='exotic'] .level-shield-bg { fill: rgb(13 148 136); }
+.level-shield[data-rarity='galaxial'] .level-shield-bg { fill: rgb(67 56 202); }
+.level-shield[data-rarity='lumo'] .level-shield-bg { fill: rgb(202 138 4); }
+@media (prefers-reduced-motion: reduce) { .rarity-exotic, .rarity-galaxial, .rarity-lumo, .pet-card[data-rarity='lumo'] { animation: none !important; } }
+
+/* The full-screen pet page: the pet on a stage tinted by its rarity. */
+.pet-screen { --rc: 16 185 129; }
+.pet-screen[data-rarity='rare'] { --rc: 56 189 248; }
+.pet-screen[data-rarity='epic'] { --rc: 217 70 239; }
+.pet-screen[data-rarity='legendary'] { --rc: 249 146 22; }
+.pet-screen[data-rarity='mythical'] { --rc: 244 114 182; }
+.pet-screen[data-rarity='exotic'] { --rc: 45 212 191; }
+.pet-screen[data-rarity='galaxial'] { --rc: 129 140 248; }
+.pet-screen[data-rarity='lumo'] { --rc: 250 204 21; }
+.pet-stage { background: radial-gradient(ellipse at 50% 38%, rgb(var(--rc) / 0.28), transparent 68%), var(--color-surface); border: 2px solid rgb(var(--rc) / 0.35); }
+.pet-screen[data-rarity='galaxial'] .pet-stage { background: radial-gradient(circle at 15% 20%, rgb(255 255 255 / 0.55) 0 1px, transparent 1.5px), radial-gradient(circle at 80% 70%, rgb(255 255 255 / 0.45) 0 1px, transparent 1.5px), radial-gradient(ellipse at 50% 38%, rgb(var(--rc) / 0.35), transparent 68%), var(--color-surface); background-size: 23px 23px, 31px 31px, auto, auto; }
+.pet-screen[data-rarity='lumo'] .pet-stage { animation: lumo-glow 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pet-screen[data-rarity='lumo'] .pet-stage { animation: none; } }
+
+/* Surprise gift while playing: drops in, bobs, then drifts away (after ~7 s). */
+.gift-drop { animation: gift-drop 7s ease-in-out both; transform: translateX(-50%); }
+.gift-drop:focus-visible { outline: 3px solid #facc15; outline-offset: 4px; border-radius: 1rem; }
+.gift-bob { display: block; animation: gift-bob 0.9s ease-in-out infinite; }
+@keyframes gift-drop {
+  0% { opacity: 0; translate: 0 -140px; rotate: -12deg; }
+  8% { opacity: 1; translate: 0 10px; rotate: 6deg; }
+  12% { translate: 0 0; rotate: 0deg; }
+  85% { opacity: 1; translate: 0 0; }
+  100% { opacity: 0; translate: 0 -90px; }
+}
+@keyframes gift-bob { 0%, 100% { transform: translateY(0) rotate(-4deg) scale(1); } 50% { transform: translateY(-8px) rotate(4deg) scale(1.06); } }
+.golden-chip { background: linear-gradient(90deg, #fde68a, #facc15, #fff7cc, #facc15); background-size: 300% 100%; animation: myth-flow 3s linear infinite; box-shadow: 0 0 12px rgb(250 204 21 / 0.6); }
+@media (prefers-reduced-motion: reduce) { .gift-drop { animation: none; } .gift-bob, .golden-chip { animation: none; } }

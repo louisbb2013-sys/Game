@@ -9,6 +9,7 @@ import {
   canRepair,
   currentFullness,
   DUPLICATE_PET_XP,
+  DUPLICATE_PET_SNACKS,
   EGG_EMOJI,
   EGG_TARGET,
   feedPet,
@@ -171,6 +172,13 @@ interface StoredSession {
     missed?: { prompt: string; context?: string; answer: string; explanation: string; note?: string }[];
     /** The current question is a lightning one (double XP within 10 seconds). */
     lightning?: string;
+    /** A surprise gift is waiting to be tapped (it drops in after a right answer, now and then). */
+    gift?: { id: string; at: number } | null;
+    /** Surprise gifts this round (at most 2) and when the last one came. */
+    gifts?: number;
+    giftAfter?: number;
+    /** The next right answer is golden: double XP (from a surprise gift). */
+    golden?: boolean;
     /** Options a hint already removed from the current question. */
     hinted?: string[];
   };
@@ -210,6 +218,8 @@ interface DB {
     createdAt: number;
     week?: { id: string; xp: number };
     liveRewarded?: string[];
+    /** Friends already rewarded with coins (once each). */
+    friendRewarded?: string[];
   };
   decks: Deck[];
   states: Record<string, ConceptStateView>;
@@ -492,7 +502,7 @@ function profile() {
   };
 }
 
-type Hatched = { species: PetSpeciesId; emoji: string; rarity: Rarity; duplicate: boolean };
+type Hatched = { species: PetSpeciesId; emoji: string; rarity: Rarity; duplicate: boolean; snacks?: number };
 type Rewards = {
   xp: number;
   levelUp: { level: number; coins: number; chest?: ChestKind } | null;
@@ -539,13 +549,31 @@ function giveChest(kind: ChestKind, source: string) {
   game().chests.push({ id: uid(), kind, source, at: now() });
 }
 
+/** The site's gifts endpoint (website only). */
+const giftsApi = () => (globalThis as { __LUMO_GIFTS__?: (body: Record<string, unknown>) => Promise<unknown> }).__LUMO_GIFTS__;
+
+/** A gift from the creator: the pet at Lumo rarity (or, if you have it already, yours becomes Lumo). */
+function giftPet(species: PetSpeciesId, tier: Rarity): LocalPet {
+  const g = game();
+  const have = g.pets.find((p) => p.species === species);
+  if (have) {
+    have.tier = tier;
+    return have;
+  }
+  const pet: LocalPet = { id: uid(), species, name: '', level: 1, xp: 0, fullness: 100, fedAt: now(), equipped: !g.pets.some((p) => p.equipped), active: team().length < MAX_ACTIVE_PETS, tier };
+  g.pets.push(pet);
+  return pet;
+}
+
 /** A new pet joins (or, if you have it already, your existing one powers up). */
 function addPet(species: PetSpeciesId): { pet: LocalPet; duplicate: boolean } {
   const g = game();
   const have = g.pets.find((p) => p.species === species);
   const rarity = speciesOf(species)!.rarity;
   if (have) {
+    // Already have it: it powers up, and you get snacks for your other pets.
     Object.assign(have, addPetXp(petState(have), DUPLICATE_PET_XP[rarity]));
+    addItem('pet_food', DUPLICATE_PET_SNACKS);
     return { pet: have, duplicate: true };
   }
   // A new pet joins the team while there's room.
@@ -663,7 +691,7 @@ function useItem(itemId: ItemId, petId?: string) {
       takeItem(itemId);
       const { pet, duplicate } = addPet(hatch(itemId, lootRng()));
       g.hatched++;
-      return { pet: petView(pet), duplicate };
+      return { pet: petView(pet), duplicate, snacks: duplicate ? DUPLICATE_PET_SNACKS : 0 };
     }
     default:
       throw new LocalError(400, 'cannot_use');
@@ -683,7 +711,7 @@ function warmEgg(answers: number): Hatched | undefined {
   const s = speciesOf(species)!;
   const next = rollEggRarity(rng);
   g.egg = { rarity: next, progress: 0, target: EGG_TARGET[next] };
-  return { species, emoji: s.emoji, rarity: s.rarity, duplicate };
+  return { species, emoji: s.emoji, rarity: s.rarity, duplicate, ...(duplicate ? { snacks: DUPLICATE_PET_SNACKS } : {}) };
 }
 
 // ------------------------------------------------------------------ memory: what Lumoly knows about you
@@ -868,6 +896,28 @@ const gameRoutes: [string, RegExp, Handler][] = [
     if (b.equipped) for (const p of g.pets) p.equipped = p === pet;
     return petView(pet);
   }],
+  ['GET', /^\/api\/game\/gifts$/, async () => {
+    // Gifts from the creator (website only): claim each one and add the Lumo pet.
+    const call = giftsApi();
+    if (!call) return { creator: false, gifts: [] };
+    const r = (await call({ op: 'list' })) as { creator: boolean; gifts: { id: string; species: string; tier: Rarity }[] };
+    const got: ReturnType<typeof petView>[] = [];
+    for (const g of r.gifts) {
+      const claimed = (await call({ op: 'claim', id: g.id }).catch(() => null)) as { gift?: { species: string; tier: Rarity } } | null;
+      if (!claimed?.gift || !speciesOf(claimed.gift.species)) continue;
+      got.push(petView(giftPet(claimed.gift.species as PetSpeciesId, claimed.gift.tier)));
+    }
+    return { creator: r.creator, gifts: got };
+  }],
+  ['POST', /^\/api\/game\/gifts\/give$/, async (_m, b) => {
+    const call = giftsApi();
+    if (!call) throw new LocalError(403, 'not_creator');
+    try {
+      return await call({ op: 'give', username: String(b.username ?? ''), species: String(b.species ?? 'lumo_firefly') });
+    } catch (e) {
+      throw new LocalError(400, (e as { code?: string }).code ?? 'network');
+    }
+  }],
   ['POST', /^\/api\/game\/pets\/([\w-]+)\/upgrade$/, (m) => {
     // Rarity goes up one tier: common → rare → epic → legendary → mythical.
     const pet = game().pets.find((p) => p.id === m[1]);
@@ -928,7 +978,7 @@ function award(xp: number, events: GameEvent[]): Rewards {
       all.push({ type: 'level', level });
     }
     // The pets on the team grow a little with every bit of study.
-    for (const pet of team()) Object.assign(pet, addPetXp(petState(pet), xp * 0.15));
+    for (const pet of team()) Object.assign(pet, addPetXp(petState(pet), xp * PET_GROWTH));
   }
   // Quests
   for (const q of currentQuests()) {
@@ -1165,7 +1215,34 @@ function starsFor(s: StoredSession): number {
   return accuracy >= 0.4 ? 1 : 0;
 }
 
-const CHALLENGE_BONUS = 15;
+/** How fast team pets grow from study: a tenth of the XP earned (levelling pets takes work). */
+const PET_GROWTH = 0.1;
+const CHALLENGE_BONUS = 10;
+/** Coins for each new friend: enough for 2 snacks. */
+const FRIEND_COINS = 20;
+/** Chance a right answer brings a surprise gift (see answer()). */
+const GIFT_CHANCE = 0.14;
+
+/** Open the surprise gift that dropped in: a few coins, a snack, or a golden next answer (double XP). */
+function openGift(sessionId: string, id: string) {
+  const s = getSession(sessionId);
+  const g = s.state.gift;
+  // Tapped in time (it floats away after a few seconds) and not opened yet.
+  if (!g || g.id !== id || now() - g.at > 15_000) throw new LocalError(409, 'gift_gone');
+  s.state.gift = null;
+  const roll = Math.random();
+  if (roll < 0.55) {
+    const coins = 3 + Math.floor(Math.random() * 6);
+    load().user.coins += coins;
+    return { kind: 'coins' as const, coins, total: load().user.coins };
+  }
+  if (roll < 0.8) {
+    addItem('pet_food', 1);
+    return { kind: 'snack' as const };
+  }
+  s.state.golden = true;
+  return { kind: 'golden' as const };
+}
 
 function finish(s: StoredSession) {
   const d = load();
@@ -1175,7 +1252,7 @@ function finish(s: StoredSession) {
   const st = studied ? recordStudyDay(u.streak, dayKey(t, u.timezone)) : { state: u.streak, extended: false };
   u.streak = st.state;
   const accuracy = s.state.answered ? s.state.correct / s.state.answered : 0;
-  let coins = studied ? 5 + s.state.correct * 2 + (accuracy === 1 && s.state.answered >= 5 ? 10 : 0) : 0;
+  let coins = studied ? 3 + s.state.correct + (accuracy === 1 && s.state.answered >= 5 ? 5 : 0) : 0;
   // A Challenge played to the end with hearts to spare earns a bonus.
   if (s.mode === 'challenge' && studied && s.state.endedReason !== 'out_of_hearts') coins += CHALLENGE_BONUS;
   let heartsGained = 0;
@@ -1195,7 +1272,7 @@ function finish(s: StoredSession) {
   const bossWon = s.mode === 'boss' && s.state.endedReason === 'boss_defeated';
   if (bossWon) {
     mine.bossWins = (mine.bossWins ?? 0) + 1;
-    coins += 25;
+    coins += 15;
   }
   u.coins += coins;
   s.status = 'done';
@@ -1272,7 +1349,9 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   const firstTry = !isRetry(s.state, q.conceptId);
   const comboAfter = g.correct ? s.state.combo + 1 : 0;
   const lightning = s.state.lightning === q.id && g.correct && typeof timeMs === 'number' && timeMs <= LIGHTNING_MS + 500;
-  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() }) * (lightning ? 2 : 1);
+  const golden = !!s.state.golden && g.correct;
+  if (golden) s.state.golden = false;
+  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() }) * (lightning ? 2 : 1) * (golden ? 2 : 1);
   const outcome = applyAnswer(s.state, { conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, variantKey: q.variantKey }, xp);
   s.state = { ...s.state, ...outcome.state };
   s.attempts.push({ conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, at: t });
@@ -1330,6 +1409,16 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
       if (boss.shields === 0) s.state.endedReason = 'out_of_hearts';
     }
   }
+  // Now and then, a surprise gift drops in after a right answer (tap it to open). Not in a mock exam,
+  // never in the first few answers, at most two a round.
+  let gift: string | undefined;
+  const answeredNow = s.state.answered;
+  if (g.correct && s.mode !== 'exam' && answeredNow >= 3 && (s.state.gifts ?? 0) < 2 && answeredNow >= (s.state.giftAfter ?? 0) && Math.random() < GIFT_CHANCE) {
+    gift = uid();
+    s.state.gift = { id: gift, at: now() };
+    s.state.gifts = (s.state.gifts ?? 0) + 1;
+    s.state.giftAfter = answeredNow + 4;
+  }
   // Every 3 right answers earn a chest to pick (not in a mock exam or a speed run).
   let chest = false;
   if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && s.state.correct > 0 && s.state.correct % 3 === 0) {
@@ -1345,7 +1434,7 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   const { gradedBy: _g, ...result } = g;
   return {
     rewards,
-    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, points, damage, shield, chest, lightning, petCoins, petGift },
+    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, points, damage, shield, chest, lightning, petCoins, petGift, gift, golden },
     session: publicSession(s),
     next: next ? publicQuestion(next) : null,
     summary,
@@ -1829,6 +1918,7 @@ const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/api\/sessions\/([\w-]+)\/go$/, (m) => goNow(m[1]!)],
   ['POST', /^\/api\/sessions\/([\w-]+)\/hint$/, (m) => hint(m[1]!)],
   ['POST', /^\/api\/sessions\/([\w-]+)\/pick$/, (m, b) => pickChest(m[1]!, Number(b.choice))],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/gift$/, (m, b) => openGift(m[1]!, String(b.id ?? ''))],
   ['POST', /^\/api\/sessions\/([\w-]+)\/report$/, (m, b) => reportLast(m[1]!, String(b.reason ?? ''))],
   ['GET', /^\/api\/decks\/([\w-]+)\/cards$/, (m) => cards(m[1]!)],
   ['POST', /^\/api\/decks\/([\w-]+)\/cards$/, (m, b) => rateCard(m[1]!, String(b.conceptId), b.knew === true)],
@@ -1900,6 +1990,19 @@ const routes: [string, RegExp, Handler][] = [
     const bank = dk.bank ?? [];
     return { total: bank.length, unseen: bank.filter((q) => seen[q.variantKey] === undefined).length, concepts: dk.concepts.length };
   }],
+  [
+    'POST',
+    /^\/api\/local\/friend-reward$/,
+    (_m, b) => {
+      // A new friend: a few coins (enough for 2 snacks), once per friend.
+      const u = load().user;
+      const id = String(b.friendId ?? '').slice(0, 80);
+      if (!id || (u.friendRewarded ?? []).includes(id)) return { coins: 0 };
+      u.friendRewarded = [...(u.friendRewarded ?? []), id].slice(-500);
+      u.coins += FRIEND_COINS;
+      return { coins: FRIEND_COINS, total: u.coins };
+    },
+  ],
   [
     'POST',
     /^\/api\/local\/live-reward$/,

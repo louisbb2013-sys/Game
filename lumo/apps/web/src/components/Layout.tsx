@@ -8,6 +8,7 @@ import { useOnline } from '../lib/offline';
 import { BoltIcon, BookIcon, CoinIcon, FlameIcon, GearIcon, HeartIcon, HomeIcon, PawIcon, PlusIcon, ShopIcon, SparkIcon, TrophyIcon, UserIcon, UsersIcon } from './icons';
 import { Lumo } from './Lumo';
 import { LiveInvitePopup } from './LiveInvites';
+import { GiftPopup } from './GiftPopup';
 
 type Tab = { to: string; label: string; icon: ComponentType<{ size?: number; className?: string }>; end?: boolean };
 
@@ -117,6 +118,7 @@ export function Layout() {
           </Suspense>
         </main>
         {LOCAL && <LiveInvitePopup />}
+        {LOCAL && <GiftPopup />}
 
         {/* Phone: tab bar with Create in the middle */}
         <nav

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addPetXp, advanceQuest, applyStats, BADGES, currentFullness, emptyStats, feedPet, hatch, ITEMS, newBadges, PET_SPECIES, petMood, petXpPerk,
   questsFor, rollChest, seededRng, HOUR_MS, type GameEvent, petTier, upgradeBlocker, upgradePet, RARITIES, PET_UPGRADES,
-  MAX_ACTIVE_PETS, petBuff, teamBuffs, type PetState,
+  MAX_ACTIVE_PETS, petBuff, teamBuffs, type PetState, rollEggRarity, speciesOf,
 } from '../src';
 
 describe('chests', () => {
@@ -37,7 +37,7 @@ describe('pets', () => {
     expect(currentFullness(pet, T + 50 * HOUR_MS)).toBe(50);
     const fed = feedPet({ ...pet, fullness: 10 }, T);
     expect(fed.fullness).toBe(45);
-    expect(fed.xp).toBe(15);
+    expect(fed.xp).toBe(10);
   });
   it('level up and react to streak and hunger', () => {
     const p = addPetXp(pet, 1000);
@@ -84,22 +84,28 @@ describe('quests and badges', () => {
 });
 
 describe('pet tiers', () => {
-  it('pets climb common → rare → epic → legendary → mythical with level and coins', () => {
+  it('pets climb common → rare → … → galaxial with level and coins; Lumo is only ever a gift', () => {
     let p = { species: 'moss_turtle' as const, level: 1, xp: 0, fullness: 80, fedAt: 0 };
     expect(petTier(p)).toBe('common');
     expect(upgradeBlocker(p, 10_000)).toBe('level_too_low');
-    p = { ...p, level: 3 };
-    expect(upgradeBlocker(p, 100)).toBe('not_enough_coins');
-    expect(upgradeBlocker(p, 150)).toBeNull();
+    p = { ...p, level: 4 };
+    expect(upgradeBlocker(p, 150)).toBe('not_enough_coins');
+    expect(upgradeBlocker(p, 200)).toBeNull();
     const up = upgradePet(p);
     expect(petTier(up)).toBe('rare');
-    let top = { ...up, level: 50, tier: 'mythical' as const };
+    // Mythical → Exotic → Galaxial by upgrades; nothing goes past Galaxial.
+    expect(petTier(upgradePet({ ...up, tier: 'mythical' }))).toBe('exotic');
+    expect(petTier(upgradePet({ ...up, tier: 'exotic' }))).toBe('galaxial');
+    const top = { ...up, level: 50, tier: 'galaxial' as const };
     expect(upgradeBlocker(top, 1e9)).toBe('max_tier');
+    expect(upgradeBlocker({ ...top, tier: 'lumo' }, 1e9)).toBe('max_tier');
     expect(petXpPerk(top, 'happy')).toBeGreaterThan(petXpPerk({ ...top, tier: 'common' }, 'happy'));
-    top = { ...top, tier: 'mythical' };
-    expect(RARITIES.at(-1)).toBe('mythical');
-    expect(PET_SPECIES.some((s) => s.rarity === 'mythical')).toBe(true);
-    expect(PET_UPGRADES.mythical).toBeNull();
+    expect(RARITIES).toEqual(['common', 'rare', 'epic', 'legendary', 'mythical', 'exotic', 'galaxial', 'lumo']);
+    expect(PET_UPGRADES.galaxial).toBeNull();
+    // No egg ever gives a Lumo pet.
+    for (let s = 0; s < 3000; s++) expect(rollEggRarity(seededRng(s))).not.toBe('lumo');
+    for (let s = 0; s < 3000; s++) expect(speciesOf(hatch('egg_rare', seededRng(s)))!.rarity).not.toBe('lumo');
+    expect(PET_SPECIES.find((x) => x.rarity === 'lumo')?.id).toBe('lumo_firefly');
   });
 });
 

@@ -1,8 +1,9 @@
 // The study egg (website): fills as you answer questions, then hatches into a pet.
+import type { Rarity } from '@lumo/core';
 import { Egg3D } from './Pet3D';
 
 export interface EggState {
-  rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythical';
+  rarity: Rarity;
   progress: number;
   target: number;
   emoji: string;

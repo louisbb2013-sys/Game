@@ -34,7 +34,8 @@ test('friends, a shared deck and a two-player Live game on the website', async (
   await expect(b.getByRole('heading', { name: /Online now \(1\)/ })).toBeVisible({ timeout: 10_000 });
   await b.getByLabel("Type a friend's username, press Enter").fill('alice');
   await b.getByLabel("Type a friend's username, press Enter").press('Enter');
-  await expect(b.getByRole('status')).toHaveText('Alice is now your friend!');
+  // A new friend pays a few coins (enough for 2 snacks), once.
+  await expect(b.getByRole('status')).toHaveText('Alice is now your friend! +20 coins for a new friend! 🪙');
   await expect(b.locator('ol li', { hasText: 'Alice' })).toBeVisible();
   await b.getByLabel("Type a friend's username, press Enter").fill('nobody');
   await b.getByLabel("Type a friend's username, press Enter").press('Enter');
@@ -242,8 +243,8 @@ test('website Live: 100 questions, the host ends early', async ({ browser }) => 
     await answerCurrent(p, f);
     if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Lock in answer' }).click();
   }
-  await a.getByRole('button', { name: 'End game' }).click({ timeout: 15_000 });
-  await a.getByRole('button', { name: 'Tap to end' }).click();
+  await a.getByRole('button', { name: 'End game', exact: true }).click({ timeout: 15_000 });
+  await a.getByRole('button', { name: 'Tap to end', exact: true }).click();
   await expect(a.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible();
   await expect(b.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 15_000 });
 });
@@ -547,4 +548,50 @@ test('website: after a round there is always a way out (close, or Done)', async 
   await a.getByRole('link', { name: '✓ Done' }).click();
   await expect(a.getByRole('button', { name: /^Play\b/ })).toBeVisible();
   await ctx.close();
+});
+
+test('website Live: a player can leave any time, and the host can stop the game (two taps)', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  const b = await ctx.newPage();
+  await a.goto(process.env.MULTI_URL!);
+  await a.evaluate(() => localStorage.clear());
+  await open(a, 'u_l1');
+  await open(b, 'u_l2');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+  const host = async () => {
+    await a.getByRole('link', { name: 'Live', exact: true }).click();
+    await a.getByRole('button', { name: '5', exact: true }).click();
+    await a.getByRole('button', { name: /Create game/ }).click();
+    await expect(a.getByTestId('live-code')).toBeVisible();
+    await b.getByRole('link', { name: 'Live', exact: true }).click();
+    await b.getByRole('button', { name: /Cells — the basics/ }).click({ timeout: 15_000 });
+    await expect(a.getByRole('button', { name: 'Start with 2 players' })).toBeVisible({ timeout: 10_000 });
+  };
+
+  // In the middle of a question, the player leaves: one tap asks, the second leaves.
+  await host();
+  await a.getByRole('button', { name: 'Start with 2 players' }).click();
+  await expect(b.getByText('Question 1 of 5')).toBeVisible({ timeout: 15_000 });
+  await b.getByTestId('live-leave').click();
+  await expect(b.getByTestId('live-leave')).toHaveText('Tap again to leave');
+  await b.getByTestId('live-leave').click();
+  await expect(b.getByRole('heading', { name: 'Join a game' })).toBeVisible();
+
+  // The host stops mid-game: everyone goes to the results.
+  await expect(a.getByTestId('live-leave')).toHaveText('✕ End game');
+  await a.getByTestId('live-leave').click();
+  await a.getByTestId('live-leave').click();
+  await expect(a.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 15_000 });
+  await a.getByRole('link', { name: 'Play again' }).click();
+
+  // From the lobby, the host closes the game: the player is told it ended.
+  await host();
+  await a.getByTestId('live-leave').click();
+  await a.getByTestId('live-leave').click();
+  await expect(a.getByRole('button', { name: /Create game/ })).toBeVisible();
+  await expect(b.getByText('This game has ended.')).toBeVisible({ timeout: 15_000 });
 });

@@ -3,9 +3,9 @@ import { makeAuthHandler } from '../lib/auth';
 import { makeDataHandler } from '../lib/data';
 import { memoryKV } from '../lib/kv';
 
-function site(identity: Record<string, string> = {}) {
+function site(identity: Record<string, string> = {}, vars: Record<string, string> = {}) {
   const kv = memoryKV();
-  const env = () => undefined;
+  const env = (k: string) => vars[k];
   let clock = 1_000_000;
   const now = () => clock;
   const fetchMock = (async (url: unknown, init?: RequestInit) => {
@@ -28,6 +28,7 @@ function site(identity: Record<string, string> = {}) {
     remove: (token: string) => call(auth, '/api/auth/delete', {}, token),
     db: (token: string, body: unknown) => call(data, '/api/data', body, token),
     room: (token: string, body: unknown) => call(data, '/api/room', body, token),
+    gifts: (token: string, body: unknown) => call(data, '/api/gifts', body, token),
   };
 }
 
@@ -245,5 +246,58 @@ describe('live rooms', () => {
     expect(later.body.peers.map((p: { by: string }) => p.by)).toEqual([a.uid]);
     await s.room(a.token, { op: 'leave', room: 'live-123456', peer: `${a.uid}_aa11` });
     expect((await s.room(a.token, { op: 'peers', room: 'live-123456' })).body.peers).toEqual([]);
+  });
+});
+
+describe('gifts from the creator (Lumo-rarity pets)', () => {
+  const named = async (s: ReturnType<typeof site>, token: string, uid: string, username: string) => s.db(token, { op: 'set', path: `profiles/${uid}`, data: { username } });
+
+  it("gives the creator's own older accounts (named Louis) one Lumo pet each, claimed once", async () => {
+    const s = site({ g1: 'idn-0001-aaaa', g2: 'idn-0002-bbbb' });
+    const louis = (await s.google('g1')).body;
+    const other = (await s.google('g2')).body;
+    await named(s, louis.token, louis.uid, 'Louis');
+    await named(s, other.token, other.uid, 'Mia');
+    const mine = (await s.gifts(louis.token, { op: 'list' })).body;
+    expect(mine.creator).toBe(true);
+    expect(mine.gifts).toHaveLength(1);
+    expect(mine.gifts[0]).toMatchObject({ species: 'lumo_firefly', tier: 'lumo' });
+    expect((await s.gifts(louis.token, { op: 'list' })).body.gifts).toHaveLength(1); // only one, however often it looks
+    expect((await s.gifts(louis.token, { op: 'claim', id: mine.gifts[0].id })).status).toBe(200);
+    expect((await s.gifts(louis.token, { op: 'claim', id: mine.gifts[0].id })).status).toBe(409); // another device can't take it again
+    expect((await s.gifts(louis.token, { op: 'list' })).body.gifts).toHaveLength(0);
+    // Everyone else: no creator powers, no free Lumo pet.
+    const theirs = (await s.gifts(other.token, { op: 'list' })).body;
+    expect(theirs).toEqual({ creator: false, gifts: [] });
+    expect((await s.gifts(other.token, { op: 'give', username: 'Louis' })).status).toBe(403);
+  });
+
+  it('lets a creator give a Lumo pet by Lumo name; a new account named Louis is not a creator', async () => {
+    const s = site({ g1: 'idn-0001-aaaa', g3: 'idn-0003-cccc' });
+    const louis = (await s.google('g1')).body;
+    await named(s, louis.token, louis.uid, 'Louis');
+    const mia = (await s.signup('Mia', 'secret123')).body;
+    await named(s, mia.token, mia.uid, 'Mia');
+    expect((await s.gifts(louis.token, { op: 'give', username: 'mia', species: 'galaxy_dragon' })).status).toBe(200);
+    expect((await s.gifts(louis.token, { op: 'give', username: 'nobody_here' })).status).toBe(404);
+    expect((await s.gifts(louis.token, { op: 'give', username: 'Mia', species: 'not_a_pet' })).status).toBe(400);
+    const got = (await s.gifts(mia.token, { op: 'list' })).body;
+    expect(got.creator).toBe(false);
+    expect(got.gifts).toEqual([expect.objectContaining({ species: 'galaxy_dragon', tier: 'lumo', from: louis.uid })]);
+    // Accounts made after gifts existed can't become a creator by taking the name.
+    s.tick(Date.UTC(2027, 0, 1));
+    const late = (await s.google('g3')).body;
+    await s.kv.set(`d/profiles/${late.uid}`, JSON.stringify({ username: 'louis' }));
+    expect((await s.gifts(late.token, { op: 'list' })).body.creator).toBe(false);
+  });
+
+  it('also makes the learners listed in LUMO_CREATORS creators', async () => {
+    const vars: Record<string, string> = {};
+    const s = site({ g1: 'idn-0001-aaaa' }, vars);
+    const me = (await s.google('g1')).body;
+    await named(s, me.token, me.uid, 'Teacher');
+    expect((await s.gifts(me.token, { op: 'list' })).body.creator).toBe(false);
+    vars.LUMO_CREATORS = `someone_else, ${me.uid}`;
+    expect((await s.gifts(me.token, { op: 'list' })).body.creator).toBe(true);
   });
 });

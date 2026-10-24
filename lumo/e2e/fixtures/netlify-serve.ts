@@ -13,7 +13,9 @@ const root = process.argv[2]!;
 const port = Number(process.env.PORT ?? 8899);
 const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.json': 'application/json' };
 const kv = memoryKV();
-const env = () => undefined;
+// Site settings; a test can name the creator (LUMO_CREATORS) with POST /__test/creator?name=…
+const vars = new Map<string, string>();
+const env = (k: string) => vars.get(k);
 // The pretend Identity knows every token it handed out.
 const identity = new Map<string, string>();
 const auth = makeAuthHandler({
@@ -73,8 +75,14 @@ async function route(req: Request): Promise<Response | null> {
   const url = new URL(req.url);
   const p = url.pathname;
   if (p.startsWith('/api/auth/')) return auth(req);
-  if (p === '/api/data' || p === '/api/room') return data(req);
+  if (p === '/api/data' || p === '/api/room' || p === '/api/gifts') return data(req);
   if (p === '/api/claude') return claude(req);
+  if (p === '/__test/creator') {
+    const rec = await kv.get(`a/n/${encodeURIComponent((url.searchParams.get('name') ?? '').toLowerCase())}`);
+    const uid = rec ? (JSON.parse(rec.value) as { uid: string }).uid : '';
+    if (uid) vars.set('LUMO_CREATORS', uid);
+    return Response.json({ uid }, { status: uid ? 200 : 404 });
+  }
   if (p === '/.netlify/identity/settings') return process.env.NO_GOOGLE ? new Response('', { status: 404 }) : Response.json({ external: { google: true }, disable_signup: false, autoconfirm: true });
   if (p === '/.netlify/identity/authorize') {
     // Google said yes for a made-up Google account (the same one each time for ?as=…).

@@ -7,6 +7,8 @@ import { Creature3D } from '../components/Pet3D';
 import { EggArt, PetPortrait, RARITY_TONE } from '../components/Art';
 import { CoinIcon } from '../components/icons';
 import { useConfetti } from '../lib/confetti';
+import { useGifts } from '../lib/gifts';
+import { useRewards } from '../lib/rewards';
 import { api, ApiError } from '../lib/api';
 import { play } from '../lib/sound';
 
@@ -83,6 +85,8 @@ export function Pets() {
   const [name, setName] = useState('');
   const [coins, setCoins] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
+  const showRewards = useRewards();
+  const { creator, gifts } = useGifts();
 
   const load = useCallback(async () => {
     const [p, inv] = await Promise.all([api<PetsData>('/api/game/pets'), api<{ items: { id: string; qty: number }[]; coins: number }>('/api/game/inventory')]);
@@ -92,6 +96,10 @@ export function Pets() {
     setEggs(inv.items.filter((i) => i.id.startsWith('egg')));
   }, []);
   useEffect(() => void load(), [load]);
+  // A gift from the creator just arrived: it's in the collection now.
+  useEffect(() => {
+    if (gifts.length) void load();
+  }, [gifts.length, load]);
 
   const run = async (fn: () => Promise<unknown>) => {
     setError(null);
@@ -170,7 +178,17 @@ export function Pets() {
         <section className="space-y-2">
           <h2 className="font-black">{t('pets.eggs')}</h2>
           {eggs.map((e) => (
-            <button key={e.id} onClick={() => void run(() => api('/api/game/items/use', { method: 'POST', body: { itemId: e.id } }).then(() => play('finish')))} className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 ring-1 ring-line">
+            <button
+              key={e.id}
+              onClick={() =>
+                void run(async () => {
+                  const r = await api<{ pet?: PetView; duplicate?: boolean; snacks?: number }>('/api/game/items/use', { method: 'POST', body: { itemId: e.id } });
+                  // It hatches on screen (a pet you have already also gives snacks).
+                  if (r.pet) showRewards({ xp: 0, levelUp: null, badges: [], questsCompleted: [], hatched: { species: r.pet.species, emoji: r.pet.emoji, rarity: r.pet.rarity, duplicate: !!r.duplicate, snacks: r.snacks } });
+                  else play('finish');
+                })
+              }
+              className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 ring-1 ring-line">
               <EggArt rarity={e.id === 'egg_rare' ? 'rare' : 'common'} size={48} />
               <span className="flex-1 text-left font-black">
                 {t(`items.${e.id}.name`)} ×{e.qty}
@@ -225,15 +243,16 @@ export function Pets() {
           </h2>
           <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6">
             {missing.map((sp) => (
-              <li key={sp.id} className="pet-locked flex flex-col items-center gap-1 rounded-2xl bg-surface p-2 text-center ring-1 ring-line" title={t('pets.locked')}>
+              <li key={sp.id} className="pet-locked flex flex-col items-center gap-1 rounded-2xl bg-surface p-2 text-center ring-1 ring-line" title={t(sp.rarity === 'lumo' ? 'pets.giftOnly' : 'pets.locked')}>
                 <PetPortrait species={sp.id} rarity={sp.rarity} emoji={sp.emoji} size={52} still />
                 <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black ${RARITY_TONE[sp.rarity]}`}>{t(`pets.rarity.${sp.rarity}`)}</span>
-                <span className="sr-only">{t('pets.locked')}</span>
+                <span className="sr-only">{t(sp.rarity === 'lumo' ? 'pets.giftOnly' : 'pets.locked')}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
+      {creator && <CreatorPanel />}
       {error && !shown && <p className="font-bold text-bad">{t(`pets.errors.${error}`, { defaultValue: t('signin.errors.network') })}</p>}
 
       {shown && (
@@ -253,6 +272,57 @@ export function Pets() {
         />
       )}
     </div>
+  );
+}
+
+/** Only for the game's creator: give someone a Lumo-rarity pet by their Lumoly name. */
+function CreatorPanel() {
+  const { t } = useTranslation();
+  const [username, setUsername] = useState('');
+  const [species, setSpecies] = useState('lumo_firefly');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const give = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const who = username.trim();
+    if (!who || busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api('/api/game/gifts/give', { method: 'POST', body: { username: who, species } });
+      setMsg({ ok: true, text: t('gifts.sent', { name: who }) });
+      setUsername('');
+      play('finish');
+    } catch (err) {
+      setMsg({ ok: false, text: t(`gifts.errors.${err instanceof ApiError ? err.code : 'network'}`, { defaultValue: t('signin.errors.network') }) });
+    }
+    setBusy(false);
+  };
+  return (
+    <section className="pet-screen space-y-3 rounded-3xl bg-surface p-4 ring-2 ring-amber-glow" data-rarity="lumo" aria-labelledby="creator-title" data-testid="creator-panel">
+      <h2 id="creator-title" className="font-black">
+        👑 {t('gifts.creatorTitle')}
+      </h2>
+      <p className="text-sm text-muted">{t('gifts.creatorBody')}</p>
+      <form onSubmit={(e) => void give(e)} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t('gifts.username')} aria-label={t('gifts.username')} maxLength={40} className="rounded-xl border-2 border-line bg-bg px-3 py-2 font-bold" />
+        <select value={species} onChange={(e) => setSpecies(e.target.value)} aria-label={t('gifts.which')} className="rounded-xl border-2 border-line bg-bg px-3 py-2 font-bold">
+          {PET_SPECIES.map((sp) => (
+            <option key={sp.id} value={sp.id}>
+              {sp.emoji} {t(`pets.species.${sp.id}`)}
+            </option>
+          ))}
+        </select>
+        <button type="submit" disabled={busy || !username.trim()} className="rarity-lumo rounded-xl px-4 py-2 font-black text-night disabled:opacity-50">
+          🎁 {t('gifts.give')}
+        </button>
+      </form>
+      {msg && (
+        <p role="status" className={`text-sm font-bold ${msg.ok ? 'text-good' : 'text-bad'}`}>
+          {msg.text}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -348,23 +418,36 @@ function PetSheet({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
+    // The page underneath stays put, so there is only one thing to scroll.
+    const was = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      removeEventListener('keydown', onKey);
+      document.body.style.overflow = was;
+    };
   }, [onClose]);
 
+  const title = pet.name || t(`pets.species.${pet.species}`);
+  // The whole screen, one scroll: the pet big on one side, everything about it on the other.
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-night/70 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label={pet.name || t(`pets.species.${pet.species}`)}
-        onClick={(e) => e.stopPropagation()}
-        className="relative flex max-h-[92dvh] w-full max-w-md flex-col items-center gap-3 overflow-y-auto rounded-t-3xl bg-surface p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] text-center ring-1 ring-line sm:rounded-3xl"
-      >
-        <button type="button" onClick={onClose} aria-label={t('common.close')} className="absolute top-3 right-3 grid size-10 place-items-center rounded-full bg-surface-2 text-xl font-black">
-          ✕
+    <div role="dialog" aria-modal="true" aria-label={title} className="pet-screen fixed inset-0 z-[70] overflow-y-auto bg-bg" data-rarity={pet.rarity} data-testid="pet-screen">
+      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-bg/90 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 backdrop-blur">
+        <button type="button" onClick={onClose} aria-label={t('common.close')} className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-2 text-xl font-black ring-1 ring-line">
+          ←
         </button>
-        <PetAvatar pet={pet} three />
-        {hearts && <span className="combo-pop absolute top-10 text-4xl">💕</span>}
+        <h2 className="min-w-0 flex-1 truncate text-xl font-black">{title}</h2>
+        <span className={`rounded-full px-3 py-1 text-xs font-black ${RARITY_TONE[pet.rarity]}`} data-testid="pet-rarity">
+          {t(`pets.rarity.${pet.rarity}`)}
+        </span>
+      </header>
+      <div className="mx-auto grid w-full max-w-5xl gap-5 p-4 pb-[max(env(safe-area-inset-bottom),2rem)] lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-8 lg:p-8">
+      <section className="pet-stage relative flex flex-col items-center gap-2 rounded-3xl p-4 text-center lg:sticky lg:top-24">
+        <div className="relative h-[36dvh] w-full max-w-sm lg:h-[52dvh]">
+          <Creature3D species={pet.species} rarity={pet.rarity} className="absolute inset-0" label={title}>
+            <span className="grid size-full place-items-center text-8xl">{pet.emoji}</span>
+          </Creature3D>
+          {hearts && <span className="combo-pop absolute top-4 left-1/2 -translate-x-1/2 text-5xl">💕</span>}
+        </div>
         {renaming ? (
           <form
             onSubmit={(e) => {
@@ -381,13 +464,12 @@ function PetSheet({
             {pet.name || t(`pets.species.${pet.species}`)} ✏️
           </button>
         )}
-        <p className="flex flex-wrap items-center justify-center gap-1.5 text-sm font-bold text-muted">
-          <span className={`rounded-full px-2.5 py-0.5 text-xs font-black ${RARITY_TONE[pet.rarity]}`} data-testid="pet-rarity">
-            {t(`pets.rarity.${pet.rarity}`)}
-          </span>
+        <p className="text-sm font-bold text-muted">
           {t(`pets.species.${pet.species}`)} · {t('pets.mood.' + pet.mood)}
         </p>
         <RarityLadder tier={pet.rarity} />
+      </section>
+      <section className="flex flex-col gap-3 text-center">
         {buff ? (
           <p className={`rounded-xl px-3 py-1.5 text-sm font-black ${buff.off ? 'bg-bad/10 text-bad' : 'bg-amber-glow/15'}`} data-testid="pet-buff">
             {BUFF_ICON[buff.kind]} {buff.off ? t('pets.tooHungryLong') : buffLine(t, buff)}
@@ -473,6 +555,7 @@ function PetSheet({
         {error && <p className="font-bold text-bad">{t(`pets.errors.${error}`, { defaultValue: t('signin.errors.network') })}</p>}
         <p className="text-xs text-muted">{t('pets.tip')}</p>
       </section>
+      </div>
     </div>
   );
 }
@@ -482,7 +565,7 @@ function RarityLadder({ tier }: { tier: Rarity }) {
   const { t } = useTranslation();
   const at = RARITIES.indexOf(tier);
   return (
-    <ol className="flex w-full items-center justify-center gap-1 text-[0.65rem] font-black" aria-label={t('pets.ladder')}>
+    <ol className="flex w-full flex-wrap items-center justify-center gap-1 text-[0.65rem] font-black" aria-label={t('pets.ladder')}>
       {RARITIES.map((r, i) => (
         <li key={r} className={`rounded-full px-2 py-0.5 ${i <= at ? RARITY_TONE[r] : 'bg-surface-2 text-muted'} ${i === at ? 'scale-110 shadow' : ''}`} aria-current={i === at ? 'step' : undefined}>
           {t(`pets.rarity.${r}`)}
@@ -496,7 +579,7 @@ function RarityLadder({ tier }: { tier: Rarity }) {
 function UpgradeCard({ pet, coins, onUpgrade }: { pet: PetView; coins: number; onUpgrade: () => void }) {
   const { t } = useTranslation();
   const up = pet.upgrade;
-  if (!up) return <p className="rounded-2xl bg-surface-2 px-3 py-2 text-sm font-black">👑 {t('pets.maxTier')}</p>;
+  if (!up) return <p className="rounded-2xl bg-surface-2 px-3 py-2 text-sm font-black">{pet.rarity === 'lumo' ? `✨ ${t('pets.lumoTier')}` : `👑 ${t('pets.maxTier')}`}</p>;
   const levelOk = pet.level >= up.level;
   const coinsOk = coins >= up.coins;
   return (

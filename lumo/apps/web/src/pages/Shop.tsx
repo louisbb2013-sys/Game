@@ -162,7 +162,13 @@ export function Shop() {
                         </button>
                       ) : (
                         <button
-                            onClick={() => void act(() => api('/api/game/items/use', { method: 'POST', body: { itemId: i.id } }), t(`shop.used_${def.kind === 'egg' ? 'egg' : i.id}`, { defaultValue: t('shop.used') }))}
+                            onClick={() =>
+                              void act(async () => {
+                                const r = await api<{ pet?: { species: string; emoji: string; rarity: string }; duplicate?: boolean; snacks?: number }>('/api/game/items/use', { method: 'POST', body: { itemId: i.id } });
+                                // An egg hatches on screen, like the study egg (a pet you have already also gives snacks).
+                                if (r.pet) showRewards({ xp: 0, levelUp: null, badges: [], questsCompleted: [], hatched: { species: r.pet.species, emoji: r.pet.emoji, rarity: r.pet.rarity, duplicate: !!r.duplicate, snacks: r.snacks } });
+                              }, t(`shop.used_${def.kind === 'egg' ? 'egg' : i.id}`, { defaultValue: t('shop.used') }))
+                            }
                             className="rounded-xl bg-brand px-3 py-2 text-sm font-black text-brand-ink"
                           >
                             {def.kind === 'egg' ? t('shop.hatch') : t('shop.use')}

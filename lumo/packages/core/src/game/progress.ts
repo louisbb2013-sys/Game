@@ -82,24 +82,24 @@ export interface QuestDef {
 }
 
 export const DAILY_QUESTS: QuestDef[] = [
-  { id: 'd_correct_10', metric: 'correct_answers', target: 10, reward: { coins: 15 } },
-  { id: 'd_correct_20', metric: 'correct_answers', target: 20, reward: { coins: 25 } },
-  { id: 'd_xp_50', metric: 'xp', target: 50, reward: { coins: 15 } },
-  { id: 'd_xp_120', metric: 'xp', target: 120, reward: { coins: 30 } },
-  { id: 'd_session_1', metric: 'sessions', target: 1, reward: { coins: 10 } },
-  { id: 'd_session_2', metric: 'sessions', target: 2, reward: { coins: 20 } },
-  { id: 'd_sandbox_1', metric: 'sandbox', target: 1, reward: { coins: 15 } },
-  { id: 'd_combo_5', metric: 'combo', target: 5, reward: { coins: 20 } },
-  { id: 'd_mastered_1', metric: 'mastered', target: 1, reward: { coins: 20 } },
+  { id: 'd_correct_10', metric: 'correct_answers', target: 10, reward: { coins: 10 } },
+  { id: 'd_correct_20', metric: 'correct_answers', target: 20, reward: { coins: 20 } },
+  { id: 'd_xp_50', metric: 'xp', target: 50, reward: { coins: 10 } },
+  { id: 'd_xp_120', metric: 'xp', target: 120, reward: { coins: 20 } },
+  { id: 'd_session_1', metric: 'sessions', target: 1, reward: { coins: 5 } },
+  { id: 'd_session_2', metric: 'sessions', target: 2, reward: { coins: 15 } },
+  { id: 'd_sandbox_1', metric: 'sandbox', target: 1, reward: { coins: 10 } },
+  { id: 'd_combo_5', metric: 'combo', target: 5, reward: { coins: 15 } },
+  { id: 'd_mastered_1', metric: 'mastered', target: 1, reward: { coins: 15 } },
 ];
 
 export const WEEKLY_QUESTS: QuestDef[] = [
-  { id: 'w_correct_100', metric: 'correct_answers', target: 100, reward: { coins: 60, chest: 'rare' } },
-  { id: 'w_xp_600', metric: 'xp', target: 600, reward: { coins: 60, chest: 'rare' } },
-  { id: 'w_sessions_8', metric: 'sessions', target: 8, reward: { coins: 50, chest: 'common' } },
-  { id: 'w_sandbox_5', metric: 'sandbox', target: 5, reward: { coins: 50, chest: 'common' } },
-  { id: 'w_mastered_5', metric: 'mastered', target: 5, reward: { coins: 80, chest: 'rare' } },
-  { id: 'w_perfect_2', metric: 'perfect_session', target: 2, reward: { coins: 70, chest: 'rare' } },
+  { id: 'w_correct_100', metric: 'correct_answers', target: 100, reward: { coins: 40, chest: 'rare' } },
+  { id: 'w_xp_600', metric: 'xp', target: 600, reward: { coins: 40, chest: 'rare' } },
+  { id: 'w_sessions_8', metric: 'sessions', target: 8, reward: { coins: 35, chest: 'common' } },
+  { id: 'w_sandbox_5', metric: 'sandbox', target: 5, reward: { coins: 35, chest: 'common' } },
+  { id: 'w_mastered_5', metric: 'mastered', target: 5, reward: { coins: 55, chest: 'rare' } },
+  { id: 'w_perfect_2', metric: 'perfect_session', target: 2, reward: { coins: 50, chest: 'rare' } },
 ];
 
 export const questDef = (id: string) => [...DAILY_QUESTS, ...WEEKLY_QUESTS].find((q) => q.id === id);

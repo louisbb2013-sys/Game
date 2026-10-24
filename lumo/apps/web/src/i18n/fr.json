@@ -573,7 +573,7 @@
     },
     "egg_rare": {
       "name": "Œuf rare",
-      "desc": "Fait éclore un compagnon rare, épique, légendaire, ou même mythique."
+      "desc": "Fait éclore un compagnon rare, épique, légendaire, ou (avec de la chance) mythique, exotique ou galaxial."
     },
     "chest_common": {
       "name": "Coffre",
@@ -668,14 +668,20 @@
       "cosmic_whale": "Baleine cosmique",
       "aurora_peacock": "Paon aurore",
       "celestial_phoenix": "Phénix céleste",
-      "galaxy_dragon": "Dragon galactique"
+      "galaxy_dragon": "Dragon galactique",
+      "prism_axolotl": "Axolotl prisme",
+      "nebula_manta": "Raie nébuleuse",
+      "lumo_firefly": "Luciole Lumo"
     },
     "rarity": {
       "common": "Commun",
       "rare": "Rare",
       "epic": "Épique",
       "legendary": "Légendaire",
-      "mythical": "Mythique"
+      "mythical": "Mythique",
+      "exotic": "Exotique",
+      "galaxial": "Galaxial",
+      "lumo": "Lumo"
     },
     "mood": {
       "happy": "Heureux",
@@ -694,7 +700,7 @@
       "already_has_pet": "Tu as déjà adopté un compagnon.",
       "not_enough_items": "Plus de collations — achète-en à la boutique.",
       "network": "Impossible de joindre Lumoly. Vérifie ta connexion.",
-      "max_tier": "Ce compagnon est déjà Mythique.",
+      "max_tier": "Ce compagnon est déjà au plus haut niveau d’amélioration.",
       "level_too_low": "Ton compagnon doit d'abord monter de niveau.",
       "not_enough_coins": "Pas encore assez de pièces.",
       "team_full": "Ton équipe est pleine (4 compagnons). Retires-en un d’abord."
@@ -707,7 +713,7 @@
     "upgrade": "Améliorer",
     "upgradeHint": "Ton compagnon monte de niveau quand tu étudies et quand tu le nourris.",
     "upgraded": "Ton compagnon est {{rarity}} maintenant !",
-    "maxTier": "Mythique : la plus haute rareté qui existe !",
+    "maxTier": "Galaxial : le plus haut niveau d’amélioration !",
     "collectionTitle": "Collection de compagnons",
     "teamBonus": "Ce que ton équipe ajoute",
     "activeTitle": "Compagnons actifs ({{n}}/{{max}})",
@@ -746,7 +752,9 @@
       "coins": "Pièces",
       "heart": "Cœurs",
       "egg": "Œufs plus rapides"
-    }
+    },
+    "lumoTier": "Rareté Lumo : un cadeau du créateur. Personne ne peut le faire éclore.",
+    "giftOnly": "Rareté Lumo : seul le créateur peut la donner"
   },
   "badges": {
     "first_steps": {
@@ -925,7 +933,9 @@
     "answeredCount": "{{n}} sur {{total}} ont répondu",
     "andTheAnswer": "Et la réponse est…",
     "react": "Réactions",
-    "reactWith": "Réagir avec {{e}}"
+    "reactWith": "Réagir avec {{e}}",
+    "leaveGame": "Quitter",
+    "leaveSure": "Touche encore pour quitter"
   },
   "friends": {
     "title": "Amis",
@@ -1257,7 +1267,8 @@
       "public": "Ton paquet est public maintenant."
     },
     "copyDeckLink": "Partager le lien du paquet",
-    "deckGone": "Ce paquet n'est plus partagé."
+    "deckGone": "Ce paquet n'est plus partagé.",
+    "friendCoins": "+{{n}} pièces pour un nouvel ami ! 🪙"
   },
   "egg": {
     "title": "Œuf {{rarity}}",
@@ -1269,9 +1280,10 @@
     "newPet": "Tu as obtenu {{name}} !",
     "newPetBody": "Un nouvel ami rejoint ta collection. Emmène-le pour gagner de l’XP bonus.",
     "duplicate": "Encore {{name}} !",
-    "duplicateBody": "Ton {{name}} est devenu plus fort et a monté de niveau.",
+    "duplicateBody": "Ton {{name}} est devenu plus fort, et tu reçois des collations pour tes compagnons.",
     "seePets": "Mes compagnons",
-    "keepGoing": "Continuer"
+    "keepGoing": "Continuer",
+    "snacks": "collations"
   },
   "gate": {
     "tagline": "Transforme tes notes, une photo de ton manuel ou juste un sujet en quiz — puis joue jusqu’à vraiment comprendre.",
@@ -1459,7 +1471,20 @@
     },
     "heartsLeft_one": "{{count}} cœur restant",
     "heartsLeft_other": "{{count}} cœurs restants",
-    "petHeart": "{{name}} t’a fait gagner un cœur !"
+    "petHeart": "{{name}} t’a fait gagner un cœur !",
+    "gift": {
+      "tap": "Une surprise ! Touche pour l’ouvrir",
+      "coins": "+{{n}} pièces !",
+      "snack": "Une collation pour tes compagnons !",
+      "golden": "Question en or ! Ta prochaine bonne réponse donne le double d’XP",
+      "goldenChip": "XP double"
+    },
+    "cheer": {
+      "combo3": "Bien joué, 3 de suite !",
+      "combo5": "Tu es en feu ! 🔥",
+      "combo10": "Inarrêtable ! 10 de suite !",
+      "miss": "Pas grave, tu vas y arriver ! 💪"
+    }
   },
   "write": {
     "title": "Lumoly écrit ton examen",
@@ -1664,6 +1689,24 @@
     "errors": {
       "too_many": "C'est beaucoup ! Oublie quelques choses d'abord.",
       "empty": "Écris quelque chose d'abord."
+    }
+  },
+  "gifts": {
+    "fromCreator": "Un cadeau du créateur !",
+    "title": "Tu as reçu {{name}} !",
+    "body": "Il est de rareté Lumo, la plus rare qui existe. Personne ne peut le faire éclore : seul le créateur le donne.",
+    "thanks": "Génial !",
+    "creatorTitle": "Créateur : donner un compagnon Lumo",
+    "creatorBody": "Écris le nom Lumoly d’un élève et choisis un compagnon. Il le reçoit en rareté Lumo la prochaine fois qu’il ouvre Lumoly.",
+    "username": "Son nom Lumoly",
+    "which": "Quel compagnon",
+    "give": "Donner",
+    "sent": "Envoyé ! {{name}} le recevra la prochaine fois qu’il ouvre Lumoly.",
+    "errors": {
+      "not_creator": "Seul le créateur peut donner des compagnons Lumo.",
+      "no_such_learner": "Personne sur Lumoly n’a ce nom.",
+      "bad_species": "Choisis un compagnon dans la liste.",
+      "network": "Impossible de joindre Lumoly. Vérifie ta connexion."
     }
   }
 }

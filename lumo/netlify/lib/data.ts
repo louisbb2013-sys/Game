@@ -1,4 +1,5 @@
 import type { KV } from './kv.ts';
+import { gifts } from './gifts.ts';
 import { claimName, releaseName } from './names.ts';
 import { bearer, goneKey, json, limiter, verifySession, type Session } from './session.ts';
 
@@ -236,7 +237,9 @@ export function makeDataHandler(deps: DataDeps) {
     if (!me) return json(401, { error: 'signed_out' });
     if (!allow(me.u, now())) return json(429, { error: 'rate_limited' });
     try {
-      return new URL(req.url).pathname.endsWith('/room') ? await room(body, me) : await db(body, me);
+      const path = new URL(req.url).pathname;
+      if (path.endsWith('/gifts')) return await gifts(kv, env, body, me, now());
+      return path.endsWith('/room') ? await room(body, me) : await db(body, me);
     } catch (e) {
       console.error('lumo: data request failed', body.op, body.path ?? body.coll ?? body.room, e);
       return json(503, { error: 'unavailable' });

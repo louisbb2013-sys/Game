@@ -4,9 +4,19 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { FlameIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
+import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { SharedDecks } from '../components/SharedDecks';
 import { answerFriendRequest, findProfiles, FRIENDS_ONLY, sendFriendRequest, setFriends, useFriendRequests, useFriends, useNames, useOnlineNow, useProfiles, useReadOnly, useTogether, type PublicProfile } from '../local/together';
+
+/** A new friend pays a few coins (enough for 2 snacks), once per friend; 0 if it already did. */
+async function friendCoins(id: string): Promise<number> {
+  try {
+    return (await api<{ coins: number }>('/api/local/friend-reward', { method: 'POST', body: { friendId: id } })).coins;
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * Browser-only build: add friends by typing their username (Enter), or tap Add next to someone who is
@@ -14,7 +24,7 @@ import { answerFriendRequest, findProfiles, FRIENDS_ONLY, sendFriendRequest, set
  */
 export function LocalFriends() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const together = useTogether();
   const profiles = useProfiles();
   const friends = useFriends();
@@ -63,7 +73,9 @@ export function LocalFriends() {
       await setFriends([...myFriends, id]);
       // On the website they get a request, so they can add me back with one tap.
       void sendFriendRequest(id, user?.username ?? '');
-      setMsg({ ok: true, text: t(FRIENDS_ONLY ? 'together.addedSite' : 'together.added', { name: nameOf(id) }) });
+      const coins = await friendCoins(id);
+      if (coins) void refresh();
+      setMsg({ ok: true, text: t(FRIENDS_ONLY ? 'together.addedSite' : 'together.added', { name: nameOf(id) }) + (coins ? ` ${t('together.friendCoins', { n: coins })}` : '') });
     } catch {
       setMsg({ ok: false, text: t('together.cantAdd') });
     }
@@ -80,7 +92,9 @@ export function LocalFriends() {
   const answer = async (id: string, accept: boolean, name: string) => {
     setBusy(true);
     await answerFriendRequest(id, accept, [...myFriends]).catch(() => {});
-    if (accept) setMsg({ ok: true, text: t('together.added', { name: byId.get(id)?.username || name || t('together.someone') }) });
+    const coins = accept ? await friendCoins(id) : 0;
+    if (coins) void refresh();
+    if (accept) setMsg({ ok: true, text: t('together.added', { name: byId.get(id)?.username || name || t('together.someone') }) + (coins ? ` ${t('together.friendCoins', { n: coins })}` : '') });
     setBusy(false);
   };
   const invite = FRIENDS_ONLY && user ? `${location.origin}/add/${encodeURIComponent(user.username)}` : null;
@@ -308,10 +322,11 @@ export function LocalAddFriend() {
   const { t } = useTranslation();
   const { code } = useParams();
   const name = decodeURIComponent(code ?? '').trim();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const together = useTogether();
   const friends = useFriends();
   const [state, setState] = useState<'working' | 'done' | 'self' | 'missing' | 'error'>('working');
+  const [coins, setCoins] = useState(0);
   const ran = useRef(false);
   useEffect(() => {
     if (!together || friends === null || ran.current) return;
@@ -328,10 +343,15 @@ export function LocalAddFriend() {
       if (!friends.includes(found.id)) {
         await setFriends([...friends, found.id]);
         void sendFriendRequest(found.id, user?.username ?? '');
+        const got = await friendCoins(found.id);
+        if (got) {
+          setCoins(got);
+          void refresh();
+        }
       }
       setState('done');
     })().catch(() => setState('error'));
-  }, [together, friends, name, user]);
+  }, [together, friends, name, user, refresh]);
 
   const guest = together === null;
   const text = guest
@@ -339,7 +359,7 @@ export function LocalAddFriend() {
     : state === 'working'
       ? t('together.inviteTitle')
       : state === 'done'
-        ? t('together.inviteDone', { name })
+        ? t('together.inviteDone', { name }) + (coins ? ` ${t('together.friendCoins', { n: coins })}` : '')
         : state === 'self'
           ? t('together.inviteSelf')
           : state === 'missing'

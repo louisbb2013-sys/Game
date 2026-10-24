@@ -139,8 +139,8 @@ test('live: a 100-question game the host ends early', async ({ browser }) => {
   await expect(guest.page.getByText('Question 1 of 100')).toBeVisible();
   await playQuestion(host.page);
   await playQuestion(guest.page, true);
-  await host.page.getByRole('button', { name: 'End game' }).click();
-  await host.page.getByRole('button', { name: 'Tap to end' }).click();
+  await host.page.getByRole('button', { name: 'End game', exact: true }).click();
+  await host.page.getByRole('button', { name: 'Tap to end', exact: true }).click();
   await expect(host.page.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible();
   await expect(guest.page.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible();
   await expect(guest.page.getByRole('status').filter({ hasText: 'XP' })).toBeVisible();

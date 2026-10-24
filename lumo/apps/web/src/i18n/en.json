@@ -573,7 +573,7 @@
     },
     "egg_rare": {
       "name": "Rare egg",
-      "desc": "Hatches a rare, epic, legendary or even mythical pet."
+      "desc": "Hatches a rare, epic, legendary, or (if you are lucky) mythical, exotic or galaxial pet."
     },
     "chest_common": {
       "name": "Chest",
@@ -668,14 +668,20 @@
       "cosmic_whale": "Cosmic Whale",
       "aurora_peacock": "Aurora Peacock",
       "celestial_phoenix": "Celestial Phoenix",
-      "galaxy_dragon": "Galaxy Dragon"
+      "galaxy_dragon": "Galaxy Dragon",
+      "prism_axolotl": "Prism Axolotl",
+      "nebula_manta": "Nebula Manta",
+      "lumo_firefly": "Lumo Firefly"
     },
     "rarity": {
       "common": "Common",
       "rare": "Rare",
       "epic": "Epic",
       "legendary": "Legendary",
-      "mythical": "Mythical"
+      "mythical": "Mythical",
+      "exotic": "Exotic",
+      "galaxial": "Galaxial",
+      "lumo": "Lumo"
     },
     "mood": {
       "happy": "Happy",
@@ -694,7 +700,7 @@
       "already_has_pet": "You already adopted a pet.",
       "not_enough_items": "No snacks left — get some in the shop.",
       "network": "Can’t reach Lumoly. Check your connection.",
-      "max_tier": "This pet is already Mythical.",
+      "max_tier": "This pet is already as high as upgrades go.",
       "level_too_low": "Your pet needs a higher level first.",
       "not_enough_coins": "Not enough coins yet.",
       "team_full": "Your team is full (4 pets). Take one off first."
@@ -707,7 +713,7 @@
     "upgrade": "Upgrade",
     "upgradeHint": "Pets level up as you study and when you feed them.",
     "upgraded": "Your pet is {{rarity}} now!",
-    "maxTier": "Mythical: the highest rarity there is!",
+    "maxTier": "Galaxial: as high as upgrades go!",
     "collectionTitle": "Pet collection",
     "teamBonus": "What your team adds",
     "activeTitle": "Active pets ({{n}}/{{max}})",
@@ -746,7 +752,9 @@
       "coins": "Coins",
       "heart": "Hearts",
       "egg": "Faster eggs"
-    }
+    },
+    "lumoTier": "Lumo rarity: a gift from the creator. Nobody can hatch it.",
+    "giftOnly": "Lumo rarity: only the creator can give it"
   },
   "badges": {
     "first_steps": {
@@ -925,7 +933,9 @@
     "answeredCount": "{{n}} of {{total}} answered",
     "andTheAnswer": "And the answer is…",
     "react": "Reactions",
-    "reactWith": "React with {{e}}"
+    "reactWith": "React with {{e}}",
+    "leaveGame": "Leave",
+    "leaveSure": "Tap again to leave"
   },
   "friends": {
     "title": "Friends",
@@ -1257,7 +1267,8 @@
       "public": "Your deck is public now."
     },
     "copyDeckLink": "Share the deck's link",
-    "deckGone": "This deck isn't shared any more."
+    "deckGone": "This deck isn't shared any more.",
+    "friendCoins": "+{{n}} coins for a new friend! 🪙"
   },
   "egg": {
     "title": "{{rarity}} egg",
@@ -1269,9 +1280,10 @@
     "newPet": "You got {{name}}!",
     "newPetBody": "A new friend joins your collection. Take it along to earn bonus XP.",
     "duplicate": "{{name}} again!",
-    "duplicateBody": "Your {{name}} got stronger and levelled up.",
+    "duplicateBody": "Your {{name}} got stronger, and you get snacks for your pets.",
     "seePets": "See my pets",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "snacks": "snacks"
   },
   "gate": {
     "tagline": "Turn your notes, a photo of your textbook or just a topic into quizzes — then play them until you actually get it.",
@@ -1459,7 +1471,20 @@
     },
     "heartsLeft_one": "{{count}} heart left",
     "heartsLeft_other": "{{count}} hearts left",
-    "petHeart": "{{name}} won you a heart!"
+    "petHeart": "{{name}} won you a heart!",
+    "gift": {
+      "tap": "A surprise! Tap to open",
+      "coins": "+{{n}} coins!",
+      "snack": "A snack for your pets!",
+      "golden": "Golden question! Your next right answer gives double XP",
+      "goldenChip": "Double XP"
+    },
+    "cheer": {
+      "combo3": "Nice, 3 in a row!",
+      "combo5": "You're on fire! 🔥",
+      "combo10": "Unstoppable! 10 in a row!",
+      "miss": "It's okay, you've got this! 💪"
+    }
   },
   "write": {
     "title": "Lumoly is writing your test",
@@ -1664,6 +1689,24 @@
     "errors": {
       "too_many": "That's a lot! Forget a few things first.",
       "empty": "Write something first."
+    }
+  },
+  "gifts": {
+    "fromCreator": "A gift from the creator!",
+    "title": "You got {{name}}!",
+    "body": "It's Lumo rarity, the rarest there is. Nobody can hatch it: only the creator gives it.",
+    "thanks": "Awesome!",
+    "creatorTitle": "Creator: give a Lumo pet",
+    "creatorBody": "Type a learner’s Lumoly name and pick a pet. They get it at Lumo rarity next time they open Lumoly.",
+    "username": "Their Lumoly name",
+    "which": "Which pet",
+    "give": "Give",
+    "sent": "Sent! {{name}} gets it next time they open Lumoly.",
+    "errors": {
+      "not_creator": "Only the creator can give Lumo pets.",
+      "no_such_learner": "Nobody on Lumoly has that name.",
+      "bad_species": "Pick a pet from the list.",
+      "network": "Can’t reach Lumoly. Check your connection."
     }
   }
 }

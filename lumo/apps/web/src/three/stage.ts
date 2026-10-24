@@ -1,7 +1,7 @@
 import type { Rarity } from '@lumo/core';
 import type * as T from 'three';
-import { Creature, Etincelles, lumieres, ombre, solide, THREE, webgl2Dispo } from './creatures.js';
-import { lookFor } from './looks';
+import { Creature, Etincelles, lumieres, matierePoints, nuageDePoints, ombre, solide, THREE, webgl2Dispo } from './creatures.js';
+import { lookFor, tierSparkle } from './looks';
 
 /**
  * Lumoly's 3D stage. One WebGL canvas covers the window; every element that shows a 3D creature
@@ -10,7 +10,8 @@ import { lookFor } from './looks';
  * nothing moves, and it stops when the tab is hidden.
  */
 
-export type Spec = { kind: 'creature'; species: string; rarity: Rarity; mood?: 'happy' | 'angry' } | { kind: 'egg'; rarity: Rarity; progress: number };
+export type Mood = 'happy' | 'angry' | 'sad' | 'sleepy';
+export type Spec = { kind: 'creature'; species: string; rarity: Rarity; mood?: Mood } | { kind: 'egg'; rarity: Rarity; progress: number };
 
 export interface Handle {
   jump(force?: number): void;
@@ -32,8 +33,52 @@ interface View extends Handle {
 }
 
 const FOV = 28;
-const EGG_COLOR: Record<Rarity, string> = { common: '#FFF1D6', rare: '#9FD8FF', epic: '#D3A6FF', legendary: '#FFD54A', mythical: '#FF92DA' };
-const RICH = (r: Rarity) => r === 'epic' || r === 'legendary' || r === 'mythical';
+const EGG_COLOR: Record<Rarity, string> = {
+  common: '#FFF1D6',
+  rare: '#9FD8FF',
+  epic: '#D3A6FF',
+  legendary: '#FFD54A',
+  mythical: '#FF92DA',
+  exotic: '#2DD4BF',
+  galaxial: '#4F46E5',
+  lumo: '#FACC15',
+};
+/** Rare pets and eggs give off sparkles now and then: every `every` seconds, `count` of them (none below epic). */
+const AURA: Record<Rarity, { every: number; count: number } | null> = {
+  common: null,
+  rare: null,
+  epic: { every: 2.2, count: 3 },
+  legendary: { every: 1.1, count: 6 },
+  mythical: { every: 0.7, count: 8 },
+  exotic: { every: 0.6, count: 8 },
+  galaxial: { every: 0.5, count: 9 },
+  lumo: { every: 0.4, count: 10 },
+};
+const RICH = (r: Rarity) => AURA[r] !== null;
+const HUMEUR: Record<Mood, string> = { happy: 'joyeux', angry: 'colere', sad: 'triste', sleepy: 'endormi' };
+
+/**
+ * The top tiers wear their magic around them: a cloud of twinkling stars (galaxial) or drifting golden
+ * fireflies (lumo). One small point cloud per view, animated on the GPU.
+ */
+function halo(rarity: Rarity, L: ReturnType<typeof lumieres>, px: { value: number }, echelle: { value: number }) {
+  if (rarity !== 'galaxial' && rarity !== 'lumo') return null;
+  const gold = rarity === 'lumo';
+  const colors = gold ? ['#FFE08A', '#FACC15', '#FFF3C4', '#FFB21C'] : ['#FFFFFF', '#C7D2FE', '#A5F3FC', '#F0ABFC', '#FDE68A'];
+  const n = gold ? 16 : 30;
+  const list = Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+    const r = 0.5 + Math.random() * 0.35;
+    return {
+      pos: [Math.cos(a) * r, 0.1 + Math.random() * 1.0, Math.sin(a) * r * 0.6 - 0.1],
+      couleur: colors[i % colors.length]!,
+      taille: gold ? 0.05 + Math.random() * 0.05 : 0.025 + Math.random() * 0.045,
+      alpha: 0.9,
+      seed: [Math.random(), Math.random(), Math.random()],
+    };
+  });
+  return nuageDePoints(list, matierePoints({ temps: L.uTime, forme: gold ? 0 : 1, flotte: gold ? 0.18 : 0.08, px, echelle }));
+}
 
 let supported: boolean | null = null;
 /** 3D only where WebGL2 works, not when saving data, and not in automated test browsers (unless ?3d=1). */
@@ -273,7 +318,7 @@ function build(el: HTMLElement, spec: Spec): Handle {
   const scene = new THREE.Scene();
   const L = lights(spec.kind === 'egg');
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 30);
-  const sparks = new Etincelles(80, L.uTime as { value: number });
+  const sparks = new Etincelles(120, L.uTime as { value: number });
   scene.add(sparks.points);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let colors: string[];
@@ -288,12 +333,23 @@ function build(el: HTMLElement, spec: Spec): Handle {
   if (spec.kind === 'creature') {
     const look = lookFor(spec.species, spec.rarity);
     colors = look.sparkle;
+    const pointsU = { uPx: sparks.mat.uniforms.uPx!, uEchelle: sparks.mat.uniforms.uEchelle! };
+    // The top tiers light their pets differently: a starry blue-violet rim, a warm golden one.
+    if (spec.rarity === 'galaxial') L.uRim!.value.set('#A5B4FC').multiplyScalar(0.95);
+    if (spec.rarity === 'lumo') {
+      L.uRim!.value.set('#FFD45A').multiplyScalar(1.1);
+      L.uLanternColor!.value.set('#FFE2A0');
+    }
     // The boss glares (frown, red glint) under a red rim light.
     if (spec.mood === 'angry') L.uRim!.value.set('#FF5A3D').multiplyScalar(0.95);
     const c = new Creature(spec.species, L, {
       forme: look.forme,
       palette: look.palette,
-      humeur: spec.mood === 'angry' ? 'colere' : 'joyeux',
+      etoiles: look.etoiles,
+      iris: look.iris,
+      nebuleuse: look.nebuleuse,
+      points: pointsU,
+      humeur: HUMEUR[spec.mood ?? 'happy'],
       // Fewer, thicker strands read as plush on a small screen (thin ones turn to grain).
       couches: st.touch ? 26 : 32,
       poils: st.touch ? 7000 : 9000,
@@ -301,22 +357,30 @@ function build(el: HTMLElement, spec: Spec): Handle {
       segH: st.touch ? 30 : 40,
       glow: look.glow,
     });
+    // Each species has its own little effects (embers, bubbles, a water spout…), drawn with the view's sparks.
+    c.emettre = (o: T.Vector3, cols: string | string[], n?: number, v?: number, s?: number, d?: T.Vector3 | null) => sparks.emettre(o, cols, n, v, s, d);
     scene.add(c.groupe);
+    const aura = halo(spec.rarity, L, pointsU.uPx, pointsU.uEchelle);
+    if (aura) c.groupe.add(aura);
     camera.position.set(0, 0.64, 3.45);
     camera.lookAt(0, 0.56, 0);
-    let ambient = RICH(spec.rarity) ? 1.2 : 0;
+    const sparkle = AURA[spec.rarity];
+    let ambient = sparkle ? 1.2 : 0;
+    const at = new THREE.Vector3();
     tick = (t, dt) => {
       if (view.pop < 1) view.pop = Math.min(1, view.pop + dt * 2.2);
       const s = view.pop >= 1 ? 1 : 1 - Math.pow(1 - view.pop, 3) * Math.cos(view.pop * 9);
       c.groupe.scale.setScalar(Math.max(0.001, s));
       L.uTime!.value = t;
+      // exotic pets shimmer: their rim light slowly runs through the rainbow
+      if (spec.rarity === 'exotic' && spec.mood !== 'angry') L.uRim!.value.setHSL((t * 0.07) % 1, 0.75, 0.62);
       c.maj(t, dt);
       // rare pets give off a few sparkles now and then
-      if (ambient && dt > 0) {
+      if (sparkle && dt > 0) {
         ambient -= dt;
         if (ambient <= 0) {
-          ambient = spec.rarity === 'mythical' ? 0.7 : spec.rarity === 'legendary' ? 1.1 : 2.2;
-          sparks.emettre(c.centre(new THREE.Vector3()), colors, spec.rarity === 'mythical' ? 8 : spec.rarity === 'legendary' ? 6 : 3, 0.6, 0.05);
+          ambient = sparkle.every;
+          sparks.emettre(c.centre(at), colors, sparkle.count, 0.6, 0.05);
         }
       }
       sparks.maj(dt);
@@ -340,9 +404,11 @@ function build(el: HTMLElement, spec: Spec): Handle {
       st.wake();
     });
   } else {
-    colors = [EGG_COLOR[spec.rarity], '#FFE27A', '#FFFFFF'];
+    colors = tierSparkle(spec.rarity) ?? [EGG_COLOR[spec.rarity], '#FFE27A', '#FFFFFF'];
+    const eggTop = new THREE.Vector3(0, 0.33, 0);
     const group = new THREE.Group();
-    const shell = new THREE.Mesh(eggGeometry(), solide(EGG_COLOR[spec.rarity], L, { wrap: 0.75, pois: true, emissive: RICH(spec.rarity) ? 0.18 : 0.04 }));
+    const glowing = spec.rarity === 'lumo' ? 0.45 : spec.rarity === 'galaxial' || spec.rarity === 'exotic' ? 0.28 : RICH(spec.rarity) ? 0.18 : 0.04;
+    const shell = new THREE.Mesh(eggGeometry(), solide(EGG_COLOR[spec.rarity], L, { wrap: 0.75, pois: true, emissive: glowing, iris: spec.rarity === 'exotic' ? 0.35 : 0 }));
     group.add(shell);
     // Cracks appear on the front of the shell as it gets close to hatching.
     const crackMat = new THREE.MeshBasicMaterial({ color: '#5A4026', transparent: true, opacity: 0.85 });
@@ -363,6 +429,11 @@ function build(el: HTMLElement, spec: Spec): Handle {
     const shadow = ombre();
     shadow.scale.set(0.34, 0.3, 1);
     scene.add(group, shadow);
+    const eggAura = halo(spec.rarity, L, sparks.mat.uniforms.uPx!, sparks.mat.uniforms.uEchelle!);
+    if (eggAura) {
+      eggAura.scale.setScalar(0.75);
+      scene.add(eggAura);
+    }
     camera.position.set(0, 0.5, 2.5);
     camera.lookAt(0, 0.33, 0);
     let progress = spec.progress;
@@ -384,7 +455,7 @@ function build(el: HTMLElement, spec: Spec): Handle {
           vy = 0.9 + progress * 0.8;
           shake = 0.45 + progress * 0.35;
           squash = 1;
-          if (RICH(spec.rarity) || progress >= 0.8) sparks.emettre(new THREE.Vector3(0, 0.33, 0), colors, spec.rarity === 'mythical' ? 10 : 5, 0.7, 0.05);
+          if (RICH(spec.rarity) || progress >= 0.8) sparks.emettre(eggTop, colors, (AURA[spec.rarity]?.count ?? 4) + 2, 0.7, 0.05);
         }
       }
       squash = Math.max(0, squash - dt * 3);

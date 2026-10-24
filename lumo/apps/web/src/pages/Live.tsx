@@ -10,7 +10,7 @@ import { QrCode, shareOrCopy } from '../components/QrCode';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { ChoiceTiles } from '../components/play/answers';
 import { api, LOCAL } from '../lib/api';
-import { hostLocalGame, liveNow, REACTIONS, useLocalLiveRoom, useOpenGames, type LiveReaction } from '../local/liveLocal';
+import { endHostedGame, hostLocalGame, liveNow, REACTIONS, useLocalLiveRoom, useOpenGames, type LiveReaction } from '../local/liveLocal';
 import { canAskClaude } from '../local/reader';
 import { writeQuestions } from '../local/writer';
 import { READY_TO_PLAY, WritingScreen } from '../components/play/Writing';
@@ -284,6 +284,7 @@ export function LiveRoom() {
     <ReactCtx.Provider value={fun.react ?? null}>
     <div className="space-y-4">
       {!room.connected && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">{t('live.reconnecting')}</p>}
+      {s.phase !== 'podium' && <LeaveButton s={s} isHost={isHost} send={room.send} />}
       {s.phase === 'lobby' && <Lobby s={s} isHost={isHost} send={room.send} />}
       {s.phase === 'question' && <QuestionView s={s} me={room.me} answer={room.answer} bet={bet} onPick={(qid, id) => (picks.current[qid] = id)} />}
       {s.phase === 'reveal' && <RevealView s={s} me={room.me} isHost={isHost} send={room.send} picked={s.question ? picks.current[s.question.id] : undefined} />}
@@ -295,6 +296,39 @@ export function LiveRoom() {
 }
 
 type Send = ReturnType<typeof useLiveRoom>['send'];
+
+/** Out of a game at any time: a player leaves; the host ends it for everyone. Two taps, so it can't happen by accident. */
+function LeaveButton({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [sure, setSure] = useState(false);
+  useEffect(() => {
+    if (!sure) return;
+    const id = setTimeout(() => setSure(false), 4000);
+    return () => clearTimeout(id);
+  }, [sure]);
+  const go = async () => {
+    if (!sure) return setSure(true);
+    if (isHost) {
+      // Mid-game everyone goes to the results; from the lobby the game just closes.
+      if ((s.phase === 'question' || s.phase === 'reveal') && (await send('live:end')).ok) return setSure(false);
+      if (LOCAL) await endHostedGame(s.code);
+    }
+    navigate('/live');
+  };
+  return (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        onClick={() => void go()}
+        data-testid="live-leave"
+        className={`rounded-full px-4 py-2 text-sm font-black ring-2 transition-colors ${sure ? 'bg-bad text-white ring-bad' : 'bg-surface text-muted ring-line'}`}
+      >
+        {sure ? t(isHost ? 'live.endSure' : 'live.leaveSure') : `✕ ${t(isHost ? 'live.endGame' : 'live.leaveGame')}`}
+      </button>
+    </div>
+  );
+}
 
 function Lobby({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send }) {
   const { t } = useTranslation();

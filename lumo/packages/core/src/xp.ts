@@ -24,6 +24,8 @@ export const FORMAT_XP: Record<Format, number> = {
 export const BLOOM_MULTIPLIER: Record<Bloom, number> = { remember: 1, understand: 1.2, apply: 1.4, analyze: 1.6 };
 
 export const FIRST_TRY_BONUS = 5;
+/** XP comes a bit slower than the raw numbers above, so levels feel earned. */
+export const XP_PACE = 0.75;
 export const MAX_BOOST = 1; // boosts + pet perks can at most double XP
 
 /** In-quiz answer streak → combo multiplier. */
@@ -49,7 +51,7 @@ export function xpForAnswer(i: AnswerXpInput): number {
   const base = FORMAT_XP[i.format] * BLOOM_MULTIPLIER[i.bloom] * score;
   const bonus = i.firstTry && score >= 0.999 ? FIRST_TRY_BONUS : 0;
   const boost = 1 + Math.min(Math.max(i.boost ?? 0, 0), MAX_BOOST);
-  return Math.round((base + bonus) * comboMultiplier(i.combo) * boost);
+  return Math.round((base + bonus) * comboMultiplier(i.combo) * boost * XP_PACE);
 }
 
 /** Total XP needed to *reach* `level` (level 1 = 0 XP). */
@@ -80,7 +82,7 @@ export function levelProgress(xp: number): LevelProgress {
 
 /** Rewards granted when reaching a level. Exact contents of chests are rolled later. */
 export function levelUpRewards(level: number): { coins: number; chest?: 'common' | 'rare' | 'epic'; unlock?: string } {
-  const coins = 20 + level * 5;
+  const coins = 10 + level * 3;
   if (level % 10 === 0) return { coins, chest: 'epic', unlock: `pet_slot_${level / 10 + 1}` };
   if (level % 5 === 0) return { coins, chest: 'rare' };
   return { coins, chest: level % 2 === 0 ? 'common' : undefined };

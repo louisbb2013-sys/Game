@@ -190,7 +190,7 @@ test('invite link adds a friend, the friend gets a request to add back, and a sh
   await a.getByRole('link', { name: /Friends/ }).first().click();
   await expect(a.getByRole('heading', { name: /Friend requests \(1\)/ })).toBeVisible({ timeout: 20_000 });
   await a.getByRole('button', { name: 'Add back' }).click();
-  await expect(a.getByRole('status')).toHaveText(`${bName} is now your friend!`);
+  await expect(a.getByRole('status')).toHaveText(`${bName} is now your friend! +20 coins for a new friend! 🪙`);
   await expect(a.getByRole('heading', { name: /Friend requests/ })).toHaveCount(0, { timeout: 15_000 });
   await expect(a.getByRole('list').getByText(bName).first()).toBeVisible();
   await a.screenshot({ path: 'e2e/screens/netlify-requests.png', fullPage: true });
@@ -300,8 +300,8 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   await expect(a.getByTestId('floating-reaction').filter({ hasText: '🔥' })).toBeVisible({ timeout: 8000 });
   await a.screenshot({ path: 'e2e/screens/netlify-live-reaction.png', fullPage: true });
   await b.screenshot({ path: 'e2e/screens/netlify-live-reveal.png', fullPage: true });
-  await a.getByRole('button', { name: 'End game' }).click();
-  await a.getByRole('button', { name: 'Tap to end' }).click();
+  await a.getByRole('button', { name: 'End game', exact: true }).click();
+  await a.getByRole('button', { name: 'Tap to end', exact: true }).click();
   await expect(b.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 15_000 });
   await expect(b.getByRole('status').filter({ hasText: /🎲 [+−]25 XP/ })).toBeVisible({ timeout: 15_000 });
   expect(bName).toBeTruthy();
@@ -401,6 +401,54 @@ test('one Google account on a laptop and an iPad is one Lumoly account; names ar
 
   await laptop.context().close();
   await ipad.context().close();
+});
+
+test('the creator gives Lumo-rarity pets: one for the creator, and one for a learner by name', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const maker = `mk_${tag()}`;
+  const kid = `kid_${tag()}`;
+  const a = await signUp(browser, maker);
+  const b = await signUp(browser, kid);
+  // Not the creator: nothing to give.
+  await b.getByRole('link', { name: 'Pets' }).first().click();
+  await expect(b.getByRole('heading', { name: 'Choose your study buddy' })).toBeVisible();
+  await expect(b.getByTestId('creator-panel')).toHaveCount(0);
+
+  // The site names `maker` the creator; next time the app opens, the creator's own Lumo pet arrives.
+  expect((await a.request.post(`${process.env.NETLIFY_URL}__test/creator?name=${maker}`)).ok()).toBe(true);
+  await a.reload();
+  const mine = a.getByTestId('creator-gift');
+  await expect(mine).toContainText('You got Lumo Firefly!', { timeout: 20_000 });
+  await a.waitForTimeout(800);
+  await a.screenshot({ path: 'e2e/screens/web-creator-gift.png' });
+  await mine.getByRole('link', { name: 'See my pets' }).click();
+  await expect(a.getByTestId('pet-card')).toContainText('Lumo Firefly');
+
+  // The creator gives a Comet Fox to the learner, by name.
+  const panel = a.getByTestId('creator-panel');
+  await panel.getByLabel('Their Lumoly name').fill(kid);
+  await panel.getByLabel('Which pet').selectOption('comet_fox');
+  await panel.getByRole('button', { name: /Give/ }).click();
+  await expect(panel.getByRole('status')).toHaveText(`Sent! ${kid} gets it next time they open Lumoly.`);
+  await panel.getByLabel('Their Lumoly name').fill('nobody_here_zz');
+  await panel.getByRole('button', { name: /Give/ }).click();
+  await expect(panel.getByRole('status')).toHaveText('Nobody on Lumoly has that name.');
+
+  // The learner opens Lumoly: the gift pops up, and the pet is in the collection at Lumo rarity.
+  await b.reload();
+  const got = b.getByTestId('creator-gift');
+  await expect(got).toContainText('You got Comet Fox!', { timeout: 20_000 });
+  await got.getByRole('button', { name: 'Awesome!' }).click();
+  await expect(got).toHaveCount(0);
+  // (Still on the Pets page from before: the new pet shows up there right away.)
+  await b.getByTestId('pet-card').click();
+  await expect(b.getByTestId('pet-rarity')).toHaveText('Lumo');
+  await expect(b.getByTestId('pet-screen')).toContainText('Lumo rarity: a gift from the creator. Nobody can hatch it.');
+  // A gift only arrives once.
+  await b.reload();
+  await expect(b.getByRole('link', { name: 'Learn', exact: true })).toBeVisible();
+  await b.waitForTimeout(2500);
+  await expect(b.getByTestId('creator-gift')).toHaveCount(0);
 });
 
 test('Google can find the site: title, description, site info, robots.txt and sitemap', async ({ request }) => {

@@ -13,4 +13,4 @@ export default (req: Request) => {
   return handler(req);
 };
 
-export const config = { path: ['/api/data', '/api/room'] };
+export const config = { path: ['/api/data', '/api/room', '/api/gifts'] };

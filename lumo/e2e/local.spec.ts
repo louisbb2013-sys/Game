@@ -71,7 +71,7 @@ test('browser-only Lumoly: deck, quiz, exam, sandbox, notes, progress kept after
   expect(errors.filter((e) => !/favicon/i.test(e))).toEqual([]);
 });
 
-test('pets climb the rarities: Common → Rare with enough level and coins (Mythical at the top)', async ({ page }) => {
+test('pets climb the rarities: Common → Rare with enough level and coins; the pet fills the whole screen', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto(process.env.LOCAL_URL!);
   await page.evaluate(() => localStorage.clear());
@@ -84,9 +84,16 @@ test('pets climb the rarities: Common → Rare with enough level and coins (Myth
   await expect(page.getByTestId('pet-card')).toContainText('+5% chance to win a heart on a right answer');
   await expect(page.getByTestId('study-egg')).toContainText('Answer 5 more questions to hatch your egg!');
   await page.getByTestId('pet-card').click();
+  // The pet takes the whole screen (one page to scroll, not a little box).
+  const screen = page.getByTestId('pet-screen');
+  await expect(screen).toBeVisible();
+  const box = (await screen.boundingBox())!;
+  const view = page.viewportSize()!;
+  expect(Math.round(box.width)).toBe(view.width);
+  expect(Math.round(box.height)).toBe(view.height);
   await expect(page.getByTestId('pet-rarity')).toHaveText('Common');
-  await expect(page.getByRole('list', { name: 'Rarity' }).getByRole('listitem')).toHaveText(['Common', 'Rare', 'Epic', 'Legendary', 'Mythical']);
-  // Not yet: the pet needs level 3 and 150 coins.
+  await expect(page.getByRole('list', { name: 'Rarity' }).getByRole('listitem')).toHaveText(['Common', 'Rare', 'Epic', 'Legendary', 'Mythical', 'Exotic', 'Galaxial', 'Lumo']);
+  // Not yet: the pet needs level 4 and 200 coins.
   await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Rare');
   await expect(page.getByTestId('pet-upgrade').getByRole('button', { name: 'Upgrade' })).toBeDisabled();
 
@@ -95,7 +102,7 @@ test('pets climb the rarities: Common → Rare with enough level and coins (Myth
     const k = 'lumo_local_v1';
     const d = JSON.parse(localStorage.getItem(k)!);
     d.user.coins = 500;
-    d.game.pets[0].level = 3;
+    d.game.pets[0].level = 4;
     localStorage.setItem(k, JSON.stringify(d));
   });
   await page.reload();
@@ -105,9 +112,10 @@ test('pets climb the rarities: Common → Rare with enough level and coins (Myth
   await expect(page.getByText('Your pet is Rare now!')).toBeVisible();
   await expect(page.getByTestId('pet-rarity')).toHaveText('Rare');
   await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Epic');
-  // Rarer and higher level: a bigger bonus (Rare base 8% + 2 levels).
-  await expect(page.getByTestId('pet-buff')).toContainText('+10% chance to win a heart on a right answer');
-  await page.screenshot({ path: 'e2e/screens/local-pet-upgrade.png', fullPage: true });
+  // Rarer and higher level: a bigger bonus (Rare base 8% + 3 levels).
+  await expect(page.getByTestId('pet-buff')).toContainText('+11% chance to win a heart on a right answer');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.coins)).toBe(300);
+  await page.screenshot({ path: 'e2e/screens/local-pet-upgrade.png' });
 });
 
 test('Challenge: hearts show while you play, and a miss breaks one', async ({ page }) => {
@@ -189,4 +197,63 @@ test('pet team: up to 4 active pets, their bonuses add up, swap one for another'
   await expect(page.getByTestId('team')).toContainText('Comet Fox');
   await expect(page.getByTestId('team')).not.toContainText('Acorn Squirrel');
   await page.screenshot({ path: 'e2e/screens/local-pet-team.png', fullPage: true });
+});
+
+test('an egg with a pet you already have gives 5 snacks', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto(process.env.LOCAL_URL!);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  await page.getByLabel('Give it a name').fill('Pip');
+  await page.getByRole('button', { name: 'Adopt!' }).click();
+  await expect(page.getByTestId('pet-card')).toHaveCount(1);
+  // Every pet an egg can give is already in the collection, and there's an egg to hatch.
+  await page.evaluate(() => {
+    const k = 'lumo_local_v1';
+    const d = JSON.parse(localStorage.getItem(k)!);
+    const base = d.game.pets[0];
+    const all = ['moss_turtle', 'cloud_sheep', 'pixel_owl', 'comet_fox', 'crystal_cat', 'star_jelly', 'bubble_octo', 'ember_dragon', 'puddle_frog', 'acorn_squirrel', 'snow_penguin', 'lucky_bunny', 'rock_dino', 'mystic_unicorn', 'cosmic_whale', 'aurora_peacock', 'celestial_phoenix', 'galaxy_dragon', 'prism_axolotl', 'nebula_manta'];
+    for (const [i, species] of all.filter((x) => x !== base.species).entries()) d.game.pets.push({ ...base, id: `d${i}`, species, name: '', equipped: false, active: false });
+    d.game.inventory = { ...d.game.inventory, egg_common: 1, pet_food: 2 };
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  await page.reload();
+  await page.getByRole('link', { name: 'Pets' }).first().click();
+  await page.getByRole('button', { name: /egg ×1/i }).click();
+  const hatch = page.getByRole('dialog', { name: 'Your egg hatched!' });
+  await expect(hatch.getByTestId('duplicate-snacks')).toHaveText('+5 🍎 snacks', { timeout: 10_000 });
+  await expect(hatch).toContainText('again!');
+  await hatch.screenshot({ path: 'e2e/screens/local-duplicate-snacks.png' });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).game.inventory.pet_food)).toBe(7);
+});
+
+test('while playing, a surprise gift drops in now and then: tap it before it floats away', async ({ page }) => {
+  test.setTimeout(120_000);
+  // Make luck certain for this test: every right answer (after the 3rd) brings a gift, and it's coins.
+  await page.addInitScript(() => (Math.random = () => 0.01));
+  await page.goto(process.env.LOCAL_URL!);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('link', { name: 'Learn' }).click();
+  await page.getByRole('button', { name: 'Try a sample deck' }).click();
+  await page.getByRole('button', { name: /^Play\b/ }).click();
+  const gift = page.getByTestId('surprise-gift');
+  for (let i = 0; i < 10 && !(await gift.count()); i++) {
+    const section = page.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    await answerAndCheck(page, (await section.getAttribute('data-format'))!);
+    await expect(page.getByRole('status').getByRole('button', { name: /Continue|See results/ })).toBeVisible();
+    if (await gift.count()) break;
+    await closeHatch(page);
+    if (await continueRound(page)) break;
+    await openChests(page);
+  }
+  await closeHatch(page); // the forced luck also hatches eggs quickly
+  await expect(gift).toBeVisible();
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.coins);
+  await gift.click();
+  await expect(page.getByTestId('gift-won')).toHaveText('🪙 +3 coins!');
+  await expect(gift).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.coins)).toBe(before + 3);
 });

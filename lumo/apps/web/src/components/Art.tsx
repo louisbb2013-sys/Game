@@ -80,6 +80,9 @@ const EGG: Record<Rarity, { light: string; base: string; dark: string; accent: s
   epic: { light: '#F6EAFF', base: '#C99DFF', dark: '#7044C2', accent: '#FF79D6' },
   legendary: { light: '#FFF8D4', base: '#FFD54A', dark: '#C98A00', accent: '#FF7A00' },
   mythical: { light: '#FFEAFB', base: '#FF92DA', dark: '#6D4BFF', accent: '#35E3FF' },
+  exotic: { light: '#E9FFF9', base: '#5EEAD4', dark: '#0E7490', accent: '#A3E635' },
+  galaxial: { light: '#E0E7FF', base: '#6366F1', dark: '#1E1B4B', accent: '#F0ABFC' },
+  lumo: { light: '#FFFBEA', base: '#FACC15', dark: '#A16207', accent: '#FFFFFF' },
 };
 const EGG_PATH = 'M50 6C74 6 88 44 88 70C88 96 71 110 50 110C29 110 12 96 12 70C12 44 26 6 50 6Z';
 
@@ -149,6 +152,9 @@ export const RARITY_TONE: Record<Rarity, string> = {
   epic: 'bg-fuchsia-600 text-white',
   legendary: 'bg-amber-400 text-night',
   mythical: 'rarity-mythical text-white',
+  exotic: 'rarity-exotic text-night',
+  galaxial: 'rarity-galaxial text-white',
+  lumo: 'rarity-lumo text-night',
 };
 
 /** A shop item's picture: eggs and chests are drawn; small consumables keep their emoji. */

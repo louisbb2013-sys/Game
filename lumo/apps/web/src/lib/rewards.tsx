@@ -1,4 +1,4 @@
-import { BADGES } from '@lumo/core';
+import { BADGES, RARITIES } from '@lumo/core';
 import type { Rarity } from '@lumo/core';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Creature3D, Egg3D } from '../components/Pet3D';
@@ -15,7 +15,7 @@ export interface Rewards {
   badges: string[];
   questsCompleted: string[];
   /** Website: a pet hatched from the study egg. */
-  hatched?: { species: string; emoji: string; rarity: string; duplicate: boolean };
+  hatched?: { species: string; emoji: string; rarity: string; duplicate: boolean; snacks?: number };
   /** Website: a chest earned for finishing a round. */
   chest?: string;
   /** Website: the study egg after this answer. */
@@ -119,7 +119,7 @@ function HatchCelebration({ pet, onClose }: { pet: NonNullable<Rewards['hatched'
   const [open, setOpen] = useState(false);
   const egg = useRef<Handle | null>(null);
   const creature = useRef<Handle | null>(null);
-  const rarity = (['common', 'rare', 'epic', 'legendary', 'mythical'].includes(pet.rarity) ? pet.rarity : 'common') as Rarity;
+  const rarity = ((RARITIES as string[]).includes(pet.rarity) ? pet.rarity : 'common') as Rarity;
   useEffect(() => {
     play('tap');
     const shakes = [200, 700, 1150].map((ms) => setTimeout(() => egg.current?.jump(), ms));
@@ -159,7 +159,12 @@ function HatchCelebration({ pet, onClose }: { pet: NonNullable<Rewards['hatched'
           <>
             <p className="mt-2 text-sm font-black tracking-wide text-amber-glow uppercase">{t(`pets.rarity.${pet.rarity}`)}</p>
             <h2 className="text-2xl font-black">{pet.duplicate ? t('egg.duplicate', { name }) : t('egg.newPet', { name })}</h2>
-            <p className="mt-1 text-sm text-muted">{pet.duplicate ? t('egg.duplicateBody') : t('egg.newPetBody')}</p>
+            <p className="mt-1 text-sm text-muted">{pet.duplicate ? t('egg.duplicateBody', { name }) : t('egg.newPetBody')}</p>
+            {pet.duplicate && !!pet.snacks && (
+              <p className="pop-in mx-auto mt-3 w-fit rounded-full bg-good/15 px-4 py-1.5 text-lg font-black text-good" data-testid="duplicate-snacks">
+                +{pet.snacks} 🍎 {t('egg.snacks')}
+              </p>
+            )}
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Link to="/pets" onClick={onClose} className="rounded-2xl bg-surface-2 py-3 font-black">
                 {t('egg.seePets')}

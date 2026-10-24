@@ -9,11 +9,12 @@ describe('xp', () => {
   });
 
   it('applies first-try bonus, combo and capped boost', () => {
-    expect(xpForAnswer({ format: 'multiple_choice', bloom: 'remember', score: 1, firstTry: true, combo: 1 })).toBe(15);
-    expect(xpForAnswer({ format: 'multiple_choice', bloom: 'remember', score: 1, firstTry: false, combo: 10 })).toBe(20);
-    expect(xpForAnswer({ format: 'multiple_choice', bloom: 'remember', score: 1, firstTry: false, combo: 1, boost: 50 })).toBe(20);
+    // XP comes at 75% pace (XP_PACE), so levels take a little longer.
+    expect(xpForAnswer({ format: 'multiple_choice', bloom: 'remember', score: 1, firstTry: true, combo: 1 })).toBe(11);
+    expect(xpForAnswer({ format: 'multiple_choice', bloom: 'remember', score: 1, firstTry: false, combo: 10 })).toBe(15);
+    expect(xpForAnswer({ format: 'multiple_choice', bloom: 'remember', score: 1, firstTry: false, combo: 1, boost: 50 })).toBe(15);
     expect(xpForAnswer({ format: 'explain', bloom: 'remember', score: 0, firstTry: true, combo: 3 })).toBe(0);
-    expect(xpForAnswer({ format: 'explain', bloom: 'remember', score: 0.5, firstTry: true, combo: 1 })).toBe(10);
+    expect(xpForAnswer({ format: 'explain', bloom: 'remember', score: 0.5, firstTry: true, combo: 1 })).toBe(8);
   });
 
   it('combo tiers', () => {

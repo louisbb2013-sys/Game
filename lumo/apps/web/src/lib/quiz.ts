@@ -56,6 +56,10 @@ export interface AnswerResult {
   /** A heart pet won a heart back. */
   petGift?: { kind: 'heart'; name: string; species: string };
   lightning?: boolean;
+  /** A surprise gift dropped in (its id; tap it to open). */
+  gift?: string;
+  /** This answer was golden: double XP (from a surprise gift). */
+  golden?: boolean;
 }
 
 export interface MissedItem {

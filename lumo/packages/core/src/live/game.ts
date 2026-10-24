@@ -322,5 +322,5 @@ export function publicView(s: LiveState): LivePublic {
 /** End-of-game rewards (server-granted): everyone gets something, podium gets more. */
 export function liveRewards(rank: number, players: number, correctCount: number): { xp: number; coins: number } {
   const podium = rank === 1 ? 30 : rank === 2 ? 20 : rank === 3 ? 10 : 0;
-  return { xp: 10 + correctCount * 5 + (players >= 3 ? podium : Math.floor(podium / 2)), coins: 5 + (rank <= 3 ? 15 - (rank - 1) * 5 : 0) };
+  return { xp: 8 + correctCount * 4 + (players >= 3 ? podium : Math.floor(podium / 2)), coins: 3 + (rank <= 3 ? 10 - (rank - 1) * 3 : 0) };
 }

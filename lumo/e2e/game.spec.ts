@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import pg from 'pg';
+import { closeHatch } from './helpers';
 
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://lumo:lumo@localhost:5432/lumo' });
 test.afterAll(() => db.end());
@@ -59,10 +60,12 @@ test('shop, chest opening, pets, quests and badges', async ({ page }) => {
   await page.getByRole('button', { name: 'Adopt!' }).click();
   await page.getByRole('button', { name: /Hoot/ }).click(); // its card opens the pet up close
   await page.getByRole('button', { name: /Feed \(\d+ snacks?\)/ }).click();
-  await expect(page.getByText(/15 \//)).toBeVisible();
+  await expect(page.getByText(/10 \//)).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
   await page.getByRole('button', { name: /Mystery egg/ }).click();
-  await expect(page.getByText(/Collection \(2 of 18 species\)|Collection \(1 of 18 species\)/)).toBeVisible();
+  // The egg hatches on screen.
+  await closeHatch(page);
+  await expect(page.getByText(/Collection \(2 of 21 species\)|Collection \(1 of 21 species\)/)).toBeVisible();
   await page.screenshot({ path: 'e2e/screens/game-pets.png', fullPage: true });
 
   // Home: quests, pet card; Profile: badges

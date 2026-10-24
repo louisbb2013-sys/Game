@@ -83,7 +83,7 @@ describe('pets', () => {
     await setCoins(u.id, 1000);
     await post('/api/game/shop/buy', u.cookie, { itemId: 'pet_food' });
     const fed = (await post('/api/game/items/use', u.cookie, { itemId: 'pet_food', petId: pet.id })).json();
-    expect(fed.pet.xp).toBe(15);
+    expect(fed.pet.xp).toBe(10);
 
     await post('/api/game/shop/buy', u.cookie, { itemId: 'egg_rare' });
     const hatched = (await post('/api/game/items/use', u.cookie, { itemId: 'egg_rare' })).json().pet;
@@ -107,7 +107,7 @@ describe('XP, levels, quests and badges', () => {
     expect(r.levelUp!.level).toBeGreaterThanOrEqual(5);
     const inv = (await get('/api/game/inventory', u.cookie)).json();
     expect(inv.chests.length).toBeGreaterThanOrEqual(2);
-    expect(await coins(u.id)).toBeGreaterThan(100);
+    expect(await coins(u.id)).toBeGreaterThan(60);
 
     const quests = (await get('/api/game/quests', u.cookie)).json().quests;
     expect(quests.filter((q: { period: string }) => q.period === 'daily')).toHaveLength(3);

@@ -505,6 +505,8 @@ function makeSample(s: SessionInfo) {
 export function installCloud(s: SessionInfo) {
   // Live games keep time on the site's clock (see siteNow).
   (globalThis as { __LUMO_CLOCK__?: () => number }).__LUMO_CLOCK__ = siteNow;
+  // Gifts from the creator (Lumo-rarity pets): list, claim, give.
+  (globalThis as { __LUMO_GIFTS__?: (body: Record<string, unknown>) => Promise<unknown> }).__LUMO_GIFTS__ = (body) => post('/api/gifts', body, s.token);
   const db = makeDb(s);
   const caps: Record<string, unknown> = {
     db,
