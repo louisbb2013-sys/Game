@@ -31,6 +31,8 @@ export class Creature {
   cibleYaw: number;
   ciblePitch: number;
   cibleGlow: number;
+  /** Half its width (world units), so a narrow view can step its camera back to fit it. */
+  largeur: number;
   /** True while no finger or mouse is on it: it then looks around and does its own little tricks. */
   regardLibre: boolean;
   /** Set by the stage: how the creature's own effects (embers, bubbles, spout…) reach the view's sparks. */

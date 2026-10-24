@@ -1,6 +1,7 @@
 import { PET_BUFF, PET_SPECIES, petXpForLevel, RARITIES, STARTER_PETS, type PetBuffKind, type Rarity } from '@lumo/core';
 import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Creature3D } from '../components/Pet3D';
@@ -429,7 +430,8 @@ function PetSheet({
 
   const title = pet.name || t(`pets.species.${pet.species}`);
   // The whole screen, one scroll: the pet big on one side, everything about it on the other.
-  return (
+  // On top of the whole app (not inside the page, which may be scrolled or animated).
+  return createPortal(
     <div role="dialog" aria-modal="true" aria-label={title} className="pet-screen fixed inset-0 z-[70] overflow-y-auto bg-bg" data-rarity={pet.rarity} data-testid="pet-screen">
       <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-bg/90 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 backdrop-blur">
         <button type="button" onClick={onClose} aria-label={t('common.close')} className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-2 text-xl font-black ring-1 ring-line">
@@ -556,7 +558,8 @@ function PetSheet({
         <p className="text-xs text-muted">{t('pets.tip')}</p>
       </section>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

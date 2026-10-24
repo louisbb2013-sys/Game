@@ -1,7 +1,7 @@
 import type { PetSpeciesId, Rarity } from '@lumo/core';
 
 /**
- * How each Lumoly pet looks in 3D: its own furry body (a woolly ball, a pixel cube, a jellyfish, a
+ * How each Lumo pet looks in 3D: its own furry body (a woolly ball, a pixel cube, a jellyfish, a
  * whale, a manta, a serpent dragon… see the `plan_*` builders in creatures.js), each with its own idle
  * animation, in its own colours. Rarer pets glow and sparkle more; galaxial ones are starry.
  */

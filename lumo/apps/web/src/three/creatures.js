@@ -1,8 +1,8 @@
-// @ts-nocheck — ported from the Minitaure site's 3D engine (plain JavaScript), extended for Lumoly.
+// @ts-nocheck — ported from the Minitaure site's 3D engine (plain JavaScript), extended for Lumo.
 /* Minitaure 3D — pièces partagées : lumières, matières, créatures-animaux en fourrure, particules.
    La fourrure utilise la technique des « coquilles » : la même forme est dessinée en
    N couches de plus en plus grandes, et chaque couche ne garde que la pointe des poils.
-   Lumoly : chaque espèce a son propre corps (boule, cube, méduse, baleine, raie, serpent…)
+   Lumo : chaque espèce a son propre corps (boule, cube, méduse, baleine, raie, serpent…)
    et sa propre façon de bouger quand on ne joue pas avec elle. */
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -141,8 +141,8 @@ export const GLSL = { LUMIERE, HASH };
 
 /* ---------------- Fourrure ----------------
    Deux façons de planter les poils : selon la direction depuis le centre (boules, œufs, cubes
-   arrondis : uMode 0) ou sur une grille le long d'un tube (queues, tentacules, corps de serpent :
-   uMode 1). Des vagues peuvent plier la forme dans le shader (serpent, queue de chat, ailes de raie). */
+   arrondis) ou sur une grille le long d'un tube (queues, tentacules, corps de serpent : TUBE).
+   Des vagues peuvent plier la forme dans le shader (serpent, queue de chat : VAGUE ; ailes de raie : AILE). */
 const FOURRURE_VS = /* glsl */ `
 attribute float aShell;
 uniform float uTime;
@@ -169,7 +169,8 @@ void main() {
   vec3 n = normalize(normal);
   vNo = n;
   vec3 p = position + n * uFur * aShell;
-  if (uVague.x != 0.0 || uVague.y != 0.0) {
+  #ifdef VAGUE
+  {
     float s = uVagueEnv.w > 0.5 ? uv.x * uLong : position.x;
     float e = pow(clamp(s * uVagueEnv.x + uVagueEnv.y, 0.0, 1.0), uVagueEnv.z);
     float ph = uVague.z * s + uVague.w;
@@ -179,13 +180,16 @@ void main() {
       n = normalize(n - vec3(dot(dd, n), 0.0, 0.0));
     }
   }
-  if (uAile.x != 0.0) {
+  #endif
+  #ifdef AILE
+  {
     float ax = abs(position.x);
     float ph = uAile.z - uAile.y * ax;
     p.y += uAile.x * ax * ax * sin(ph);
     float dy = uAile.x * (2.0 * ax * sin(ph) - ax * ax * uAile.y * cos(ph)) * sign(position.x);
     n = normalize(vec3(n.x - dy * n.y, n.y, n.z));
   }
+  #endif
   float k2 = aShell * aShell;
   vec3 sway = vec3(sin(uTime * 1.7 + position.y * 9.0 + uSeed), 0.0, cos(uTime * 1.3 + position.x * 9.0 + uSeed)) * uWobble;
   p += (uGravity + sway) * uFur * k2;
@@ -213,7 +217,6 @@ uniform vec3 uZoneDir;
 uniform vec3 uZoneCol;
 uniform vec3 uZone;
 uniform vec3 uShape;
-uniform float uMode;
 uniform vec2 uGrille;
 uniform float uEtoiles;
 uniform float uIris;
@@ -233,7 +236,7 @@ void main() {
   float id = 0.0;
   if (vS > 0.001) {
     float dist;
-    if (uMode > 0.5) {
+    #ifdef TUBE
       // poils sur une grille (le long du tube, autour du tube), un peu décalés au hasard
       vec2 g = vUv * uGrille;
       vec2 c0 = floor(g - 0.5);
@@ -251,7 +254,7 @@ void main() {
       }
       dist = sqrt(best);
       id = bc.x * 157.0 + bc.y;
-    } else {
+    #else
       // léger gauchissement pour casser la régularité des rangées de poils
       float esp = sqrt(12.566 / uStrands);
       vec3 d2 = normalize(dir + esp * (0.7 * sin(dir.yzx * 41.0 + uSeed) + 0.45 * sin(dir.zxy * 97.0 - uSeed * 1.7)));
@@ -259,7 +262,7 @@ void main() {
       vec2 poil = poilProche(vec3(d2.y, d2.z, d2.x), uStrands);
       dist = poil.y / esp;
       id = poil.x;
-    }
+    #endif
     h = hash13(vec3(id * 0.618, uSeed, 3.7));
     float h2 = hash13(vec3(uSeed, id * 0.371, 9.1));
     float t = vS / (0.7 + 0.3 * h);
@@ -270,41 +273,55 @@ void main() {
   }
   vec3 N = normalize(vN);
   // zone plus claire : ventre des animaux, bout de la queue du renard…
-  vec3 zd = uMode > 0.5 ? normalize(vNo) : dir;
+  #ifdef TUBE
+    vec3 zd = normalize(vNo);
+  #else
+    vec3 zd = dir;
+  #endif
   float zone = smoothstep(uZone.x, uZone.y, dot(zd, uZoneDir)) * uZone.z;
   vec3 root = mix(uRoot, uZoneCol * 0.8, zone * 0.7);
   vec3 base = mix(uBase, uZoneCol, zone);
   vec3 tip = mix(uTip, mix(uZoneCol, vec3(1.0), 0.4), zone);
-  if (uNebula > 0.0) {
+  #ifdef NEBULEUSE
+  {
     // nuages de nébuleuse
-    vec3 np = uMode > 0.5 ? vec3(vUv.x * 5.0, vNo.yz * 1.5) : dir * 1.8;
+    #ifdef TUBE
+      vec3 np = vec3(vUv.x * 5.0, vNo.yz * 1.5);
+    #else
+      vec3 np = dir * 1.8;
+    #endif
     float nb = fbm(np.xy * 1.6 + np.z * 1.9 + uSeed);
     float m = smoothstep(0.42, 0.72, nb) * uNebula;
     base = mix(base, uNebCol, m);
     tip = mix(tip, mix(uNebCol, vec3(1.0), 0.35), m);
   }
+  #endif
   vec3 c = mix(root, base, smoothstep(0.0, 0.55, vS));
   c = mix(c, tip, smoothstep(0.5, 1.0, vS) * 0.7);
   c *= 0.92 + 0.16 * h;
-  if (uIris > 0.0) {
+  #ifdef IRIS
+  {
     // reflets irisés (prisme, aurore) qui changent avec l'angle de vue
     vec3 V = normalize(cameraPosition - vW);
     float fi = dot(N, V);
     vec3 ir = 0.55 + 0.45 * cos(6.2831 * (fi * 0.8 + vS * 0.35 + uTime * 0.06 + dir.y * 0.5 + vec3(0.0, 0.33, 0.67)));
     c = mix(c, ir * (0.6 + 0.5 * dot(c, vec3(0.3, 0.5, 0.2))), uIris * smoothstep(0.25, 1.0, vS));
   }
+  #endif
   vec3 col = eclairer(c, N, vW, 0.7);
   col *= mix(0.6, 1.0, vS);
   // couleurs bien vives
   float lumi = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col = max(mix(vec3(lumi), col, 1.2), 0.0);
   col += c * uGlow * 0.18;
-  if (uEtoiles > 0.0) {
+  #ifdef ETOILES
+  {
     // quelques pointes de poils brillent comme des étoiles et scintillent
     float st = step(1.0 - uEtoiles * 0.045, hash13(vec3(id * 0.437, uSeed * 1.3, 5.9)));
     float tw = 0.55 + 0.45 * sin(uTime * (2.0 + 3.0 * h) + id);
     col += st * smoothstep(0.55, 1.0, vS) * vec3(1.0, 0.96, 0.88) * 2.4 * tw;
   }
+  #endif
   col = mix(uFogColor, col, brume(vDepth));
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -323,7 +340,16 @@ function pelage(geo, P, L, q, glow, zone = {}, x = {}) {
   for (let i = 0; i < q.couches; i++) couches[i] = i / (q.couches - 1);
   g.setAttribute("aShell", new THREE.InstancedBufferAttribute(couches, 1));
   g.instanceCount = q.couches;
+  // only the features this piece of fur uses are compiled in (a plain ball of fur stays cheap)
+  const defines = {};
+  if (x.grille) defines.TUBE = "";
+  if (x.vague) defines.VAGUE = "";
+  if (x.aile) defines.AILE = "";
+  if (x.etoiles > 0) defines.ETOILES = "";
+  if (x.iris > 0) defines.IRIS = "";
+  if (x.nebuleuse) defines.NEBULEUSE = "";
   const mat = new THREE.ShaderMaterial({
+    defines,
     uniforms: {
       ...L,
       uRoot: { value: new THREE.Color(P.racine) },
@@ -339,7 +365,6 @@ function pelage(geo, P, L, q, glow, zone = {}, x = {}) {
       uZoneCol: { value: new THREE.Color(zone.couleur || P.ventre || P.pointe) },
       uZone: { value: new THREE.Vector3(zone.debut ?? 0.35, zone.fin ?? 0.85, zone.force ?? 0) },
       uShape: { value: new THREE.Vector3(...(x.forme || [1, 1, 1])) },
-      uMode: { value: x.grille ? 1 : 0 },
       uGrille: { value: new THREE.Vector2(...(x.grille || [1, 1])) },
       uVague: { value: new THREE.Vector4(0, 0, 0, 0) },
       uVagueEnv: { value: new THREE.Vector4(...(x.env || [0, 1, 1, x.grille ? 1 : 0])) },
@@ -760,15 +785,6 @@ function flamme(h, r, seg = 18) {
   return new THREE.LatheGeometry(pts, seg);
 }
 
-function goutte() {
-  const pts = [];
-  for (let i = 0; i <= 18; i++) {
-    const u = i / 18;
-    pts.push(new THREE.Vector2(0.085 * Math.pow(Math.sin(Math.PI * u), 0.85) * (0.3 + 0.7 * u), 0.22 * (1 - u)));
-  }
-  return new THREE.LatheGeometry(pts, 28);
-}
-
 /* Couleur par sommet, pour fusionner plusieurs pièces de couleurs différentes en une seule. */
 const _col = new THREE.Color();
 function peint(geo, hex) {
@@ -875,7 +891,6 @@ const cloche = (x) => (x <= 0 || x >= 1 ? 0 : Math.sin(Math.PI * x));
 const enveloppe = (t, d, m = 0.3) => (t < 0 ? 0 : Math.min(lisse(0, m, t), 1 - lisse(d - m, d, t)));
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _sc = new THREE.Vector3();
 
-const ETINCELLES = ["#FFE27A", "#FFFFFF", "#FFC6F0"];
 const BRAISES = ["#FFE27A", "#FF9F1C", "#FF4A2E", "#FFD36B"];
 const BULLES = ["#BDEBFF", "#FFFFFF", "#9FD8FF"];
 const ARC_EN_CIEL = ["#FF8FC8", "#FFB86B", "#FFE27A", "#7DE3B0", "#8FC8FF", "#C3A3FF"];
@@ -886,7 +901,7 @@ let graine = 1;
 export class Creature {
   constructor(id, L, o = {}) {
     const q = { couches: 28, poils: 14000, fourrure: 0.075, segW: 64, segH: 40, ...o };
-    // Lumoly : n'importe quelles couleurs (o.palette) sur n'importe quel corps (o.forme).
+    // Lumo : n'importe quelles couleurs (o.palette) sur n'importe quel corps (o.forme).
     const P0 = o.palette || PALETTE[id] || PALETTE.pipo;
     const P = { ...P0, accent: P0.accent || P0.oreille || P0.pointe };
     const forme = o.forme || id;
@@ -894,7 +909,6 @@ export class Creature {
     this.L = L;
     this.q = q;
     this.P = P;
-    this.R = 0.42;
     this.graine = (graine++ * 1.618) % 10;
     this.glow = { value: o.glow ?? 0 };
     this.cibleGlow = this.glow.value;
@@ -918,6 +932,8 @@ export class Creature {
     this.baseYaw = 0;
     this.basePitch = 0;
     this.ombreT = [0.46, 0.4];
+    /** demi-largeur de la créature (pour que la scène recule la caméra dans une vue étroite) */
+    this.largeur = 0.5;
     this.centreLocal = new THREE.Vector3(0, 0.15, 0.04);
     this.tete = new THREE.Group();
     this.tete.position.set(0, 0.36, 0.1);
@@ -962,6 +978,7 @@ export class Creature {
     if (this.boucheMuseau && !this.face.boucheSur) this.face.boucheSur = this.boucheMuseau;
     this.visage(this.face, this.humeur, L);
     this.pivot.scale.setScalar(this.taille);
+    this.largeur *= this.taille;
     this.corps.rotation.set(this.basePitch, this.baseYaw, 0);
     // clignements, coups d'œil
     this.cligne = 1.5 + Math.random() * 3;
@@ -994,6 +1011,7 @@ export class Creature {
       etoiles: o.etoiles ?? this.extra.etoiles,
       iris: o.iris ?? this.extra.iris,
       nebuleuse: o.nebuleuse === undefined ? this.extra.nebuleuse : o.nebuleuse,
+      aile: o.aile,
     });
     m.position.set(...pos);
     if (o.rot) m.rotation.set(...o.rot);
@@ -1016,6 +1034,7 @@ export class Creature {
     const m = pelage(geo, o.P || this.P, this.L, qq, this.glow, o.zone || {}, {
       grille,
       longueur: long,
+      vague: !!o.vague,
       env: v.env || [1 / long, 0, 1.4, v.selonX ? 0 : 1],
       axeA: v.A,
       axeB: v.B,
@@ -1050,17 +1069,6 @@ export class Creature {
     p.userData.pos = p.position.clone();
     parent.add(p);
     return p;
-  }
-
-  // touffe de fourrure (queue en pompon, mèche…)
-  touffe(geo, couleurs, parent, pos, rot = [0, 0, 0], zone) {
-    const qq = { ...this.q, couches: Math.max(12, Math.round(this.q.couches * 0.6)), poils: Math.round(this.q.poils * 0.35), fourrure: this.q.fourrure * 0.9 };
-    const m = pelage(geo, couleurs, this.L, qq, this.glow, zone);
-    m.position.set(...pos);
-    m.rotation.set(...rot);
-    parent.add(m);
-    this.mats.push(m.material);
-    return m;
   }
 
   feuille(parent, pos, rz, ry = 0, s = 1) {
@@ -1248,6 +1256,7 @@ export class Creature {
   // Tortue moussue : carapace de mousse (avec champignon), petite tête sortie, pattes qui marchent.
   plan_tortue(P, L) {
     const c = this.corps, glow = this.glow;
+    this.largeur = 0.6;
     this.hauteur = 0.31;
     this.taille = 1.05;
     this.baseYaw = 0.5;
@@ -1297,6 +1306,7 @@ export class Creature {
   // Mouton nuage : une grosse boule de laine bosselée, une frimousse crème, quatre petites pattes.
   plan_mouton(P, L) {
     const c = this.corps;
+    this.largeur = 0.6;
     this.hauteur = 0.5;
     this.ombreT = [0.52, 0.46];
     this.teteAmp = 0.5;
@@ -1330,6 +1340,7 @@ export class Creature {
   // Chouette pixel : un cube de plumes, de grands disques autour des yeux, aigrettes pointues.
   plan_cube(P, L) {
     const c = this.corps;
+    this.largeur = 0.46;
     this.hauteur = 0.43;
     this.taille = 1.02;
     this.teteAmp = 0;
@@ -1377,6 +1388,7 @@ export class Creature {
   // Renard comète : assis de trois quarts, museau crème, grandes oreilles, énorme queue qui balaie.
   plan_renard(P, L) {
     const c = this.corps;
+    this.largeur = 0.62;
     this.hauteur = 0.31;
     this.baseYaw = 0.32;
     this.teteRepos.set(0, -0.26, 0);
@@ -1423,6 +1435,7 @@ export class Creature {
   // Chat de cristal : assis, tête large aux joues touffues, moustaches, longue queue qui ondule, cristaux.
   plan_chat(P, L) {
     const c = this.corps;
+    this.largeur = 0.52;
     this.hauteur = 0.32;
     this.baseYaw = -0.3;
     this.teteRepos.set(0, 0.24, 0);
@@ -1474,6 +1487,7 @@ export class Creature {
   // Méduse étoile : cloche de fourrure qui se contracte, bordure frisée, étoile dorée, perles qui ondulent.
   plan_meduse(P, L) {
     const c = this.corps;
+    this.largeur = 0.46;
     this.flotte = true;
     this.hauteur = 0.8;
     this.ombreT = [0.38, 0.34];
@@ -1525,6 +1539,7 @@ export class Creature {
   // Poulpe bulle : grosse tête ronde à pois, huit tentacules de fourrure qui ondulent en vague.
   plan_poulpe(P, L) {
     const c = this.corps;
+    this.largeur = 0.68;
     this.hauteur = 0.53;
     this.ombreT = [0.62, 0.56];
     this.teteAmp = 0.45;
@@ -1557,6 +1572,7 @@ export class Creature {
   // Dragon de braise : bébé dragon assis, ventre doré, cornes, ailes de chauve-souris, queue à pointe.
   plan_dragon(P, L) {
     const c = this.corps;
+    this.largeur = 0.6;
     this.hauteur = 0.32;
     this.baseYaw = 0.22;
     this.teteRepos.set(0, -0.18, 0);
@@ -1628,6 +1644,7 @@ export class Creature {
   // Grenouille de flaque : large et plate, yeux sur des bosses, gorge qui gonfle, grand saut.
   plan_grenouille(P, L) {
     const c = this.corps, glow = this.glow;
+    this.largeur = 0.62;
     this.hauteur = 0.25;
     this.taille = 1.08;
     this.ombreT = [0.6, 0.5];
@@ -1684,6 +1701,7 @@ export class Creature {
   // Écureuil gland : petit corps droit, gland entre les pattes, énorme queue touffue en S.
   plan_ecureuil(P, L) {
     const c = this.corps;
+    this.largeur = 0.46;
     this.hauteur = 0.31;
     this.baseYaw = -0.34;
     this.teteRepos.set(0, 0.26, 0);
@@ -1729,6 +1747,7 @@ export class Creature {
   // Pingouin des neiges : un œuf debout, ventre blanc, bonnet à pompon, ailerons, pieds orange.
   plan_pingouin(P, L) {
     const c = this.corps;
+    this.largeur = 0.42;
     this.hauteur = 0.44;
     this.teteAmp = 0.35;
     this.spTous = [5, 8];
@@ -1765,6 +1784,7 @@ export class Creature {
   // Lapin porte-bonheur : longues oreilles (une tombante), trèfle à quatre feuilles, sauts en série.
   plan_lapin(P, L) {
     const c = this.corps;
+    this.largeur = 0.46;
     this.hauteur = 0.3;
     this.spTous = [3, 5];
     this.spDuree = 1.3;
@@ -1808,6 +1828,7 @@ export class Creature {
   // Dino des rochers : tyrannosaure de trois quarts, grosse tête souriante, plaques sur le dos, petits bras.
   plan_dino(P, L) {
     const c = this.corps;
+    this.largeur = 0.7;
     this.hauteur = 0.41;
     this.baseYaw = 0.5;
     this.teteRepos.set(0, -0.38, 0);
@@ -1852,6 +1873,7 @@ export class Creature {
   // Licorne mystique : un poney de profil, crinière arc-en-ciel, corne nacrée qui scintille.
   plan_licorne(P, L) {
     const c = this.corps;
+    this.largeur = 0.58;
     this.hauteur = 0.45;
     this.baseYaw = 0.75;
     this.taille = 0.95;
@@ -1910,6 +1932,7 @@ export class Creature {
   // Baleine cosmique : grand corps en goutte qui nage dans l'air, nageoires, queue qui bat, jet d'eau.
   plan_baleine(P, L) {
     const c = this.corps;
+    this.largeur = 0.68;
     this.flotte = true;
     this.hauteur = 0.64;
     this.baseYaw = 0.78;
@@ -1947,6 +1970,7 @@ export class Creature {
   // Paon aurore : petit oiseau bleu, aigrette à pompons, immense roue de plumes irisées qui s'ouvre.
   plan_paon(P, L) {
     const c = this.corps;
+    this.largeur = 0.84;
     this.hauteur = 0.34;
     this.ombreT = [0.5, 0.4];
     this.spTous = [6, 9];
@@ -2007,6 +2031,7 @@ export class Creature {
   // Phénix céleste : oiseau de feu qui plane, grandes ailes de plumes-flammes, longues plumes de queue.
   plan_phenix(P, L) {
     const c = this.corps;
+    this.largeur = 0.8;
     this.flotte = true;
     this.hauteur = 0.6;
     this.ombreT = [0.5, 0.36];
@@ -2064,6 +2089,7 @@ export class Creature {
   // Dragon galaxie : long corps de serpent étoilé qui ondule dans l'air, tête à bois dorés et moustaches.
   plan_serpent(P, L) {
     const c = this.corps;
+    this.largeur = 0.8;
     this.flotte = true;
     this.hauteur = 0.6;
     this.ombreT = [0.72, 0.34];
@@ -2106,6 +2132,7 @@ export class Creature {
   // Axolotl prisme : grosse tête souriante, six branchies plumeuses irisées, queue à nageoire qui ondule.
   plan_axolotl(P, L) {
     const c = this.corps;
+    this.largeur = 0.56;
     this.hauteur = 0.3;
     this.baseYaw = 0.55;
     this.taille = 1.05;
@@ -2147,9 +2174,11 @@ export class Creature {
   // Raie nébuleuse : un grand losange plat semé d'étoiles, ailes qui ondulent, longue queue fouet.
   plan_raie(P, L) {
     const c = this.corps;
+    this.largeur = 0.72;
     this.flotte = true;
     this.hauteur = 0.66;
     this.basePitch = 0.42;
+    this.taille = 1.1;
     this.ombreT = [0.72, 0.46];
     this.teteAmp = 0.25;
     this.spTous = [6, 9];
@@ -2164,7 +2193,7 @@ export class Creature {
       this.q.segW,
       this.q.segH
     );
-    this.boule([0.66, 0.14, 0.36], c, [0, 0, 0], { geo, etoiles: Math.max(1, this.extra.etoiles), nebuleuse: this.extra.nebuleuse || P.accent, zone: { dir: [0, -1, 0], couleur: "#F4E8FF", force: 0.9, debut: 0.25, fin: 0.6 } });
+    this.boule([0.66, 0.14, 0.36], c, [0, 0, 0], { geo, aile: true, etoiles: Math.max(1, this.extra.etoiles), nebuleuse: this.extra.nebuleuse || P.accent, zone: { dir: [0, -1, 0], couleur: "#F4E8FF", force: 0.9, debut: 0.25, fin: 0.6 } });
     this.r.raie = this.mats[this.mats.length - 1];
     const fonce = this.mat(teinte(P.base, -0.25), { wrap: 0.7 });
     [-1, 1].forEach((sx) => this.morceau(tubeEffile([[0.13 * sx, 0.0, 0.3], [0.15 * sx, -0.02, 0.38], [0.14 * sx, -0.08, 0.42], [0.11 * sx, -0.12, 0.39]], 0.03, 0.012, 16, 8), fonce, c, [0, 0, 0]));
@@ -2184,6 +2213,7 @@ export class Creature {
   // Lumo la luciole : tête-corps indigo toute douce, ventre-lanterne doré qui pulse, ailes de verre, antennes.
   plan_luciole(P, L) {
     const c = this.corps;
+    this.largeur = 0.5;
     this.flotte = true;
     this.hauteur = 0.68;
     this.teteAmp = 0.55;

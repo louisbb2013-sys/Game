@@ -517,7 +517,8 @@ html[data-reduce-motion='true'] .flip-inner { transition: none; }
 
 /* ---------- Motion that answers what you do ---------- */
 /* A new page glides in. */
-.page-in { animation: page-in 0.32s cubic-bezier(.2,.8,.2,1) both; }
+/* backwards, not both: once it has played, the page keeps no transform (a kept one would pin full-screen panels to the page instead of the screen). */
+.page-in { animation: page-in 0.32s cubic-bezier(.2,.8,.2,1) backwards; }
 @keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 /* Answer tiles are dealt onto the table one after another. */
 .tile-deal { animation: tile-deal 0.5s cubic-bezier(.2,1.25,.35,1) both; animation-delay: var(--d, 0s); transform-origin: 50% 100%; }

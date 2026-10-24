@@ -4,7 +4,7 @@ import { Creature, Etincelles, lumieres, matierePoints, nuageDePoints, ombre, so
 import { lookFor, tierSparkle } from './looks';
 
 /**
- * Lumoly's 3D stage. One WebGL canvas covers the window; every element that shows a 3D creature
+ * Lumo's 3D stage. One WebGL canvas covers the window; every element that shows a 3D creature
  * or egg gets its own little scene, drawn exactly inside that element's rectangle (the
  * "many elements, one canvas" technique from the Minitaure site). Nothing renders while
  * nothing moves, and it stops when the tab is hidden.
@@ -30,6 +30,8 @@ interface View extends Handle {
   pop: number;
   busy(): boolean;
   tick(t: number, dt: number): void;
+  /** Frame the scene for this width / height (wide creatures in a tall box: the camera steps back). */
+  fit?(aspect: number): void;
 }
 
 const FOV = 28;
@@ -168,7 +170,9 @@ class Stage {
     const modal = document.querySelector<HTMLElement>('[aria-modal="true"]');
     // Never draw over the bottom tab bar.
     // (On wide screens the tab bar is hidden: its box is empty, and there is no floor.)
-    const navBox = document.querySelector<HTMLElement>('[data-bottom-nav]')?.getBoundingClientRect();
+    // (A pop-up covers the tab bar, so then the whole height is free.)
+    const nav = document.querySelector<HTMLElement>('[data-bottom-nav]');
+    const navBox = nav && !(modal && !modal.contains(nav)) ? nav.getBoundingClientRect() : null;
     const floor = navBox && navBox.height > 0 ? navBox.top : h;
     const tan = Math.tan(THREE.MathUtils.degToRad(FOV) / 2);
     let moving = false;
@@ -180,6 +184,7 @@ class Stage {
       v.tick(this.t, this.reduced ? 0 : dt);
       if (v.busy() || !this.reduced) moving = true;
       v.camera.aspect = b.width / b.height;
+      v.fit?.(v.camera.aspect);
       v.camera.updateProjectionMatrix();
       const scale = b.height / (2 * tan);
       v.sparks.mat.uniforms.uPx!.value = this.dpr;
@@ -362,8 +367,20 @@ function build(el: HTMLElement, spec: Spec): Handle {
     scene.add(c.groupe);
     const aura = halo(spec.rarity, L, pointsU.uPx, pointsU.uEchelle);
     if (aura) c.groupe.add(aura);
-    camera.position.set(0, 0.64, 3.45);
-    camera.lookAt(0, 0.56, 0);
+    const eye = new THREE.Vector3(0, 0.64, 3.45);
+    const target = new THREE.Vector3(0, 0.56, 0);
+    camera.position.copy(eye);
+    camera.lookAt(target);
+    const half = Math.tan(THREE.MathUtils.degToRad(FOV) / 2) * eye.z;
+    let framed = 1;
+    view.fit = (aspect) => {
+      // a long dragon or a peacock's fan in a tall, narrow box: step back until it fits
+      const k = Math.max(1, (c.largeur * 1.06) / (half * aspect));
+      if (Math.abs(k - framed) < 0.002) return;
+      framed = k;
+      camera.position.copy(eye).sub(target).multiplyScalar(k).add(target);
+      camera.lookAt(target);
+    };
     const sparkle = AURA[spec.rarity];
     let ambient = sparkle ? 1.2 : 0;
     const at = new THREE.Vector3();
