@@ -275,7 +275,7 @@ export function Pets() {
   );
 }
 
-/** Only for the game's creator: give someone a Lumo-rarity pet by their Lumoly name. */
+/** Only for the game's creator: give someone a Lumo-rarity pet by their Lumo name. */
 function CreatorPanel() {
   const { t } = useTranslation();
   const [username, setUsername] = useState('');

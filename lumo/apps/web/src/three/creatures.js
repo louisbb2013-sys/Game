@@ -236,11 +236,11 @@ void main() {
     if (uMode > 0.5) {
       // poils sur une grille (le long du tube, autour du tube), un peu décalés au hasard
       vec2 g = vUv * uGrille;
-      vec2 c0 = floor(g);
+      vec2 c0 = floor(g - 0.5);
       float best = 9.0;
       vec2 bc = c0;
-      for (int j = -1; j <= 1; j++) {
-        for (int i = -1; i <= 1; i++) {
+      for (int j = 0; j <= 1; j++) {
+        for (int i = 0; i <= 1; i++) {
           vec2 c = c0 + vec2(float(i), float(j));
           vec2 cc = vec2(c.x, mod(c.y, uGrille.y));
           vec2 q = c + 0.2 + 0.6 * vec2(hash12(cc + uSeed), hash12(cc * 1.37 + 4.1 - uSeed));
@@ -987,7 +987,7 @@ export class Creature {
       ...this.q,
       poils: Math.max(300, Math.round(this.q.poils * (aire / 1.63) * (o.densite ?? 1))),
       fourrure: this.q.fourrure * (o.poil ?? 1),
-      couches: o.couches ?? Math.max(12, Math.round(this.q.couches * (k < 0.35 ? 0.6 : k < 0.7 ? 0.8 : 1))),
+      couches: o.couches ?? Math.max(10, Math.round(this.q.couches * (k < 0.3 ? 0.45 : k < 0.55 ? 0.6 : k < 0.8 ? 0.8 : 1))),
     };
     const m = pelage(geo, o.P || this.P, this.L, qq, this.glow, o.zone || {}, {
       forme: [sx, sy, sz],
@@ -1011,7 +1011,7 @@ export class Creature {
     const esp = Math.sqrt(1.63 / this.q.poils) / Math.sqrt(o.densite ?? 1);
     const fur = this.q.fourrure * (o.poil ?? 1);
     const grille = [Math.max(4, Math.round(long / esp)), Math.max(6, Math.round((TAU * (rm + fur * 0.4)) / esp))];
-    const qq = { ...this.q, fourrure: fur, couches: o.couches ?? Math.max(12, Math.round(this.q.couches * 0.8)) };
+    const qq = { ...this.q, fourrure: fur, couches: o.couches ?? Math.max(10, Math.round(this.q.couches * (rm < 0.05 ? 0.45 : 0.65))) };
     const v = o.vague || {};
     const m = pelage(geo, o.P || this.P, this.L, qq, this.glow, o.zone || {}, {
       grille,
@@ -1249,7 +1249,7 @@ export class Creature {
   plan_tortue(P, L) {
     const c = this.corps, glow = this.glow;
     this.hauteur = 0.31;
-    this.taille = 1.1;
+    this.taille = 1.05;
     this.baseYaw = 0.5;
     this.ombreT = [0.6, 0.5];
     this.teteAmp = 0.8;
@@ -1259,7 +1259,7 @@ export class Creature {
     const peau = fourrureDe(P.accent);
     const dome = new THREE.SphereGeometry(1, this.q.segW, this.q.segH, 0, TAU, 0, Math.PI * 0.6);
     dome.scale(0.44, 0.36, 0.48);
-    this.boule([0.44, 0.36, 0.48], c, [0, 0, 0], { geo: dome, poil: 1.05, densite: 0.8, zone: { force: 0.35, debut: 0.75, fin: 1, dir: [0, 1, 0], couleur: teinte(P.base, 0.25) } });
+    this.boule([0.44, 0.36, 0.48], c, [0, 0, 0], { geo: dome, poil: 1.0, densite: 0.8, couches: Math.round(this.q.couches * 0.85), zone: { force: 0.35, debut: 0.75, fin: 1, dir: [0, 1, 0], couleur: teinte(P.base, 0.25) } });
     const bord = new THREE.TorusGeometry(1, 0.075, 10, 56);
     bord.rotateX(Math.PI / 2);
     bord.scale(0.445, 1, 0.485);
@@ -1304,11 +1304,11 @@ export class Creature {
     this.spDuree = 1.1;
     this.centreLocal.set(0, 0, 0.1);
     const laine = { racine: teinte(P.base, -0.28), base: P.base, pointe: teinte(P.base, 0.55), ventre: "#FFFFFF" };
-    const fl = { P: laine, poil: 1.5, densite: 0.42 };
-    this.boule(0.38, c, [0, 0, 0], fl);
+    const fl = { P: laine, poil: 1.3, densite: 0.42 };
+    this.boule(0.38, c, [0, 0, 0], { ...fl, couches: Math.round(this.q.couches * 0.85) });
     // des bosses de nuage
-    [[0.27, 0.22, -0.03, 0.16], [-0.27, 0.22, -0.03, 0.16], [0, 0.35, -0.06, 0.17], [0.33, -0.06, -0.06, 0.14], [-0.33, -0.06, -0.06, 0.14], [0.17, 0.3, 0.12, 0.12], [-0.17, 0.3, 0.12, 0.12]].forEach(([x, y, z, r]) =>
-      this.boule(r, c, [x, y, z], { ...fl, poil: 1.3 })
+    [[0.27, 0.23, -0.02, 0.16], [-0.27, 0.23, -0.02, 0.16], [0, 0.36, -0.04, 0.16], [0.34, -0.05, -0.04, 0.13], [-0.34, -0.05, -0.04, 0.13]].forEach(([x, y, z, r]) =>
+      this.boule(r, c, [x, y, z], { ...fl, poil: 1.2, couches: Math.round(this.q.couches * 0.5) })
     );
     this.tete.position.set(0, -0.05, 0.16);
     const peau = this.mat("#FFF1E6", { wrap: 0.85 });
@@ -1386,7 +1386,7 @@ export class Creature {
     this.boule([0.29, 0.32, 0.29], c, [0, 0, 0], { zone: { force: 0.95, debut: 0.45, fin: 0.85, dir: [0, -0.15, 1], couleur: P.accent } });
     this.tete.position.set(0, 0.37, 0.08);
     this.boule(0.25, this.tete, [0, 0, 0], { zone: { force: 0.9, debut: 0.62, fin: 0.95, dir: [0, -0.7, 1], couleur: P.accent } });
-    [-1, 1].forEach((sx) => this.boule([0.1, 0.075, 0.085], this.tete, [0.2 * sx, -0.09, 0.07], { P: creme, poil: 1.1, rot: [0, 0, -0.5 * sx] }));
+    [-1, 1].forEach((sx) => this.boule([0.1, 0.075, 0.085], this.tete, [0.2 * sx, -0.09, 0.07], { P: creme, poil: 1.1, rot: [0, 0, -0.5 * sx], couches: 10 }));
     this.museau(this.tete, [0, -0.075, 0.215], [0.09, 0.068, 0.11], creme, "#2A1A1A");
     const oreille = this.mat(P.base, { wrap: 0.85 });
     const interieur = this.mat(P.accent, { wrap: 0.9 });
@@ -1406,7 +1406,7 @@ export class Creature {
     });
     // la queue de comète, qui sort sur le côté
     const pq = this.articulation(c, [-0.14, -0.2, -0.2], [-0.45, 0, 0.95]);
-    this.boule([0.15, 0.36, 0.15], pq, [0, 0.3, -0.02], { poil: 1.3, zone: { dir: [0, 1, 0], couleur: "#FFF4EA", debut: 0.45, fin: 0.85, force: 1 } });
+    this.boule([0.15, 0.36, 0.15], pq, [0, 0.3, -0.02], { poil: 1.3, couches: Math.round(this.q.couches * 0.55), zone: { dir: [0, 1, 0], couleur: "#FFF4EA", debut: 0.45, fin: 0.85, force: 1 } });
     this.r.bout = new THREE.Object3D();
     this.r.bout.position.set(0, 0.6, -0.02);
     pq.add(this.r.bout);
@@ -1544,7 +1544,7 @@ export class Creature {
       const a = (i / 8) * TAU + Math.PI / 8;
       const g = this.articulation(c, [0, -0.2, 0], [0, -a, 0]);
       const pts = [[0.1, 0.02, 0], [0.23, -0.12, 0], [0.35, -0.22, 0], [0.46, -0.25, 0], [0.55, -0.2, 0], [0.58, -0.11, 0]];
-      const m = this.tube(pts, 0.078, 0.022, g, [0, 0, 0], { poil: 0.55, zone: { dir: [0, -1, 0], couleur: P.ventre, force: 0.9, debut: 0.2, fin: 0.7 }, vague: { A: [0, 1, 0], B: [0, 0, 1], env: null } });
+      const m = this.tube(pts, 0.078, 0.022, g, [0, 0, 0], { poil: 0.55, couches: Math.round(this.q.couches * 0.5), zone: { dir: [0, -1, 0], couleur: P.ventre, force: 0.9, debut: 0.2, fin: 0.7 }, vague: { A: [0, 1, 0], B: [0, 0, 1], env: null } });
       this.r.tentacules.push(m);
     }
     this.r.haut = new THREE.Object3D();
@@ -1835,7 +1835,7 @@ export class Creature {
     const griffe = this.mat("#FFF0D2");
     [-1, 1].forEach((sx, i) => {
       const pv = this.articulation(c, [0.22 * sx, -0.16, 0.0]);
-      this.boule([0.13, 0.16, 0.15], pv, [0, 0, 0], { poil: 0.8 });
+      this.boule([0.13, 0.16, 0.15], pv, [0, 0, 0], { poil: 0.8, couches: Math.round(this.q.couches * 0.45) });
       this.morceau(ellipsoide(0.1, 0.05, 0.14, 16), patte, pv, [0, -0.18, 0.08]);
       [-1, 0, 1].forEach((k) => {
         const g = new THREE.ConeGeometry(0.014, 0.035, 6);
@@ -1845,7 +1845,7 @@ export class Creature {
       this.r.jambes.push({ pv, ph: i * Math.PI });
     });
     const pts = [[0, -0.12, -0.28], [0, -0.2, -0.48], [-0.08, -0.27, -0.64], [-0.2, -0.3, -0.72], [-0.33, -0.3, -0.74]];
-    this.r.queue = this.tube(pts, 0.15, 0.03, c, [0, 0, 0], { poil: 0.8, zone: { dir: [0, -1, 0], couleur: teinte(P.accent, 0.2), force: 0.6, debut: 0.3, fin: 0.8 }, vague: { A: [1, 0, 0], B: [0, 1, 0] } });
+    this.r.queue = this.tube(pts, 0.15, 0.03, c, [0, 0, 0], { poil: 0.8, couches: Math.round(this.q.couches * 0.5), zone: { dir: [0, -1, 0], couleur: teinte(P.accent, 0.2), force: 0.6, debut: 0.3, fin: 0.8 }, vague: { A: [1, 0, 0], B: [0, 1, 0] } });
     this.face = { R: 0.29, t: 1.0, yeux: { pitch: -0.32 }, bouche: { type: "large", taille: 0.8 } };
   }
 
@@ -1870,7 +1870,7 @@ export class Creature {
       this.morceau(new THREE.CylinderGeometry(0.05, 0.058, 0.05, 14), sabot, pv, [0, -0.3, 0]);
       this.r.jambes.push({ pv, avant: sz > 0, sx });
     });
-    this.boule([0.11, 0.2, 0.12], c, [0, 0.18, 0.27], { rot: [0.55, 0, 0] });
+    this.boule([0.11, 0.2, 0.12], c, [0, 0.18, 0.27], { rot: [0.55, 0, 0], couches: Math.round(this.q.couches * 0.5) });
     this.tete.position.set(0, 0.38, 0.35);
     this.boule([0.16, 0.16, 0.19], this.tete, [0, 0, 0]);
     this.museau(this.tete, [0, -0.07, 0.14], [0.11, 0.09, 0.1], clair, "narines");
@@ -1895,14 +1895,14 @@ export class Creature {
     corne.add(this.r.corne);
     // crinière et queue arc-en-ciel
     this.r.criniere = [];
-    [[0, 0.17, -0.05, 0.6], [0, 0.11, -0.15, 0.9]].forEach(([x, y, z, rx], i) =>
+    [[0, 0.15, -0.09, 0.7]].forEach(([x, y, z, rx], i) =>
       this.r.criniere.push(this.boule([0.075, 0.12, 0.08], this.tete, [x, y, z], { P: fourrureDe(ARC_EN_CIEL[i]), poil: 1.3, rot: [rx, 0, 0] }))
     );
-    [[0, 0.38, 0.2, 0.9], [0, 0.3, 0.13, 0.7], [0, 0.21, 0.07, 0.5]].forEach(([x, y, z, rx], i) =>
-      this.r.criniere.push(this.boule([0.08, 0.13, 0.085], c, [x, y + 0.02, z - 0.02], { P: fourrureDe(ARC_EN_CIEL[i + 2]), poil: 1.3, rot: [rx, 0, 0] }))
+    [[0, 0.38, 0.2, 0.9], [0, 0.27, 0.11, 0.6]].forEach(([x, y, z, rx], i) =>
+      this.r.criniere.push(this.boule([0.08, 0.15, 0.085], c, [x, y + 0.02, z - 0.02], { P: fourrureDe(ARC_EN_CIEL[i * 2 + 1]), poil: 1.3, rot: [rx, 0, 0] }))
     );
     const pq = this.articulation(c, [0, 0.1, -0.33], [-0.5, 0, 0]);
-    [0, 1, 2].forEach((i) => this.boule([0.06, 0.13, 0.065], pq, [0.025 * (i - 1), -0.12 - i * 0.05, -0.06 - i * 0.02], { P: fourrureDe(ARC_EN_CIEL[(i * 2 + 1) % 6]), poil: 1.2, rot: [0.3 + i * 0.15, 0, (i - 1) * 0.3] }));
+    [0, 1].forEach((i) => this.boule([0.065, 0.15, 0.07], pq, [0.03 * (i - 0.5), -0.13 - i * 0.05, -0.06 - i * 0.03], { P: fourrureDe(ARC_EN_CIEL[i ? 5 : 0]), poil: 1.2, rot: [0.3 + i * 0.2, 0, (i - 0.5) * 0.5] }));
     this.queue = { pv: pq, axe: "y", amp: 0.35, vitesse: 2.2 };
     this.face = { R: 0.2, t: 0.75, yeux: { pitch: -0.05 } };
   }
@@ -2126,12 +2126,12 @@ export class Creature {
       [[0.08, 0.2], [0.0, 0.0], [-0.07, -0.2]].forEach(([y, a], i) => {
         const pv = this.articulation(this.tete, [0.22 * sx, y, -0.06], [0, 0, 0]);
         const pts = [[0, 0, 0], [0.08 * sx, 0.04 + a * 0.3, -0.04], [0.16 * sx, 0.1 + a * 0.55, -0.08], [0.21 * sx, 0.15 + a * 0.75, -0.1]];
-        this.tube(pts, 0.026, 0.014, pv, [0, 0, 0], { P: rose, poil: 0.55, iris: 0.55, densite: 1.4, couches: 14 });
+        this.tube(pts, 0.026, 0.014, pv, [0, 0, 0], { P: rose, poil: 0.55, iris: 0.55, densite: 1.4, couches: 11 });
         this.r.branchies.push({ pv, sx, i });
       });
     });
     const pq = this.articulation(c, [0, 0.01, -0.28]);
-    this.boule([0.065, 0.12, 0.28], pq, [0, 0, -0.23], { iris });
+    this.boule([0.065, 0.12, 0.28], pq, [0, 0, -0.23], { iris, couches: Math.round(this.q.couches * 0.5) });
     this.morceau(ellipsoide(0.01, 0.17, 0.3, 24), this.mat(P.accent, { verre: true, emissive: 0.4, double: true, iris: 0.4 }), pq, [0, 0.03, -0.25]);
     this.r.queue = pq;
     this.morceau(ellipsoide(0.01, 0.06, 0.24, 20), this.mat(P.accent, { verre: true, emissive: 0.4, double: true }), c, [0, 0.17, -0.06]);

@@ -3,7 +3,7 @@ import { useEffect, useId, useState } from 'react';
 import { cachedPortrait, portrait } from '../three/stage';
 
 /**
- * Lumoly's game art, drawn instead of emojis: treasure chests and eggs as small animated SVGs
+ * Lumo's game art, drawn instead of emojis: treasure chests and eggs as small animated SVGs
  * (they bob, gleam, wobble and crack), and pet portraits taken from the 3D creatures.
  * Every animation is CSS (see index.css, "game art"), so it stops for reduced motion.
  */

@@ -52,7 +52,7 @@ describe('accounts', () => {
     expect((await s.signup('a b', 'secret123')).body.error).toBe('bad_name');
     expect((await s.signup('Zoe_2', '123')).body.error).toBe('weak_password');
     expect((await s.signup('Zoe_2', '123456')).status).toBe(200);
-    expect((await s.signup('Zoé', '123456')).body.problem).toBe('characters'); // same rules as Lumoly usernames
+    expect((await s.signup('Zoé', '123456')).body.problem).toBe('characters'); // same rules as Lumo usernames
     expect((await s.signup('Mia2011', '123456')).body.problem).toBe('personal_info'); // no birth years
   });
 
@@ -139,7 +139,7 @@ describe('deleting an account', () => {
     expect(left.some((k) => k.startsWith('a/g/'))).toBe(false);
     // Another device still signed in to it is signed out at its next save.
     expect((await s.db(a.token, { op: 'set', path: `data/users/${a.uid}/main`, data: { xp: 6 } })).status).toBe(401);
-    // Its name is free again, and the Google account gets a new, empty Lumoly account.
+    // Its name is free again, and the Google account gets a new, empty Lumo account.
     const again = (await s.google('g1b')).body;
     expect(again.uid).not.toBe(a.uid);
     expect(again.fresh).toBe('1');

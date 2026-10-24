@@ -6,7 +6,7 @@ import { takeGift, useGifts } from '../lib/gifts';
 import { play } from '../lib/sound';
 import { Creature3D } from './Pet3D';
 
-/** A gift from the creator arrived (a Lumo-rarity pet): a big moment, wherever I am in Lumoly. */
+/** A gift from the creator arrived (a Lumo-rarity pet): a big moment, wherever I am in Lumo. */
 export function GiftPopup() {
   const { t } = useTranslation();
   const { gifts } = useGifts();

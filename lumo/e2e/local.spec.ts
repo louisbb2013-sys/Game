@@ -4,7 +4,7 @@ import { answerAndCheck, closeHatch, continueRound, ONE_TAP, openChests } from '
 // Browser-only build (no server). Run with LOCAL_URL pointing at a page that embeds dist-local/lumo.html.
 test.skip(!process.env.LOCAL_URL, 'needs the browser-only build');
 
-test('browser-only Lumoly: deck, quiz, exam, sandbox, notes, progress kept after reload', async ({ page }) => {
+test('browser-only Lumo: deck, quiz, exam, sandbox, notes, progress kept after reload', async ({ page }) => {
   test.setTimeout(120_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -48,7 +48,7 @@ test('browser-only Lumoly: deck, quiz, exam, sandbox, notes, progress kept after
 
   // Deck from pasted notes.
   await page.getByRole('link', { name: 'Learn' }).click();
-  await page.getByRole('link', { name: /Make a deck with Lumoly/ }).click();
+  await page.getByRole('link', { name: /Make a deck with Lumo/ }).click();
   await page.getByRole('tab', { name: 'Paste notes' }).click();
   await page.getByRole('button', { name: 'Use an example' }).click();
   await page.getByRole('button', { name: /Make my deck/ }).click();

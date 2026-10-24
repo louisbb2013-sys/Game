@@ -4,7 +4,7 @@ import type { ConceptInput } from './concept';
 /**
  * Offline note reader: turns plain text (typed notes, Quizlet/Anki exports, copied
  * slides) into concepts with simple patterns. The AI extractor does far better and
- * also reads photos/PDFs; this keeps Lumoly useful without a key.
+ * also reads photos/PDFs; this keeps Lumo useful without a key.
  */
 
 const DEF_PATTERNS: RegExp[] = [

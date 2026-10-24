@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } fr
 import type { Handle } from '../three/stage';
 
 /**
- * A 3D furry pet (or egg) drawn on Lumoly's shared 3D stage, with a 2D fallback underneath for
+ * A 3D furry pet (or egg) drawn on Lumo's shared 3D stage, with a 2D fallback underneath for
  * phones without WebGL2, reduced data, or while it loads. The 3D engine loads only when used.
  */
 type Props = { className?: string; children?: ReactNode; label?: string };

@@ -75,7 +75,7 @@ export function Play() {
   const [leftMs, setLeftMs] = useState<number | null>(null);
   const [lightLeft, setLightLeft] = useState<number | null>(null);
   const [endRewards, setEndRewards] = useState<Rewards | null>(null);
-  // Teach-back (server version): Lumoly asks a follow-up question before grading.
+  // Teach-back (server version): Lumo asks a follow-up question before grading.
   const [followUp, setFollowUp] = useState<string | null>(null);
   const [followText, setFollowText] = useState('');
   const startedAt = useRef(Date.now());

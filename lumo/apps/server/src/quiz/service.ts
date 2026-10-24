@@ -358,7 +358,7 @@ export class QuizService {
       }
     }
 
-    // Teach-back has two turns: Lumoly asks a follow-up before the final grade.
+    // Teach-back has two turns: Lumo asks a follow-up before the final grade.
     if (firstTeach && answer.kind === 'text') {
       const followUp = open?.followUp ?? (deckLang === 'fr' ? 'Tu peux me donner un exemple ?' : 'Can you give me an example?');
       state.teachBack = { questionId: q.id, firstText: answer.text, followUp };
