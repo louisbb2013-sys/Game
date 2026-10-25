@@ -1,24 +1,35 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MemoryLink } from './Memory';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { DeckOptionsPanel, lastDeckOptions, rememberDeckOptions } from '../components/DeckOptions';
 import { CameraIcon, SearchIcon, TextIcon, UploadIcon } from '../components/icons';
 import { shrinkPhoto } from '../lib/files';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError, NETLIFY } from '../lib/api';
 import { claudeProblem, loadSession } from '../netlify/cloud';
-import { canAskClaude, deckFromNotes, deckFromTopic, photoLimits, readPhotos, ReaderError } from '../local/reader';
+import { canAskClaude, deckFromNotes, deckFromTopic, photoLimits, readPhotos, ReaderError, type DeckDraft, type DeckOptions, type KnownIdea } from '../local/reader';
+import type { Concept } from '@lumo/core';
 import { writeQuestions } from '../local/writer';
 
 type Source = 'topic' | 'upload' | 'notes';
-type Draft = Awaited<ReturnType<typeof deckFromTopic>>;
+type Draft = DeckDraft;
+/** Adding new notes to a deck I have: what it already holds. */
+interface Target {
+  title: string;
+  language: 'en' | 'fr';
+  options: DeckOptions;
+  known: KnownIdea[];
+}
 
 const TEXT_FILE = /\.(txt|md|markdown|csv)$/i;
 
 /**
  * Create a deck, Gizmo-style: a topic, a file (PDF or photos of notes) or pasted notes. Claude reads
- * it, picks out the ideas a test asks about and writes the questions; then it's straight to playing.
+ * it, breaks it into sub-aspects and every fact, and writes the questions; then it's straight to
+ * playing. "Make it yours" sets the level, how much to cover, how hard and which kinds of questions.
  * Without Claude (trying the site without an account), notes still work with Lumo's own reader.
+ * With `?add=<deck>`: new notes, photos or a topic added to that deck (only what's new is kept).
  */
 export function NewDeck() {
   const { t, i18n } = useTranslation();
@@ -33,12 +44,28 @@ export function NewDeck() {
   const [topic, setTopic] = useState('');
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  const [focus, setFocus] = useState('');
+  const [options, setOptions] = useState<DeckOptions>(lastDeckOptions);
   const [busy, setBusy] = useState<Source | null>(null);
+  const [params] = useSearchParams();
+  const addTo = params.get('add');
+  const [target, setTarget] = useState<Target | null>(null);
+  useEffect(() => {
+    if (!addTo) return;
+    void Promise.all([api<{ deck: { title: string; language: string; options?: DeckOptions } }>(`/api/decks/${addTo}`), api<{ concepts: Concept[] }>(`/api/decks/${addTo}/offline`)]).then(
+      ([m, d]) => {
+        const lang = m.deck.language === 'fr' ? 'fr' : 'en';
+        setTarget({ title: m.deck.title, language: lang, options: m.deck.options ?? {}, known: d.concepts.map((c) => ({ topic: c.topic, term: c.term, facts: c.keyPoints })) });
+        setLanguage(lang);
+      },
+      () => setError(t('deck.notFound')),
+    );
+  }, [addTo, t]);
   const [error, setError] = useState<string | null>(null);
   const ctl = useRef<AbortController | null>(null);
   // New decks are written in the app's language (switching language here switches the deck too).
-  useEffect(() => setLanguage(i18n.language === 'fr' ? 'fr' : 'en'), [i18n.language]);
+  useEffect(() => {
+    if (!addTo) setLanguage(i18n.language === 'fr' ? 'fr' : 'en');
+  }, [i18n.language, addTo]);
 
   useEffect(() => {
     void Promise.all([canAskClaude(), photoLimits()]).then(([ok, limits]) => {
@@ -77,18 +104,29 @@ export function NewDeck() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ai]);
 
-  /** Save the draft as a deck, start Claude on the questions, and open it. */
+  /** Save the draft as a deck (or add what's new to the deck), start Claude on the questions, and open it. */
   const finish = async (draft: Draft) => {
-    const { id } = await api<{ id: string }>('/api/local/decks', { method: 'POST', body: { ...draft, title: title.trim() || draft.title } });
+    if (addTo) {
+      const r = await api<{ ideas: number; facts: number }>(`/api/local/decks/${addTo}/ideas`, { method: 'POST', body: { concepts: draft.concepts } });
+      void writeQuestions(addTo);
+      navigate(`/decks/${addTo}`, { state: { added: r } });
+      return;
+    }
+    rememberDeckOptions(options);
+    const { id } = await api<{ id: string }>('/api/local/decks', { method: 'POST', body: { ...draft, options, title: title.trim() || draft.title } });
     void writeQuestions(id);
     navigate(`/decks/${id}`, { state: { fresh: true } });
   };
+  // Adding to a deck follows that deck's own options.
+  const opts = addTo ? (target?.options ?? {}) : options;
+  const known = addTo ? (target?.known ?? []) : undefined;
 
   const fail = (kind: Source, err: unknown) => {
     const code = err instanceof ReaderError ? err.code : err instanceof ApiError ? err.code : 'upstream_error';
     if (code === 'cancelled') return;
     const problem = claudeProblem();
     if (code === 'unavailable' && problem) setError(t(`create.ai.${problem}`));
+    else if (code === 'nothing_new') setError(t('addNotes.nothingNew'));
     else if (code === 'nothing_found' && kind === 'notes') setError(t('local.nothingFound'));
     else if (kind === 'topic') setError(t(`local.topicErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
     else setError(t(`local.photoErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
@@ -103,24 +141,28 @@ export function NewDeck() {
     try {
       if (kind === 'topic') {
         if (topicText.trim().length < 3) throw new ReaderError('nothing_found');
-        await finish(await deckFromTopic(topicText.trim(), language, signal));
+        await finish(await deckFromTopic(topicText.trim(), language, signal, opts, known));
       } else if (kind === 'upload') {
         // Text files are notes; PDFs and photos are read by Claude.
         const text = (await Promise.all(chosen.filter((f) => TEXT_FILE.test(f.name)).map((f) => f.text()))).join('\n\n').trim();
         const media = chosen.filter((f) => !TEXT_FILE.test(f.name));
-        if (media.length) await finish(await readPhotos(media, language, [focus, text.slice(0, 1500)].filter(Boolean).join('\n'), signal));
-        else if (text) await finish(await deckFromNotes(text, language, signal));
+        if (media.length) await finish(await readPhotos(media, language, text.slice(0, 1500), signal, opts, known));
+        else if (text) await finish(await deckFromNotes(text, language, signal, opts, known));
         else throw new ReaderError('nothing_found');
       } else {
         // With Claude, notes are read properly (ideas, examples, typical mistakes); without, the built-in reader.
         const draft = ai
-          ? await deckFromNotes(notes, language, signal).catch((e) => {
+          ? await deckFromNotes(notes, language, signal, opts, known).catch((e) => {
               if (e instanceof ReaderError && e.code === 'cancelled') throw e;
               return null;
             })
           : null;
         if (draft) await finish(draft);
-        else {
+        else if (addTo) {
+          await api(`/api/local/decks/${addTo}/ideas-from-notes`, { method: 'POST', body: { text: notes, language } });
+          if (ai) void writeQuestions(addTo);
+          navigate(`/decks/${addTo}`);
+        } else {
           const { id } = await api<{ id: string }>('/api/local/decks/from-notes', { method: 'POST', body: { title, text: notes, language } });
           if (ai) void writeQuestions(id);
           navigate(`/decks/${id}`, { state: { fresh: true } });
@@ -177,9 +219,9 @@ export function NewDeck() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-10">
       <div className="min-w-0 space-y-5">
         <header>
-          <p className="eyebrow text-sm">{t('create.eyebrow')}</p>
-          <h1 className="text-3xl leading-tight font-black sm:text-4xl">{t('create.title')}</h1>
-          <p className="mt-1 text-muted">{t('create.body')}</p>
+          <p className="eyebrow text-sm">{addTo ? t('addNotes.eyebrow') : t('create.eyebrow')}</p>
+          <h1 className="text-3xl leading-tight font-black sm:text-4xl">{addTo ? (target?.title ?? '…') : t('create.title')}</h1>
+          <p className="mt-1 text-muted">{addTo ? t('addNotes.body') : t('create.body')}</p>
         </header>
 
         <div role="tablist" aria-label={t('create.from')} className="panel grid grid-cols-3 gap-1 p-1.5">
@@ -305,10 +347,6 @@ export function NewDeck() {
                 ))}
               </ul>
             )}
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold">{t('create.focus')}</span>
-              <input value={focus} onChange={(e) => setFocus(e.target.value)} maxLength={300} placeholder={t('create.focusPlaceholder')} className="w-full rounded-2xl border-2 border-line bg-surface px-4 py-3 font-bold outline-none focus:border-brand" />
-            </label>
             <button type="button" disabled={files.length === 0} onClick={() => void run('upload')} className="btn-gold w-full rounded-2xl py-4 text-lg font-black disabled:opacity-60">
               ✨ {t('create.readFiles')}
             </button>
@@ -358,6 +396,8 @@ export function NewDeck() {
           </form>
         )}
 
+        {!addTo && ai && <DeckOptionsPanel value={options} onChange={setOptions} />}
+
         {error && (
           <p role="alert" className="rounded-2xl bg-bad/10 px-4 py-3 text-sm font-bold text-bad">
             {error}
@@ -366,6 +406,11 @@ export function NewDeck() {
 
         <MemoryLink />
 
+        {addTo ? (
+          <Link to={`/decks/${addTo}`} className="block text-center text-sm font-bold text-muted">
+            {t('common.back')}
+          </Link>
+        ) : (
         <details className="panel group p-4">
           <summary className="cursor-pointer text-sm font-black">{t('create.more')}</summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -382,6 +427,7 @@ export function NewDeck() {
             </label>
           </div>
         </details>
+        )}
 
         <Link to="/learn" className="block text-center text-sm font-bold text-muted lg:hidden">
           {t('common.back')}

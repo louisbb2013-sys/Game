@@ -14,6 +14,7 @@ import { SignIn } from './pages/SignIn';
 const Chat = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Chat })));
 const ChatHome = lazy(() => import('./pages/Chat').then((m) => ({ default: m.ChatHome })));
 const Deck = lazy(() => import('./pages/Deck').then((m) => ({ default: m.Deck })));
+const DeckQuestions = lazy(() => import('./pages/DeckQuestions').then((m) => ({ default: m.DeckQuestions })));
 const Sandbox = lazy(() => import('./pages/Sandbox').then((m) => ({ default: m.Sandbox })));
 const SandboxPlay = lazy(() => import('./pages/SandboxPlay').then((m) => ({ default: m.SandboxPlay })));
 const League = lazy(() => import('./pages/League').then((m) => ({ default: m.League })));
@@ -96,6 +97,7 @@ function AppRoutes() {
             <Route index element={<Home />} />
             <Route path="learn" element={<Learn />} />
             <Route path="decks/:id" element={<Deck />} />
+            {LOCAL && <Route path="decks/:id/questions" element={<DeckQuestions />} />}
             <Route path="chat" element={LOCAL ? <NewDeck /> : <ChatHome />} />
             <Route path="chat/:id" element={<Chat />} />
             <Route path="sandbox" element={<Sandbox />} />

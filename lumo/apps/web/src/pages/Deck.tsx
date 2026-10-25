@@ -19,11 +19,19 @@ import { writeQuestions } from '../local/writer';
 
 interface DeckData {
   deck: { id: string; title: string; subject: string; language: string; mine: boolean };
-  concepts: MasteryItem[];
+  concepts: (MasteryItem & { facts?: number; factsKnown?: number })[];
   /** Website: how many test questions Claude has written for the deck. */
   bankSize?: number;
   best?: { speed?: number; bossWins?: number };
+  /** Facts in the notes, how many have a question, the whole-deck round's length, and a round left halfway. */
+  facts?: number;
+  factsCovered?: number;
+  roundSize?: number;
+  resume?: { id: string; answered: number; total: number } | null;
 }
+
+/** A quick round's length. */
+const QUICK = 15;
 
 const BAND_STYLE: Record<MasteryItem['band'], string> = {
   new: 'bg-surface ring-line text-muted',
@@ -82,12 +90,12 @@ export function Deck() {
   const navigate = useNavigate();
   const [data, setData] = useState<DeckData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [starting, setStarting] = useState<Mode | null>(null);
+  const [starting, setStarting] = useState<Mode | 'quick' | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // null until we know whether Claude can be asked here (the website); false on the server app.
   const [ai, setAi] = useState<boolean | null>(LOCAL ? null : false);
-  const [writingOpen, setWritingOpen] = useState<Mode | null>(null);
+  const [writingOpen, setWritingOpen] = useState<Mode | 'quick' | null>(null);
   const [pet, setPet] = useState<{ species: string; rarity: Rarity } | null>(null);
   const writing = useWriting(id);
 
@@ -116,7 +124,7 @@ export function Deck() {
   const bank = Math.max(data?.bankSize ?? 0, writing?.bank ?? 0);
   const needsWriting = LOCAL && !!ai && bank < READY_TO_PLAY;
 
-  const start = async (mode: Mode) => {
+  const start = async (mode: Mode | 'quick') => {
     if (starting) return;
     // No questions yet: Claude writes them first (this tap is what lets it ask for permission).
     if (needsWriting) {
@@ -128,7 +136,14 @@ export function Deck() {
     setError(null);
     setHint(null);
     try {
-      const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode, length: mode === 'review' || mode === 'wrong_only' ? 8 : mode === 'exam' ? Math.min(20, Math.max(8, data?.concepts.length ?? 10)) : 10 } });
+      // Play is the whole deck (one question per fact of the notes); "quick" is a short round of what needs it most.
+      const body =
+        mode === 'practice'
+          ? { mode, full: true, length: 10 }
+          : mode === 'quick'
+            ? { mode: 'practice', length: QUICK }
+            : { mode, length: mode === 'review' || mode === 'wrong_only' ? 10 : mode === 'exam' ? Math.min(30, Math.max(8, data?.concepts.length ?? 10)) : mode === 'challenge' ? 12 : 10 };
+      const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body });
       navigate(`/quiz/${res.session.id}`, { state: res });
     } catch (e) {
       setError(e instanceof ApiError ? e.code : 'network');
@@ -139,6 +154,8 @@ export function Deck() {
   // Home's "jump back in" opens the deck straight into a round.
   const location = useLocation();
   const autoplay = useRef((location.state as { autoplay?: Mode } | null)?.autoplay ?? null);
+  // Back from adding new notes: say what was added (Claude is writing their questions).
+  const [added] = useState(() => (location.state as { added?: { ideas: number; facts: number } } | null)?.added ?? null);
   useEffect(() => {
     if (!data || ai === null || !autoplay.current) return;
     const m = autoplay.current;
@@ -210,6 +227,7 @@ export function Deck() {
         </div>
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
           <span className="rounded-full bg-black/20 px-2.5 py-1">🧠 {t('hub.ideas', { count: data.concepts.length })}</span>
+          {!!data.facts && <span className="rounded-full bg-black/20 px-2.5 py-1">🧩 {t('hub.facts', { count: data.facts })}</span>}
           {LOCAL && (ai || bank > 0) && (
             <span className="rounded-full bg-black/20 px-2.5 py-1" aria-live="polite">
               {isWriting ? `✍️ ${t('hub.writing', { count: bank })}` : `📝 ${t('hub.questions', { count: bank })}`}
@@ -225,21 +243,54 @@ export function Deck() {
         <p className="rounded-2xl bg-amber-glow/15 px-3 py-2 text-sm font-bold ring-1 ring-amber-glow/40">{t('hub.noClaude')}</p>
       )}
 
-      {/* Play */}
+      {added && (
+        <p className="pop-in rounded-2xl bg-good/15 px-3 py-2 text-sm font-black ring-1 ring-good/40" role="status" data-testid="notes-added">
+          ➕ {t('addNotes.added', { ideas: added.ideas, facts: added.facts })}
+        </p>
+      )}
+
+      {/* Play: the whole deck, one question per fact of the notes */}
+      {data.resume && LOCAL && (
+        <button
+          type="button"
+          onClick={() => navigate(`/quiz/${data.resume!.id}`)}
+          className="flex w-full items-center gap-3 rounded-3xl bg-surface px-4 py-3 text-left ring-2 ring-amber-glow/60"
+          data-testid="resume-round"
+        >
+          <span className="text-2xl" aria-hidden>
+            ↩️
+          </span>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block font-black">{t('hub.resume')}</span>
+            <span className="block text-xs font-bold text-muted">{t('hub.resumeBody', { n: data.resume.answered, total: data.resume.total })}</span>
+          </span>
+          <span className="h-2 w-16 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+            <span className="block h-full rounded-full bg-amber-glow" style={{ width: `${Math.round((data.resume.answered / Math.max(1, data.resume.total)) * 100)}%` }} />
+          </span>
+        </button>
+      )}
       <button
         type="button"
         onClick={() => void start('practice')}
         disabled={!!starting}
         className="btn-gold breathe flex w-full items-center justify-center gap-3 rounded-3xl py-5 text-2xl font-black disabled:opacity-60"
+        data-testid="play-all"
       >
         <span className="text-3xl" aria-hidden>
           {starting === 'practice' ? '⏳' : '▶'}
         </span>
         <span className="text-left leading-tight">
           <span className="font-display">{t('hub.play')}</span>
-          <span className="block text-sm font-bold opacity-80">{needsWriting ? t('hub.playWrite') : t('hub.playBody')}</span>
+          <span className="block text-sm font-bold opacity-80">
+            {needsWriting ? t('hub.playWrite') : LOCAL && data.roundSize ? t('hub.playAll', { count: data.roundSize, minutes: Math.max(1, Math.round((data.roundSize * 18) / 60)) }) : t('hub.playBody')}
+          </span>
         </span>
       </button>
+      {LOCAL && (
+        <button type="button" onClick={() => void start('quick')} disabled={!!starting} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-3 font-black ring-1 ring-line hover:ring-brand disabled:opacity-60" data-testid="play-quick">
+          <span aria-hidden>{starting === 'quick' ? '⏳' : '⏱️'}</span> {t('hub.quick', { count: QUICK })}
+        </button>
+      )}
       {(error || hint) && error !== 'deck_not_found' && (
         <p role="alert" className={`rounded-xl px-3 py-2 text-sm font-bold ${error ? 'bg-bad/10 text-bad' : 'bg-brand/10'}`}>
           {error ? t(`quiz.errors.${error}`, { defaultValue: t('signin.errors.network') }) : hint}
@@ -276,12 +327,24 @@ export function Deck() {
       <section className="grid grid-cols-2 gap-3">
         <button type="button" onClick={() => void start('exam')} disabled={!!starting} className="rounded-2xl bg-surface p-3 text-left ring-1 ring-line hover:ring-brand">
           <span className="block font-black">📝 {t('deck.exam')}</span>
-          <span className="block text-xs text-muted">{t('deck.examBody', { count: Math.min(20, Math.max(8, data.concepts.length)) })}</span>
+          <span className="block text-xs text-muted">{t('deck.examBody', { count: Math.min(30, Math.max(8, data.concepts.length)) })}</span>
         </button>
         <Link to={`/live?deck=${data.deck.id}`} className="rounded-2xl royal p-3 text-white">
           <span className="block font-black">👥 {t('deck.live')}</span>
           <span className="block text-xs opacity-85">{t('deck.liveBody')}</span>
         </Link>
+        {LOCAL && (
+          <Link to={`/decks/${data.deck.id}/questions`} className="rounded-2xl bg-surface p-3 ring-1 ring-line hover:ring-brand" data-testid="all-questions">
+            <span className="block font-black">📋 {t('questions.open')}</span>
+            <span className="block text-xs text-muted">{t('questions.openBody', { count: bank })}</span>
+          </Link>
+        )}
+        {LOCAL && data.deck.mine && (
+          <Link to={`/chat?add=${data.deck.id}`} className="rounded-2xl bg-surface p-3 ring-1 ring-line hover:ring-brand" data-testid="add-notes">
+            <span className="block font-black">➕ {t('addNotes.open')}</span>
+            <span className="block text-xs text-muted">{t('addNotes.openBody')}</span>
+          </Link>
+        )}
         <Link to={`/audio/${data.deck.id}`} className="rounded-2xl bg-surface p-3 ring-1 ring-line">
           <span className="block font-black">🎧 {t('deck.audio')}</span>
           <span className="block text-xs text-muted">{t('deck.audioBody')}</span>
@@ -332,6 +395,11 @@ export function Deck() {
                     <li key={c.id} className={`rounded-xl px-2.5 py-1.5 text-sm font-bold ring-1 ${BAND_STYLE[c.band]}`} title={t('deck.formatsPassed', { count: c.formatsPassed })}>
                       {c.band === 'mastered' && '★ '}
                       {c.term}
+                      {(c.facts ?? 0) > 1 && (
+                        <span className="ml-1 text-[0.7rem] opacity-70" title={t('deck.factsKnown', { n: c.factsKnown ?? 0, total: c.facts })}>
+                          {c.factsKnown ?? 0}/{c.facts}
+                        </span>
+                      )}
                       {c.due && <span className="ml-1 text-amber-glow">●</span>}
                     </li>
                   ))}
@@ -381,7 +449,7 @@ export function Deck() {
             void (async () => {
               setStarting(m);
               try {
-                const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode: m === 'speed' || m === 'boss' ? 'practice' : m, length: 10 } });
+                const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode: m === 'speed' || m === 'boss' || m === 'quick' ? 'practice' : m, length: 10 } });
                 navigate(`/quiz/${res.session.id}`, { state: res });
               } catch (e) {
                 setError(e instanceof ApiError ? e.code : 'network');

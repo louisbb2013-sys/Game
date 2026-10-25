@@ -228,7 +228,8 @@
     "translate": "Traduire en {{lang}}",
     "translating": "Traduction…",
     "translatingBody": "Je traduis les notions et chaque question…",
-    "translateFailed": "La traduction n'a pas marché cette fois. Réessaie."
+    "translateFailed": "La traduction n'a pas marché cette fois. Réessaie.",
+    "factsKnown": "{{n}} faits sur {{total}} réussis la dernière fois"
   },
   "quiz": {
     "preparing": "Lumo prépare tes questions…",
@@ -1543,7 +1544,13 @@
     "more": "Nouvelles questions",
     "moreBody": "Lumo en écrit d’autres",
     "challengeBody": "Une erreur coûte un cœur · finis-le : +15 pièces",
-    "challengeEmpty": "Plus de cœurs : le prochain dans {{minutes}} min"
+    "challengeEmpty": "Plus de cœurs : le prochain dans {{minutes}} min",
+    "facts_one": "{{count}} fait",
+    "facts_other": "{{count}} faits",
+    "playAll": "Toutes tes notes · {{count}} questions · ~{{minutes}} min",
+    "quick": "Partie rapide · {{count}} questions",
+    "resume": "Continuer ta partie",
+    "resumeBody": "{{n}} sur {{total}} faites · reprends où tu t’es arrêté"
   },
   "cards": {
     "done": "Paquet terminé !",
@@ -1721,5 +1728,111 @@
     "unlocked": "Le mode créateur est activé ! Ton compagnon Lumo arrive.",
     "isCreator": "Le mode créateur est activé pour ce compte. Donne des compagnons Lumo depuis la page Compagnons.",
     "codeHint": "Seulement pour la personne qui a créé Lumo."
+  },
+  "deckOptions": {
+    "title": "À ta façon",
+    "default": "Chaque fait · niveau normal · un mélange de questions",
+    "level": "Ton niveau",
+    "levelPlaceholder": "ex. Secondaire 2, 4e année",
+    "levels": [
+      "Secondaire 1",
+      "Secondaire 2",
+      "Secondaire 3",
+      "Secondaire 4",
+      "Secondaire 5",
+      "5e année",
+      "6e année",
+      "Cégep"
+    ],
+    "detailTitle": "Combien de matière",
+    "detail": {
+      "key": "L’essentiel",
+      "all": "Chaque fait",
+      "deep": "Chaque fait + pourquoi"
+    },
+    "detailBody": {
+      "key": "Ce qu’un examen demande le plus",
+      "all": "Rien d’oublié",
+      "deep": "Avec le pourquoi et le comment"
+    },
+    "difficultyTitle": "Difficulté",
+    "difficulty": {
+      "easier": "Plus facile",
+      "normal": "Normale",
+      "harder": "Plus difficile"
+    },
+    "stylesTitle": "Sortes de questions",
+    "styles": {
+      "quick": "Vérifs rapides",
+      "understand": "Compréhension",
+      "apply": "Situations réelles",
+      "written": "Réponses écrites"
+    },
+    "stylesMix": "Rien de choisi : un bon mélange de tout.",
+    "stylesSome": "Surtout ces sortes, toujours sous différents angles.",
+    "focusPlaceholder": "ex. Seulement le chapitre 3 · mon examen porte sur les causes · pas les dates"
+  },
+  "addNotes": {
+    "eyebrow": "Ajouter à ton paquet",
+    "body": "De nouvelles notes, des photos, un PDF ou un sujet : Lumo garde seulement ce qui est nouveau et écrit les questions.",
+    "nothingNew": "Tout ça est déjà dans ton paquet.",
+    "open": "Ajouter des notes",
+    "openBody": "Photos, PDF ou texte : plus de questions",
+    "added": "{{ideas}} nouvelles notions et {{facts}} nouveaux faits ajoutés. Lumo écrit leurs questions."
+  },
+  "questions": {
+    "open": "Toutes les questions",
+    "openBody_one": "{{count}} question · voir, corriger, ajouter",
+    "openBody_other": "{{count}} questions · voir, corriger, ajouter",
+    "eyebrow": "Toutes les questions",
+    "count_one": "{{count}} question",
+    "count_other": "{{count}} questions",
+    "covered": "{{n}}/{{total}} faits couverts",
+    "writing": "Lumo en écrit d’autres…",
+    "new": "Nouvelle question",
+    "more": "En écrire d’autres",
+    "saveOptions": "Garder ces réglages pour les nouvelles questions",
+    "optionsSaved": "C’est noté : les nouvelles questions les suivront",
+    "search": "Chercher dans les questions",
+    "none": "Pas encore de questions.",
+    "unseen": "Nouvelle",
+    "fact": "Fait",
+    "wholeIdea": "La notion en entier",
+    "edit": "Modifier",
+    "remove": "Enlever",
+    "removeSure": "L’enlever?",
+    "idea": "Notion",
+    "kind": "Sorte",
+    "kinds": {
+      "mcq": "Choix multiple",
+      "tf": "Vrai ou faux",
+      "typed": "Réponse courte",
+      "written": "Réponse écrite"
+    },
+    "statement": "Énoncé à juger",
+    "question": "Question",
+    "options": "Choix",
+    "rightOne": "La bonne réponse",
+    "optionN": "Choix {{n}}",
+    "addOption": "Ajouter un choix",
+    "pickRight": "Touche le cercle à côté de la bonne réponse.",
+    "isItTrue": "Est-ce vrai?",
+    "true": "Vrai",
+    "false": "Faux",
+    "accepted": "Bonnes réponses (une par ligne)",
+    "wrongOnes": "Mauvaises réponses tentantes (une par ligne)",
+    "lines": {
+      "written": "Ce que dit une réponse complète (un point par ligne)",
+      "order": "Les étapes, dans le bon ordre (une par ligne)",
+      "match": "Paires, une par ligne : gauche = droite"
+    },
+    "why": "Pourquoi (montré après la réponse)",
+    "save": "Enregistrer",
+    "errors": {
+      "bad_question": "Il manque quelque chose : vérifie la question, les choix et la bonne réponse.",
+      "duplicate": "Cette question est déjà dans le paquet.",
+      "concept_not_found": "Choisis une notion.",
+      "network": "Impossible d’enregistrer. Réessaie."
+    }
   }
 }

@@ -2386,6 +2386,11 @@ const routes: [string, RegExp, Handler][] = [
     return { options: dk.options ?? {} };
   }],
   ['POST', /^\/api\/local\/decks\/([\w-]+)\/ideas$/, (m, b) => addIdeas(m[1]!, Array.isArray(b.concepts) ? (b.concepts as Omit<Concept, 'id'>[]) : [])],
+  ['POST', /^\/api\/local\/decks\/([\w-]+)\/ideas-from-notes$/, (m, b) => {
+    // New notes, read by Lumo's own reader (no Claude here).
+    const r = extractFromText(String(b.text ?? ''), b.language === 'fr' ? 'fr' : 'en');
+    return addIdeas(m[1]!, r.concepts);
+  }],
   ['GET', /^\/api\/local\/decks\/([\w-]+)\/questions$/, (m) => {
     // Every question of the deck, answers included (the learner's own deck), to read, fix or remove.
     const dk = deck(m[1]!);

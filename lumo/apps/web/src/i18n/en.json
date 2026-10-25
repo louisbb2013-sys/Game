@@ -228,7 +228,8 @@
     "translate": "Translate to {{lang}}",
     "translating": "Translating…",
     "translatingBody": "Translating the ideas and every question…",
-    "translateFailed": "Couldn't translate it this time. Try again."
+    "translateFailed": "Couldn't translate it this time. Try again.",
+    "factsKnown": "{{n}} of {{total}} facts right last time"
   },
   "quiz": {
     "preparing": "Lumo is preparing your questions…",
@@ -1543,7 +1544,13 @@
     "more": "New questions",
     "moreBody": "Lumo writes different ones",
     "challengeBody": "A miss costs a heart · finish it: +15 coins",
-    "challengeEmpty": "Out of hearts: next one in {{minutes}} min"
+    "challengeEmpty": "Out of hearts: next one in {{minutes}} min",
+    "facts_one": "{{count}} fact",
+    "facts_other": "{{count}} facts",
+    "playAll": "All your notes · {{count}} questions · ~{{minutes}} min",
+    "quick": "Quick round · {{count}} questions",
+    "resume": "Continue your round",
+    "resumeBody": "{{n}} of {{total}} done · pick up where you stopped"
   },
   "cards": {
     "done": "Deck done!",
@@ -1721,5 +1728,114 @@
     "unlocked": "Creator mode is on! Your Lumo pet is on its way.",
     "isCreator": "Creator mode is on for this account. Give Lumo pets from the Pets page.",
     "codeHint": "Only for the person who made Lumo."
+  },
+  "deckOptions": {
+    "title": "Make it yours",
+    "default": "Every fact · normal level · a mix of questions",
+    "level": "Your level",
+    "levelPlaceholder": "e.g. Secondaire 2, Grade 9",
+    "levels": [
+      "Secondaire 1",
+      "Secondaire 2",
+      "Secondaire 3",
+      "Secondaire 4",
+      "Secondaire 5",
+      "Grade 7",
+      "Grade 8",
+      "Grade 9",
+      "Grade 10",
+      "Grade 11",
+      "Grade 12"
+    ],
+    "detailTitle": "How much of it",
+    "detail": {
+      "key": "Main ideas",
+      "all": "Every fact",
+      "deep": "Every fact + why"
+    },
+    "detailBody": {
+      "key": "What a test asks most",
+      "all": "Nothing left out",
+      "deep": "Plus the why and how"
+    },
+    "difficultyTitle": "How hard",
+    "difficulty": {
+      "easier": "Easier",
+      "normal": "Normal",
+      "harder": "Harder"
+    },
+    "stylesTitle": "Kinds of questions",
+    "styles": {
+      "quick": "Quick checks",
+      "understand": "Understanding",
+      "apply": "Real situations",
+      "written": "Written answers"
+    },
+    "stylesMix": "None picked: a good mix of everything.",
+    "stylesSome": "Mostly these kinds, still from different angles.",
+    "focusPlaceholder": "e.g. Only chapter 3 · my test is on the causes · skip the dates"
+  },
+  "addNotes": {
+    "eyebrow": "Add to your deck",
+    "body": "New notes, photos, a PDF or a topic: Lumo keeps only what's new and writes questions for it.",
+    "nothingNew": "Everything in there is already in your deck.",
+    "open": "Add notes",
+    "openBody": "Photos, a PDF or text: more questions",
+    "added": "Added {{ideas}} new ideas and {{facts}} new facts. Lumo is writing their questions."
+  },
+  "questions": {
+    "open": "All questions",
+    "openBody_one": "{{count}} question · see, fix, add",
+    "openBody_other": "{{count}} questions · see, fix, add",
+    "eyebrow": "All questions",
+    "count_one": "{{count}} question",
+    "count_other": "{{count}} questions",
+    "covered": "{{n}}/{{total}} facts covered",
+    "writing": "Lumo is writing more…",
+    "new": "New question",
+    "more": "Write more",
+    "saveOptions": "Save these settings for new questions",
+    "optionsSaved": "Saved: new questions follow them",
+    "search": "Search the questions",
+    "none": "No questions yet.",
+    "unseen": "New",
+    "fact": "Fact",
+    "wholeIdea": "The idea as a whole",
+    "edit": "Edit",
+    "remove": "Remove",
+    "removeSure": "Remove it?",
+    "idea": "Idea",
+    "kind": "Kind",
+    "kinds": {
+      "mcq": "Multiple choice",
+      "tf": "True or false",
+      "typed": "Short answer",
+      "written": "Written answer"
+    },
+    "statement": "Statement to judge",
+    "question": "Question",
+    "options": "Options",
+    "rightOne": "The right answer",
+    "optionN": "Option {{n}}",
+    "addOption": "Add an option",
+    "pickRight": "Tap the circle next to the right answer.",
+    "isItTrue": "Is it true?",
+    "true": "True",
+    "false": "False",
+    "accepted": "Right answers (one per line)",
+    "wrongOnes": "Tempting wrong answers (one per line)",
+    "lines": {
+      "written": "What a full answer says (one point per line)",
+      "order": "The steps, in the right order (one per line)",
+      "match": "Pairs, one per line: left = right"
+    },
+    "why": "Why (shown after answering)",
+    "save": "Save",
+    "errors": {
+      "bad_question": "Something's missing: check the question, the options and the right answer.",
+      "duplicate": "This question is already in the deck.",
+      "concept_not_found": "Pick an idea for it.",
+      "network": "Couldn't save. Try again."
+    }
   }
 }
