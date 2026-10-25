@@ -1,6 +1,7 @@
 import { shuffle, type Rng } from '../rng';
 import type { Millis } from '../types';
 import type { Concept } from './concept';
+import type { Question } from './question';
 import type { ConceptStateView } from './planner';
 
 /**
@@ -96,4 +97,29 @@ export function planQuickRound(concepts: readonly Concept[], states: ReadonlyMap
   }
   const topicOf = new Map(concepts.map((c) => [c.id, c.topic || '']));
   return spread(shuffle(picked, rng), (id) => topicOf.get(id) ?? '', true);
+}
+
+/**
+ * Questions each fact already has. A question written before facts were tagged counts for its idea:
+ * they're shared out over the idea's facts.
+ */
+export function factCoverage(concepts: readonly Concept[], bank: readonly Question[], seen: Readonly<Record<string, number>> = {}): Map<string, { have: number; unseen: number; prompts: string[] }> {
+  const out = new Map<string, { have: number; unseen: number; prompts: string[] }>();
+  for (const c of concepts) {
+    const facts = c.keyPoints.length ? c.keyPoints.map((_, i) => i) : [-1];
+    for (const f of facts) out.set(factKey(c.id, f), { have: 0, unseen: 0, prompts: [] });
+    let turn = 0;
+    for (const q of bank) {
+      if (q.conceptId !== c.id) continue;
+      const on = q.facts?.length ? q.facts.filter((f) => f < c.keyPoints.length) : [facts[turn++ % facts.length]!];
+      for (const f of on) {
+        const x = out.get(factKey(c.id, f));
+        if (!x) continue;
+        x.have += 1;
+        if (seen[q.variantKey] === undefined) x.unseen += 1;
+        x.prompts.push(q.prompt);
+      }
+    }
+  }
+  return out;
 }

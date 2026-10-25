@@ -81,6 +81,8 @@ export interface DraftContext {
   concepts: readonly Concept[];
   language: Locale;
   seed: number;
+  /** Written by the learner themself (the questions page): only the shape is checked, not the style rules. */
+  lenient?: boolean;
 }
 
 /**
@@ -106,9 +108,10 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
   const prompt = str(d.q, 500);
   const why = str(d.why, 600);
   const context = str(d.context, 900);
-  if (prompt.length < 8 || !why) return null;
-  if (copiesNotes(prompt, concept) || (context && copiesNotes(context, concept))) return null;
-  if (!context && NEEDS_DOCUMENT.test(prompt)) return null;
+  const strict = !ctx.lenient;
+  if (prompt.length < (strict ? 8 : 2) || (strict && !why)) return null;
+  if (strict && (copiesNotes(prompt, concept) || (context && copiesNotes(context, concept)))) return null;
+  if (strict && !context && NEEDS_DOCUMENT.test(prompt)) return null;
   const bloom = bloomOf(d.level, type);
   // Which of the concept's facts it tests ("f": 2 or [1, 3], numbered from 1 as Claude was shown them).
   const facts = [...new Set((Array.isArray(d.f) ? d.f : d.f === undefined ? [] : [d.f]).map(Number))]
@@ -131,10 +134,10 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
       const options = strs(d.options, 5, 220);
       const answer = Number(d.answer);
       if (options.length < 3 || !Number.isInteger(answer) || !options[answer] || repeats(options)) return null;
-      if (options.some((o) => GIVEAWAY.test(o)) || leaks(prompt, options[answer]!)) return null;
+      if (strict && (options.some((o) => GIVEAWAY.test(o)) || leaks(prompt, options[answer]!))) return null;
       // The right answer can't stand out as the long, careful one.
       const longestWrong = Math.max(...options.filter((_, i) => i !== answer).map((o) => o.length));
-      if (options[answer]!.length > 40 && options[answer]!.length > longestWrong * 1.8) return null;
+      if (strict && options[answer]!.length > 40 && options[answer]!.length > longestWrong * 1.8) return null;
       const q = buildQuestion({ prompt, options, correctIndex: answer, explanation: why }, meta('multiple_choice')) as ChoiceQ | null;
       if (!q) return null;
       // Why each wrong option is wrong, keyed by the option's id (options were shuffled).
@@ -173,7 +176,7 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
     }
     case 'typed': {
       const accepted = strs(d.accepted ?? d.answer, 8, 80);
-      if (accepted.length === 0 || accepted.some((a) => leaks(prompt, a))) return null;
+      if (accepted.length === 0 || (strict && accepted.some((a) => leaks(prompt, a)))) return null;
       const q = withContext(buildQuestion({ prompt, accepted, explanation: why }, meta('type_answer')));
       // Tempting wrong answers, so it can also be played as a choice (in Live).
       const right = new Set(accepted.map((a) => words(a).join(' ')));

@@ -81,7 +81,18 @@ import {
   newBadges,
   newProgress,
   newSession,
-  twiceSpaced,
+  deferHead,
+  dropHead,
+  factCoverage,
+  factKey,
+  FULL_ROUND_MAX,
+  nextFact,
+  planFullRound,
+  planQuickRound,
+  testsFact,
+  questionFromDraft,
+  computeVariantKey,
+  type FactLog,
   newSrsState,
   newStreak,
   parseSandboxRequest,
@@ -119,7 +130,8 @@ import {
   type StreakState,
 } from '@lumo/core';
 import { gradeOpenWithClaude } from './bank';
-import { judgeShort, withTimeout } from './reader';
+import { cleanOptions, judgeShort, withTimeout } from './reader';
+import { writingNow } from './writingNow';
 import { goOnline, plain, publishProfile, renameProfile, together } from './together';
 
 /**
@@ -141,9 +153,11 @@ interface Deck {
   summary: string;
   concepts: Concept[];
   updatedAt: number;
-  /** Real test questions written by Claude for this deck (see local/bank.ts). */
+  /** Real test questions written by Claude for this deck (see local/writer.ts). */
   bank?: Question[];
   bankAt?: number;
+  /** How the learner wants this deck's questions (level, detail, difficulty, kinds, focus): see reader.ts DeckOptions. */
+  options?: Record<string, unknown>;
 }
 interface StoredSession {
   id: string;
@@ -181,6 +195,14 @@ interface StoredSession {
     golden?: boolean;
     /** Options a hint already removed from the current question. */
     hinted?: string[];
+    /** The whole deck in one round (one question per fact). */
+    full?: boolean;
+    /** How many times each item was put back because its questions were still being written. */
+    deferred?: Record<string, number>;
+    /** The fact the question on screen was picked for. */
+    slotFact?: number;
+    /** Claude is still writing what's left of the round. */
+    waiting?: boolean;
   };
   current: Question | null;
   status: 'active' | 'done';
@@ -237,6 +259,8 @@ interface DB {
   memory?: Memory;
   /** Personal bests per deck. */
   bests?: Record<string, { speed?: number; bossWins?: number }>;
+  /** How the last question on each fact went (by `factKey`): rounds ask the facts that need it most. */
+  factLog?: FactLog;
 }
 
 interface LocalPet {
@@ -320,9 +344,10 @@ function load(): DB {
 let lastSaved = '';
 function save() {
   const d = load();
-  // Keep finished sessions small: only the last 30.
+  // Keep finished sessions small: only the last 30; rounds left halfway go after two weeks.
   const done = Object.values(d.sessions).filter((s) => s.status === 'done');
   for (const s of done.slice(0, Math.max(0, done.length - 30))) delete d.sessions[s.id];
+  for (const s of Object.values(d.sessions)) if (s.status === 'active' && now() - (s.attempts.at(-1)?.at ?? s.createdAt ?? 0) > 14 * 86_400_000) delete d.sessions[s.id];
   const { savedAt: _s, ...content } = d;
   const str = JSON.stringify(content);
   if (str === lastSaved) return; // nothing changed (a read)
@@ -331,7 +356,12 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify(d));
   } catch {
-    /* storage full or blocked: the account copy below still keeps it */
+    // Storage full: everything but the questions of decks the account holds (they come back from it), then of older decks.
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ ...d, decks: d.decks.map((dk, i) => (written.has(dk.id) || i >= 3 ? { ...dk, bank: undefined } : dk)) }));
+    } catch {
+      /* blocked: the account copy below still keeps it */
+    }
   }
   scheduleCloud();
 }
@@ -357,17 +387,45 @@ function boot(): Promise<void> {
     try {
       const snap = await withTimeout<any>(t.db.doc(`${base}/main`).get(), 8000); // eslint-disable-line @typescript-eslint/no-explicit-any
       main = snap.exists ? (plain(snap.data()) as Partial<DB> & { deckIds?: string[] }) : null;
-      if (main) docs = (await withTimeout<{ docs: typeof docs }>(t.db.collection(base).limit(300).get(), 10_000)).docs;
+      if (main) docs = (await withTimeout<{ docs: typeof docs }>(t.db.collection(base).limit(1000).get(), 12_000)).docs;
     } catch {
       return; // can't read the account copy: never risk overwriting it
     }
     const local = load();
     const localIsNew = !local.savedAt || (local.decks.length === 0 && local.user.xp === 0);
     const cloudDecks = new Map<string, Deck>();
+    const chunks = new Map<string, BankChunk[]>();
+    const progs: ProgDoc[] = [];
     for (const d of docs) {
-      if (!d.exists || !d.id.startsWith('deck-')) continue;
-      const dk = plain(d.data()) as Deck;
-      if (dk?.id && Array.isArray(dk.concepts)) cloudDecks.set(dk.id, dk);
+      if (!d.exists) continue;
+      if (d.id.startsWith('deck-')) {
+        const dk = plain(d.data()) as Deck & { bankChunks?: number };
+        if (dk?.id && Array.isArray(dk.concepts)) cloudDecks.set(dk.id, dk);
+      } else if (d.id.startsWith('bank-')) {
+        const c = plain(d.data()) as BankChunk;
+        if (c?.deckId && Array.isArray(c.questions)) chunks.set(c.deckId, [...(chunks.get(c.deckId) ?? []), c]);
+      } else if (d.id.startsWith('prog-')) {
+        const pr = plain(d.data()) as ProgDoc;
+        if (pr?.deckId) progs.push(pr);
+      }
+    }
+    // A deck's questions are kept in parts next to it: put them back together (the parts written with this copy of the deck).
+    for (const dk of cloudDecks.values() as Iterable<Deck & { bankChunks?: number }>) {
+      const parts = (chunks.get(dk.id) ?? []).filter((c) => c.at === (dk.bankAt ?? 0)).sort((a, b) => a.k - b.k);
+      if (dk.bankChunks !== undefined && parts.length === dk.bankChunks) dk.bank = parts.flatMap((c) => c.questions);
+      else if (dk.bankChunks !== undefined && !dk.bank) {
+        // An unfinished write: the newest complete set of parts, else whatever is there.
+        const all = (chunks.get(dk.id) ?? []).sort((a, b) => b.at - a.at || a.k - b.k);
+        const at = all[0]?.at;
+        dk.bank = all.filter((c) => c.at === at).flatMap((c) => c.questions);
+      }
+      delete dk.bankChunks;
+    }
+    // Progress is kept per deck too (older copies kept it all in "main").
+    if (main && progs.length) {
+      main.states = { ...(main.states ?? {}), ...Object.assign({}, ...progs.map((p) => p.states ?? {})) };
+      main.seen = { ...(main.seen ?? {}), ...Object.assign({}, ...progs.map((p) => p.seen ?? {})) };
+      main.factLog = { ...(main.factLog ?? {}), ...Object.assign({}, ...progs.map((p) => p.facts ?? {})) };
     }
     if (main?.user) {
       // A copy born on this device (a guest's, or one made while the account couldn't be reached) never
@@ -383,6 +441,7 @@ function boot(): Promise<void> {
         if (!had || (dk.updatedAt ?? 0) > (had.updatedAt ?? 0)) byId.set(dk.id, dk);
       }
       for (const dk of cloudDecks.values()) if (byId.get(dk.id) === dk) written.set(dk.id, deckSig(dk));
+      for (const [id, parts] of chunks) bankParts.set(id, Math.max(...parts.map((c) => c.k + 1)));
       const order = [...(accountWins ? (main.deckIds ?? []) : local.decks.map((x) => x.id))];
       const decks = [...byId.values()].sort((a, b) => {
         const ia = order.indexOf(a.id);
@@ -396,6 +455,8 @@ function boot(): Promise<void> {
         decks,
         deletedDecks: [...deleted].slice(-200),
         states: { ...loser.states, ...winner.states },
+        seen: newest(loser.seen, winner.seen, (t) => t),
+        factLog: newest(loser.factLog, winner.factLog, (x) => x.at),
         sessions: { ...loser.sessions, ...winner.sessions },
         badges: { ...loser.badges, ...winner.badges },
         plans: { ...loser.plans, ...winner.plans },
@@ -421,7 +482,61 @@ let cloudTimer: ReturnType<typeof setTimeout> | null = null;
 let cloudBusy = false;
 let cloudAgain = false;
 const written = new Map<string, string>(); // deck id -> content signature last written
-const deckSig = (dk: Deck) => `${dk.title}|${dk.concepts.length}|${JSON.stringify(dk.concepts).length}|${dk.bankAt ?? 0}`;
+const deckSig = (dk: Deck) => `${dk.title}|${dk.concepts.length}|${JSON.stringify(dk.concepts).length}|${dk.bankAt ?? 0}|${JSON.stringify(dk.options ?? {})}`;
+const bankParts = new Map<string, number>(); // deck id -> how many question parts are in the account
+const progWritten = new Map<string, string>(); // deck id -> progress last written
+
+/** A part of a deck's questions (one document each, under the store's size limit). */
+interface BankChunk {
+  deckId: string;
+  k: number;
+  at: number;
+  questions: Question[];
+}
+/** A deck's progress: how each of its ideas and facts is going, and when its questions were met. */
+interface ProgDoc {
+  deckId: string;
+  states?: Record<string, ConceptStateView>;
+  seen?: Record<string, number>;
+  facts?: FactLog;
+}
+const CHUNK_CHARS = 150_000;
+
+/** Two copies of a map: the newest entry of each key wins. */
+function newest<T>(a: Record<string, T> | undefined, b: Record<string, T> | undefined, at: (v: T) => number): Record<string, T> {
+  const out: Record<string, T> = { ...(a ?? {}) };
+  for (const [k, v] of Object.entries(b ?? {})) if (out[k] === undefined || at(v) >= at(out[k]!)) out[k] = v;
+  return out;
+}
+
+function splitBank(bank: Question[]): Question[][] {
+  const parts: Question[][] = [];
+  let cur: Question[] = [];
+  let size = 0;
+  for (const q of bank) {
+    const n = JSON.stringify(q).length;
+    if (cur.length && size + n > CHUNK_CHARS) {
+      parts.push(cur);
+      cur = [];
+      size = 0;
+    }
+    cur.push(q);
+    size += n;
+  }
+  if (cur.length) parts.push(cur);
+  return parts;
+}
+
+function progDoc(d: DB, dk: Deck): ProgDoc {
+  const ids = new Set(dk.concepts.map((c) => c.id));
+  const keys = new Set((dk.bank ?? []).map((q) => q.variantKey));
+  return {
+    deckId: dk.id,
+    states: Object.fromEntries(Object.entries(d.states).filter(([id]) => ids.has(id))),
+    seen: Object.fromEntries(Object.entries(d.seen ?? {}).filter(([k]) => keys.has(k))),
+    facts: Object.fromEntries(Object.entries(d.factLog ?? {}).filter(([k]) => ids.has(k.slice(0, k.lastIndexOf(':'))))),
+  };
+}
 
 function scheduleCloud(now = false) {
   if (!cloud) return;
@@ -441,14 +556,31 @@ async function pushCloud() {
     const d = load();
     for (const dk of d.decks) {
       const sig = deckSig(dk);
-      if (written.get(dk.id) === sig) continue;
-      await cloud.db.doc(`${base}/deck-${dk.id}`).set(dk as never);
-      written.set(dk.id, sig);
+      if (written.get(dk.id) !== sig) {
+        // The questions first (in parts), then the deck that says how many parts to read.
+        const { bank, ...rest } = dk;
+        const parts = splitBank(bank ?? []);
+        for (let k = 0; k < parts.length; k++) await cloud.db.doc(`${base}/bank-${dk.id}-${k}`).set({ deckId: dk.id, k, at: dk.bankAt ?? 0, questions: parts[k] } as never);
+        await cloud.db.doc(`${base}/deck-${dk.id}`).set({ ...rest, bankChunks: parts.length } as never);
+        for (let k = parts.length; k < (bankParts.get(dk.id) ?? 0); k++) await cloud.db.doc(`${base}/bank-${dk.id}-${k}`).delete().catch(() => {});
+        bankParts.set(dk.id, parts.length);
+        written.set(dk.id, sig);
+      }
+      const prog = progDoc(d, dk);
+      const ps = JSON.stringify(prog);
+      if (progWritten.get(dk.id) !== ps) {
+        await cloud.db.doc(`${base}/prog-${dk.id}`).set(prog as never);
+        progWritten.set(dk.id, ps);
+      }
     }
     for (const id of [...written.keys()]) {
       if (d.decks.some((x) => x.id === id)) continue;
       await cloud.db.doc(`${base}/deck-${id}`).delete().catch(() => {});
+      await cloud.db.doc(`${base}/prog-${id}`).delete().catch(() => {});
+      for (let k = 0; k < (bankParts.get(id) ?? 0); k++) await cloud.db.doc(`${base}/bank-${id}-${k}`).delete().catch(() => {});
       written.delete(id);
+      bankParts.delete(id);
+      progWritten.delete(id);
     }
     await cloud.db.doc(`${base}/main`).set(mainDoc(d) as never);
   } catch {
@@ -462,14 +594,18 @@ async function pushCloud() {
   }
 }
 
-/** Progress without the decks, trimmed to fit one document. */
+/** Progress without the decks (and without each deck's own progress, kept next to it), trimmed to fit one document. */
 function mainDoc(d: DB) {
-  const { decks, ...rest } = d;
+  const { decks, states: _st, seen: _se, factLog: _fl, ...rest } = d;
+  // Ideas of no deck any more (sample decks removed, older data) stay in main.
+  const inDecks = new Set(decks.flatMap((dk) => dk.concepts.map((c) => c.id)));
+  const states = Object.fromEntries(Object.entries(d.states).filter(([id]) => !inDecks.has(id)));
   const sessions = Object.values(d.sessions).sort((a, b) => (b.attempts.at(-1)?.at ?? 0) - (a.attempts.at(-1)?.at ?? 0));
   const keep = (n: number) => Object.fromEntries(sessions.filter((s, i) => (s.status === 'active' && i < 20) || i < n).map((s) => [s.id, s]));
-  let doc = { ...rest, deckIds: decks.map((x) => x.id), sessions: keep(12), sandbox: d.sandbox.slice(0, 10) };
+  let doc = { ...rest, states, deckIds: decks.map((x) => x.id), sessions: keep(12), sandbox: d.sandbox.slice(0, 10) };
   if (JSON.stringify(doc).length > MAIN_LIMIT) doc = { ...doc, sandbox: [], sessions: keep(3) };
   if (JSON.stringify(doc).length > MAIN_LIMIT) doc = { ...doc, sessions: keep(0) };
+  if (JSON.stringify(doc).length > MAIN_LIMIT) doc = { ...doc, sessions: Object.fromEntries(sessions.filter((s) => s.status === 'active').slice(0, 3).map((s) => [s.id, s])) };
   return doc;
 }
 
@@ -1031,23 +1167,147 @@ const statesMap = (ids: string[]) => new Map(ids.flatMap((id) => (load().states[
 function masteryMap(id: string) {
   const dk = deck(id);
   const t = now();
+  const log = load().factLog ?? {};
+  const cover = factCoverage(dk.concepts, dk.bank ?? []);
+  const facts = dk.concepts.reduce((a, c) => a + Math.max(1, c.keyPoints.length), 0);
   return {
-    deck: { id: dk.id, title: dk.title, subject: dk.subject, language: dk.language, mine: true },
+    deck: { id: dk.id, title: dk.title, subject: dk.subject, language: dk.language, mine: true, options: dk.options ?? {} },
     bankSize: dk.bank?.length ?? 0,
     best: load().bests?.[dk.id] ?? {},
+    /** Facts in the notes, how many have a question, and how long the whole-deck round is. */
+    facts,
+    factsCovered: [...cover.values()].filter((x) => x.have > 0).length,
+    roundSize: Math.min(FULL_ROUND_MAX, facts),
+    resume: resumable(dk.id),
     concepts: dk.concepts.map((c) => {
       const s = load().states[c.id];
       const p = s?.progress ?? newProgress();
-      return { id: c.id, term: c.term, topic: c.topic, kind: c.kind, band: masteryBand(p), score: masteryScore(p), formatsPassed: p.formatsPassed.length, due: s?.srs ? s.srs.due <= t : false };
+      const fs = c.keyPoints.length ? c.keyPoints.map((_, i) => i) : [-1];
+      return {
+        id: c.id,
+        term: c.term,
+        topic: c.topic,
+        kind: c.kind,
+        band: masteryBand(p),
+        score: masteryScore(p),
+        formatsPassed: p.formatsPassed.length,
+        due: s?.srs ? s.srs.due <= t : false,
+        facts: fs.length,
+        factsKnown: fs.filter((f) => log[factKey(c.id, f)]?.ok).length,
+      };
     }),
   };
 }
 
-function createDeck(input: { title: string; subject?: string; language: Locale; summary?: string; concepts: Omit<Concept, 'id'>[] }) {
-  const d: Deck = { id: uid(), title: input.title, subject: input.subject ?? '', language: input.language, summary: input.summary ?? '', concepts: input.concepts.map((c) => ({ ...c, id: uid() }) as Concept), updatedAt: now() };
+function createDeck(input: { title: string; subject?: string; language: Locale; summary?: string; concepts: Omit<Concept, 'id'>[]; options?: unknown }) {
+  const options = cleanOptions(input.options);
+  const d: Deck = {
+    id: uid(),
+    title: input.title,
+    subject: input.subject ?? '',
+    language: input.language,
+    summary: input.summary ?? '',
+    concepts: input.concepts.map((c) => ({ ...c, id: uid() }) as Concept),
+    updatedAt: now(),
+    ...(Object.keys(options).length ? { options: options as Record<string, unknown> } : {}),
+  };
   load().decks.unshift(d);
   award(0, [{ type: 'deck_created' }]);
   return { id: d.id };
+}
+
+/** Most questions a deck keeps (the ones met longest ago make room for new ones). */
+const MAX_BANK = 320;
+
+/** Keep a deck's bank under MAX_BANK: questions this learner met longest ago go first, never unmet ones. */
+function capBank(dk: Deck) {
+  let list = dk.bank ?? [];
+  if (list.length <= MAX_BANK) return;
+  const seen = load().seen ?? {};
+  const old = list.flatMap((q) => (seen[q.variantKey] !== undefined ? [{ k: q.variantKey, t: seen[q.variantKey]! }] : [])).sort((a, b) => a.t - b.t);
+  const drop = new Set(old.slice(0, list.length - MAX_BANK).map((x) => x.k));
+  list = list.filter((q) => !drop.has(q.variantKey));
+  if (list.length > MAX_BANK) list = list.slice(list.length - MAX_BANK);
+  dk.bank = list;
+}
+
+const normWords = (t: string) =>
+  t
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}0-9]+/gu, ' ')
+    .trim();
+const strList = (v: unknown, n: number, max = 300) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()).map((x) => x.trim().slice(0, max)).slice(0, n) : []);
+
+/**
+ * New notes added to a deck: a new idea is added after the others of its topic; new facts about an idea
+ * the deck already has go at the end of its list (so the facts its questions are tagged with keep their
+ * numbers). Returns what changed, for Claude to write questions on.
+ */
+function addIdeas(deckId: string, incoming: Omit<Concept, 'id'>[]) {
+  const dk = deck(deckId);
+  let ideas = 0;
+  let facts = 0;
+  const changed: string[] = [];
+  for (const raw of incoming.slice(0, 150)) {
+    if (!raw || typeof raw.term !== 'string' || !raw.term.trim()) continue;
+    const keyPoints = strList(raw.keyPoints, 16);
+    const had = dk.concepts.find((c) => normWords(c.term) === normWords(raw.term));
+    if (had) {
+      const known = new Set(had.keyPoints.map(normWords));
+      const fresh = keyPoints.filter((f) => !known.has(normWords(f)) && known.add(normWords(f)));
+      if (fresh.length === 0) continue;
+      had.keyPoints = [...had.keyPoints, ...fresh].slice(0, 16);
+      facts += fresh.length;
+      changed.push(had.id);
+      continue;
+    }
+    if (dk.concepts.length >= 200) break;
+    const c: Concept = {
+      id: uid(),
+      topic: String(raw.topic || 'General').slice(0, 120),
+      kind: raw.kind ?? 'definition',
+      term: raw.term.trim().slice(0, 160),
+      summary: String(raw.summary || keyPoints[0] || raw.term).slice(0, 600),
+      keyPoints,
+      misconceptions: strList(raw.misconceptions, 6),
+      examples: strList(raw.examples, 4),
+      synonyms: strList(raw.synonyms, 8, 160),
+      ...(Array.isArray(raw.steps) && raw.steps.length >= 2 ? { steps: strList(raw.steps, 10) } : {}),
+      ...(Array.isArray(raw.causeEffects) && raw.causeEffects.length ? { causeEffects: raw.causeEffects.slice(0, 6) } : {}),
+    };
+    const at = dk.concepts.map((x) => x.topic).lastIndexOf(c.topic);
+    dk.concepts.splice(at >= 0 ? at + 1 : dk.concepts.length, 0, c);
+    ideas += 1;
+    facts += Math.max(1, keyPoints.length);
+    changed.push(c.id);
+  }
+  if (changed.length === 0) throw new LocalError(422, 'nothing_new');
+  dk.updatedAt = now();
+  return { ideas, facts, changed };
+}
+
+/** A question the learner wrote or fixed on the questions page (only its shape is checked). */
+function saveOwnQuestion(deckId: string, b: Record<string, unknown>, replaceKey?: string) {
+  const dk = deck(deckId);
+  const old = replaceKey ? dk.bank?.find((x) => x.variantKey === replaceKey) : undefined;
+  if (replaceKey && !old) throw new LocalError(404, 'question_not_found');
+  const c = dk.concepts.find((x) => x.id === (b.conceptId ?? old?.conceptId));
+  if (!c) throw new LocalError(422, 'concept_not_found');
+  const draft = (b.draft && typeof b.draft === 'object' ? b.draft : {}) as Record<string, unknown>;
+  const why = typeof draft.why === 'string' ? draft.why.trim() : '';
+  const q = questionFromDraft({ ...draft, c: 1, why: why || '-' }, { concepts: [c], language: dk.language, seed: hashString(uid()), lenient: true });
+  if (!q) throw new LocalError(422, 'bad_question');
+  if (!why) q.explanation = correctAnswerText(q);
+  if (!q.facts && old?.facts) q.facts = old.facts;
+  q.variantKey = computeVariantKey(q);
+  const list = (dk.bank ?? []).filter((x) => x.variantKey !== replaceKey);
+  if (list.some((x) => x.variantKey === q.variantKey)) throw new LocalError(409, 'duplicate');
+  list.splice(old ? (dk.bank ?? []).indexOf(old) : list.length, 0, q);
+  dk.bank = list;
+  dk.bankAt = now();
+  return { question: { ...q, answer: correctAnswerText(q), seen: null } };
 }
 
 // ------------------------------------------------------------------ quiz
@@ -1061,11 +1321,16 @@ const BOSS_HP = 800; // about 7-8 right answers, fewer with a combo
 const BOSS_SHIELDS = 3;
 const HINT_COST = 5;
 const LIGHTNING_FORMATS: Format[] = ['multiple_choice', 'true_false'];
+/** Lightning questions come up in learning rounds (never in a speed run, a boss fight or a mock exam). */
+const LIGHTNING_MODES: SessionMode[] = ['practice', 'review', 'wrong_only', 'challenge'];
 const LIGHTNING_MS = 10_000;
 
 const modeFormats = (s: StoredSession): readonly Format[] => s.state.formats ?? (s.mode === 'speed' ? SPEED_FORMATS : LOCAL_FORMATS);
 
-function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]): Question | null {
+/** Variant keys of the questions this round already asked (and the one on screen): a round never asks one twice. */
+const usedIn = (s: StoredSession) => new Set([...s.state.history.map((h) => h.variantKey), ...(s.current ? [s.current.variantKey] : [])]);
+
+function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[], fact = -1): Question | null {
   const c = concepts.find((x) => x.id === conceptId);
   if (!c) return null;
   const stored = load().states[conceptId]?.progress ?? newProgress();
@@ -1081,18 +1346,13 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]):
     // Fitted to you: a step deeper when you're flying, a step back when it's hard, more of your weak formats.
     const fit = s.mode === 'exam' ? { shift: 0, boost: {} } : adaptation();
     const target: ConceptProgress = fit.shift ? { ...base, bloom: BLOOM_LEVELS[Math.max(0, Math.min(BLOOM_LEVELS.length - 1, bloomIndex(base.bloom) + fit.shift))]! } : base;
-    const used = new Set(s.state.history.map((h) => h.variantKey));
-    const opts = { allowed: modeFormats(s), usedThisSession: used, lastSeen: d.seen ?? {}, now: now(), formatBoost: fit.boost };
-    // A missed idea comes back even when its other questions were all asked: another one if there is
-    // one, else the same one again (asking again after a gap still helps it stick).
-    const lastHere = [...s.state.history].reverse().find((h) => h.conceptId === conceptId)?.variantKey;
-    const again = () => pickFromBank(bank, conceptId, target, { ...opts, usedThisSession: new Set(lastHere ? [lastHere] : []) }, rng) ?? pickFromBank(bank, conceptId, target, { ...opts, usedThisSession: new Set() }, rng);
-    // A missed idea, or a speed run that went round the whole deck, may meet a question again.
-    const picked = pickFromBank(bank, conceptId, target, opts, rng) ?? (isRetry(s.state, conceptId) || s.mode === 'speed' ? again() : null);
+    const opts = { allowed: modeFormats(s), usedThisSession: usedIn(s), lastSeen: d.seen ?? {}, now: now(), formatBoost: fit.boost, ...(fact >= 0 ? { fact } : {}) };
+    // A speed run that went round the whole deck may meet a question again; nothing else ever does.
+    const picked = pickFromBank(bank, conceptId, target, opts, rng) ?? (s.mode === 'speed' ? pickFromBank(bank, conceptId, target, { ...opts, usedThisSession: new Set(s.current ? [s.current.variantKey] : []) }, rng) : null);
     if (!picked) return null;
     d.seen = { ...(d.seen ?? {}), [picked.variantKey]: now() };
     const keys = Object.keys(d.seen);
-    if (keys.length > 3000) for (const k of keys.slice(0, keys.length - 3000)) delete d.seen[k];
+    if (keys.length > 4000) for (const k of keys.slice(0, keys.length - 4000)) delete d.seen[k];
     return { ...freshOrder(structuredClone(picked), rng), id: uid() };
   }
   // No questions from Claude (it isn't available here): basic ones built from the notes.
@@ -1107,25 +1367,59 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[]):
   return null;
 }
 
+/** Is another question left on this idea (and fact) that the round hasn't asked? Then a miss can come back. */
+function canAskAgain(s: StoredSession, q: Question, fact: number): boolean {
+  const bank = deck(s.deckId).bank;
+  if (!bank?.length) return true; // built-in questions are new every time
+  const used = usedIn(s);
+  const allowed = modeFormats(s);
+  return bank.some((x) => x.conceptId === q.conceptId && allowed.includes(x.format) && !used.has(x.variantKey) && testsFact(x, fact));
+}
+
+/**
+ * The next question. An item whose questions Claude hasn't written yet goes to the back of the round
+ * (while it's writing) or is left out. Null with `waiting`: Claude is still writing what's left.
+ */
 function serveNext(s: StoredSession): Question | null {
   const concepts = deck(s.deckId).concepts;
-  while (s.state.queue.length) {
-    const q = makeQuestion(s, s.state.queue[0]!, concepts);
+  s.state.waiting = false;
+  const writing = writingNow.has(s.deckId);
+  for (let tries = s.state.queue.length; s.state.queue.length && tries > 0; tries--) {
+    const fact = nextFact(s.state);
+    const q = makeQuestion(s, s.state.queue[0]!, concepts, fact);
     if (q) {
       // Now and then a lightning question: answer within 10 seconds for double XP (never a penalty).
-      s.state.lightning = s.mode === 'practice' && s.state.answered >= 2 && LIGHTNING_FORMATS.includes(q.format) && Math.random() < 0.2 ? q.id : undefined;
+      s.state.lightning = LIGHTNING_MODES.includes(s.mode) && s.state.answered >= 2 && LIGHTNING_FORMATS.includes(q.format) && Math.random() < 0.15 ? q.id : undefined;
       s.state.hinted = [];
+      s.state.slotFact = fact;
       return (s.current = q);
     }
-    s.state.queue.shift();
-    s.state.total = Math.max(s.state.answered, s.state.total - 1);
+    const key = factKey(s.state.queue[0]!, fact);
+    const deferred = (s.state.deferred ??= {});
+    if (writing && s.state.queue.length > 1 && (deferred[key] ?? 0) < 6) {
+      deferred[key] = (deferred[key] ?? 0) + 1;
+      s.state = { ...s.state, ...deferHead(s.state) };
+    } else if (writing && s.state.full) {
+      // Everything left is still being written: wait for it.
+      s.state.waiting = true;
+      s.current = null;
+      return null;
+    } else s.state = { ...s.state, ...dropHead(s.state) };
   }
+  if (writing && s.state.full && s.state.queue.length) {
+    s.state.waiting = true;
+    s.current = null;
+    return null;
+  }
+  // Nothing at all could be asked: whatever is left is dropped (the round ends).
+  while (s.state.queue.length) s.state = { ...s.state, ...dropHead(s.state) };
   s.current = null;
   return null;
 }
 
 function publicSession(s: StoredSession) {
   const u = load().user;
+  const dk = load().decks.find((d) => d.id === s.deckId);
   return {
     id: s.id,
     deckId: s.deckId,
@@ -1138,7 +1432,7 @@ function publicSession(s: StoredSession) {
     xp: s.state.xp,
     hearts: currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, now()).hearts,
     coins: u.coins,
-    done: s.status === 'done' || sessionDone(s.state),
+    done: s.status === 'done' || (sessionDone(s.state) && !s.state.waiting),
     endsAt: s.state.startedAt && s.state.timeLimitMs ? s.state.startedAt + s.state.timeLimitMs : undefined,
     timeLimitMs: s.state.timeLimitMs,
     points: s.state.points,
@@ -1149,6 +1443,11 @@ function publicSession(s: StoredSession) {
     language: s.state.language,
     /** The current question asks again about an idea missed earlier in this round. */
     retry: s.current ? isRetry(s.state, s.current.conceptId) : false,
+    /** A whole-deck round, and the topic (chapter) the current question is from. */
+    full: !!s.state.full,
+    topic: s.current ? dk?.concepts.find((c) => c.id === s.current!.conceptId)?.topic : undefined,
+    /** Claude is still writing the questions left in this round. */
+    waiting: !!s.state.waiting,
   };
 }
 
@@ -1165,35 +1464,66 @@ function reportLast(sessionId: string, reason: string) {
   return { ok: true, removed: 1 };
 }
 
-function startSession(deckId: string, mode: SessionMode, length: number, formats?: Format[]) {
+/** Missed facts and ideas: what a "fix my mistakes" round is made of. */
+function shaky(concepts: Concept[], states: Map<string, ConceptStateView>, log: FactLog): Concept[] {
+  return concepts.filter((c) => {
+    const st = states.get(c.id);
+    if (st?.progress.lastCorrect === false || (st?.srs?.lapses ?? 0) > 0) return true;
+    return (c.keyPoints.length ? c.keyPoints.map((_, i) => i) : [-1]).some((f) => log[factKey(c.id, f)]?.ok === false);
+  });
+}
+
+/**
+ * Start a round. `full`: the whole deck, one question per fact of the notes (the default Play);
+ * otherwise `length` questions on the facts that need it most (or, for a speed run, a boss or a mock
+ * exam, spread over the deck).
+ */
+function startSession(deckId: string, mode: SessionMode, length: number, formats?: Format[], full = false) {
   const dk = deck(deckId);
   const u = load().user;
   if (mode === 'challenge' && currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, now()).hearts <= 0) throw new LocalError(403, 'no_hearts');
   const exam = mode === 'exam';
   const allowed: readonly Format[] = formats?.length ? formats : exam ? EXAM_FORMATS : mode === 'speed' ? SPEED_FORMATS : LOCAL_FORMATS;
-  // With a bank, only ideas that already have questions (Claude may still be writing the rest).
-  const covered = dk.bank?.length ? new Set(dk.bank.filter((q) => allowed.includes(q.format)).map((q) => q.conceptId)) : null;
+  const wholeDeck = full && mode === 'practice' && !formats?.length;
+  // With a bank, only ideas that already have questions (Claude may still be writing the rest), except in
+  // a whole-deck round: there, ideas still being written come later in the round.
+  const covered = dk.bank?.length && !(wholeDeck && writingNow.has(deckId)) ? new Set(dk.bank.filter((q) => allowed.includes(q.format)).map((q) => q.conceptId)) : null;
   const pool = covered ? dk.concepts.filter((c) => covered.has(c.id)) : dk.concepts;
   if (pool.length === 0) throw new LocalError(422, 'no_questions');
   const count = mode === 'speed' ? 40 : mode === 'boss' ? BOSS_LENGTH : length;
   const rng = seededRng(hashString(`${u.id}:${now()}`));
   const states = statesMap(pool.map((c) => c.id));
-  // Learning rounds ask fewer ideas, each twice with others in between; tests and races spread wide.
-  const twice = (mode === 'practice' || mode === 'review' || mode === 'wrong_only') && !formats?.length;
-  const ids = twice ? twiceSpaced(pickConcepts(pool, states, Math.max(2, Math.min(pool.length, Math.ceil(count / 2))), mode, now(), rng)) : pickConcepts(pool, states, count, mode, now(), rng);
+  const log = load().factLog ?? {};
+  let ids: string[];
+  let facts: number[] | undefined;
+  if (wholeDeck) {
+    const slots = planFullRound(pool, states, log, now(), rng);
+    ids = slots.map((x) => x.conceptId);
+    facts = slots.map((x) => x.fact);
+  } else if ((mode === 'practice' || mode === 'review' || mode === 'wrong_only' || mode === 'challenge') && !formats?.length) {
+    // Learning rounds: the facts that need it most, spread over as many ideas as possible.
+    let from = pool;
+    if (mode === 'wrong_only') from = shaky(pool, states, log);
+    if (mode === 'review') from = pool.filter((c) => states.get(c.id)?.srs);
+    if (from.length === 0) from = pool;
+    const slots = planQuickRound(from, states, log, count, now(), rng);
+    ids = slots.map((x) => x.conceptId);
+    facts = slots.map((x) => x.fact);
+  } else ids = pickConcepts(pool, states, count, mode, now(), rng);
   const s: StoredSession = {
     id: uid(),
     deckId,
     mode,
     createdAt: now(),
     state: {
-      ...newSession(mode, ids),
+      ...newSession(mode, ids, facts),
       language: dk.language,
       heartsLost: 0,
       formats: formats?.length ? formats : exam ? EXAM_FORMATS : mode === 'speed' ? SPEED_FORMATS : undefined,
       ...(exam ? { startedAt: now(), timeLimitMs: examTimeLimitMs(ids.length) } : {}),
       ...(mode === 'speed' ? { startedAt: now(), timeLimitMs: SPEED_MS, points: 0 } : {}),
       ...(mode === 'boss' ? { boss: { hp: BOSS_HP, max: BOSS_HP, shields: BOSS_SHIELDS } } : {}),
+      ...(wholeDeck ? { full: true } : {}),
       picks: 0,
       picked: 0,
       missed: [],
@@ -1204,9 +1534,20 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
   };
   load().sessions[s.id] = s;
   const q = serveNext(s);
-  if (!q) throw new LocalError(422, 'no_questions');
+  if (!q) {
+    delete load().sessions[s.id];
+    throw new LocalError(422, 'no_questions');
+  }
   dk.updatedAt = now();
   return { session: publicSession(s), question: publicQuestion(q) };
+}
+
+/** A whole-deck round left halfway (in the last week), to pick up where it stopped. */
+function resumable(deckId: string) {
+  const s = Object.values(load().sessions)
+    .filter((x) => x.deckId === deckId && x.status === 'active' && x.state.full && x.state.answered > 0 && now() - (x.attempts.at(-1)?.at ?? x.createdAt ?? 0) < 7 * 86_400_000)
+    .sort((a, b) => (b.attempts.at(-1)?.at ?? 0) - (a.attempts.at(-1)?.at ?? 0))[0];
+  return s ? { id: s.id, answered: s.state.answered, total: s.state.total } : null;
 }
 
 function getSession(id: string): StoredSession {
@@ -1367,8 +1708,28 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   const golden = !!s.state.golden && g.correct;
   if (golden) s.state.golden = false;
   const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() }) * (lightning ? 2 : 1) * (golden ? 2 : 1);
-  const outcome = applyAnswer(s.state, { conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, variantKey: q.variantKey }, xp);
+  const fact = s.state.slotFact ?? -1;
+  // A miss comes back later only with another question (a round never asks the same one twice).
+  const canRetry = !g.correct && canAskAgain(s, q, fact);
+  const outcome = applyAnswer(s.state, { conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, variantKey: q.variantKey, ...(fact >= 0 ? { fact } : {}) }, xp, {
+    canRetry,
+    ...(s.state.full ? { maxRetries: Math.max(4, Math.ceil(s.state.total * 0.2)) } : {}),
+  });
   s.state = { ...s.state, ...outcome.state };
+  // How it went on each fact this question was about.
+  const log = (d.factLog ??= {});
+  for (const f of new Set([...(q.facts ?? []), ...(fact >= 0 ? [fact] : [])])) log[factKey(q.conceptId, f)] = { at: t, ok: g.correct };
+  // A whole-deck round goes topic by topic: the last question of a topic closes that chapter.
+  const concepts = deck(s.deckId).concepts;
+  const topicOf = (id: string) => concepts.find((c) => c.id === id)?.topic ?? '';
+  const topic = topicOf(q.conceptId);
+  let topicDone: { topic: string; right: number; total: number; next?: string } | undefined;
+  if (s.state.full && topic && !s.state.queue.some((id) => topicOf(id) === topic)) {
+    const here = s.state.history.filter((h) => topicOf(h.conceptId) === topic);
+    if (here.length >= 3) topicDone = { topic, right: here.filter((h) => h.score >= PASS).length, total: here.length, ...(s.state.queue.length ? { next: topicOf(s.state.queue[0]!) } : {}) };
+  }
+  // A missed idea answered right on its second chance.
+  const fixed = g.correct && !firstTry;
   s.attempts.push({ conceptId: q.conceptId, format: q.format, bloom: q.bloom, score: g.score, at: t });
   if (!g.correct) {
     const missed = (s.state.missed ??= []);
@@ -1428,15 +1789,17 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   // never in the first few answers, at most two a round.
   let gift: string | undefined;
   const answeredNow = s.state.answered;
-  if (g.correct && s.mode !== 'exam' && answeredNow >= 3 && (s.state.gifts ?? 0) < 2 && answeredNow >= (s.state.giftAfter ?? 0) && Math.random() < GIFT_CHANCE) {
+  const maxGifts = Math.max(2, Math.floor(s.state.total / 15));
+  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && answeredNow >= 3 && (s.state.gifts ?? 0) < maxGifts && answeredNow >= (s.state.giftAfter ?? 0) && Math.random() < GIFT_CHANCE) {
     gift = uid();
     s.state.gift = { id: gift, at: now() };
     s.state.gifts = (s.state.gifts ?? 0) + 1;
     s.state.giftAfter = answeredNow + 4;
   }
-  // Every 3 right answers earn a chest to pick (not in a mock exam or a speed run).
+  // Every few right answers earn a chest to pick (every 3 in a short round, every 6 in a long one; not in a mock exam or a speed run).
   let chest = false;
-  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && s.state.correct > 0 && s.state.correct % 3 === 0) {
+  const chestEvery = s.state.total >= 40 ? 6 : 3;
+  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && s.state.correct > 0 && s.state.correct % chestEvery === 0) {
     s.state.picks = (s.state.picks ?? 0) + 1;
     chest = true;
   }
@@ -1444,12 +1807,12 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   s.current = null;
   const next = sessionDone(s.state) ? null : serveNext(s);
   if (!next && s.mode === 'boss' && boss && boss.hp > 0 && !s.state.endedReason) s.state.endedReason = 'boss_escaped';
-  const summary = next ? null : finish(s);
+  const summary = next || s.state.waiting ? null : finish(s);
   if (summary) rewards = mergeRewards(rewards, summary.rewards);
   const { gradedBy: _g, ...result } = g;
   return {
     rewards,
-    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, points, damage, shield, chest, lightning, petCoins, petGift, gift, golden },
+    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, masteredTerm: masteredNow ? concepts.find((c) => c.id === q.conceptId)?.term : undefined, points, damage, shield, chest, lightning, petCoins, petGift, gift, golden, topicDone, fixed },
     session: publicSession(s),
     next: next ? publicQuestion(next) : null,
     summary,
@@ -1778,7 +2141,7 @@ const routes: [string, RegExp, Handler][] = [
       // A draft already cleaned by the photo reader.
       const concepts = Array.isArray(b.concepts) ? (b.concepts as Omit<Concept, 'id'>[]) : [];
       if (concepts.length === 0) throw new LocalError(422, 'nothing_found');
-      return createDeck({ title: String(b.title || 'My notes').slice(0, 120), subject: String(b.subject ?? ''), language: b.language === 'fr' ? 'fr' : 'en', summary: String(b.summary ?? ''), concepts });
+      return createDeck({ title: String(b.title || 'My notes').slice(0, 120), subject: String(b.subject ?? ''), language: b.language === 'fr' ? 'fr' : 'en', summary: String(b.summary ?? ''), concepts, options: b.options });
     },
   ],
   ['GET', /^\/api\/decks\/([\w-]+)$/, (m) => masteryMap(m[1]!)],
@@ -1807,12 +2170,10 @@ const routes: [string, RegExp, Handler][] = [
     (m, b) => {
       const dk = deck(m[1]!);
       const ids = new Set(dk.concepts.map((c) => c.id));
-      let list = (Array.isArray(b.questions) ? (b.questions as Question[]) : []).filter((q) => q && typeof q === 'object' && ids.has(q.conceptId) && typeof q.prompt === 'string' && typeof q.variantKey === 'string');
-      // Keep the deck under the account copy's size limit.
-      while (list.length > 1 && JSON.stringify(list).length > 170_000) list = list.slice(0, Math.floor(list.length * 0.9));
-      dk.bank = list;
+      dk.bank = (Array.isArray(b.questions) ? (b.questions as Question[]) : []).filter((q) => q && typeof q === 'object' && ids.has(q.conceptId) && typeof q.prompt === 'string' && typeof q.variantKey === 'string');
+      capBank(dk);
       dk.bankAt = now();
-      return { count: list.length };
+      return { count: dk.bank.length };
     },
   ],
   [
@@ -1824,7 +2185,7 @@ const routes: [string, RegExp, Handler][] = [
       const ids = new Set(dk.concepts.map((c) => c.id));
       const before = dk.bank?.length ?? 0;
       const remove = new Set(Array.isArray(b.remove) ? (b.remove as unknown[]).map(String) : []);
-      let list = (dk.bank ?? []).filter((q) => !remove.has(q.variantKey));
+      const list = (dk.bank ?? []).filter((q) => !remove.has(q.variantKey));
       const removed = before - list.length;
       const have = new Set(list.map((q) => q.variantKey));
       for (const q of Array.isArray(b.add) ? (b.add as Question[]) : []) {
@@ -1832,11 +2193,10 @@ const routes: [string, RegExp, Handler][] = [
         have.add(q.variantKey);
         list.push(q);
       }
-      // Keep the deck under the account copy's size limit (oldest questions go first).
-      while (list.length > 1 && JSON.stringify(list).length > 170_000) list = list.slice(1);
       dk.bank = list;
+      capBank(dk);
       dk.bankAt = now();
-      return { count: list.length, removed };
+      return { count: dk.bank.length, removed };
     },
   ],
   [
@@ -1874,13 +2234,13 @@ const routes: [string, RegExp, Handler][] = [
       return { ok: true };
     },
   ],
-  ['POST', /^\/api\/decks\/([\w-]+)\/sessions$/, (m, b) => startSession(m[1]!, (b.mode as SessionMode) ?? 'practice', Math.min(40, Math.max(3, Number(b.length) || 10)), b.formats as Format[] | undefined)],
+  ['POST', /^\/api\/decks\/([\w-]+)\/sessions$/, (m, b) => startSession(m[1]!, (b.mode as SessionMode) ?? 'practice', Math.min(60, Math.max(3, Number(b.length) || 10)), b.formats as Format[] | undefined, b.full === true)],
   [
     'GET',
     /^\/api\/decks\/([\w-]+)\/offline$/,
     (m) => {
       const d = deck(m[1]!);
-      return { deck: { id: d.id, title: d.title, subject: d.subject, language: d.language, summary: d.summary }, concepts: d.concepts, bank: d.bank ?? [], savedAt: now() };
+      return { deck: { id: d.id, title: d.title, subject: d.subject, language: d.language, summary: d.summary, options: d.options ?? {} }, concepts: d.concepts, bank: d.bank ?? [], savedAt: now() };
     },
   ],
   ['GET', /^\/api\/decks\/([\w-]+)\/plan$/, (m) => plan(m[1]!)],
@@ -1925,6 +2285,11 @@ const routes: [string, RegExp, Handler][] = [
     /^\/api\/sessions\/([\w-]+)$/,
     (m) => {
       const s = getSession(m[1]!);
+      // A round waiting for Claude's next questions: ask again (and end it if nothing more is coming).
+      if (s.status === 'active' && !s.current && s.state.waiting && !serveNext(s) && !s.state.waiting) {
+        const summary = finish(s);
+        return { session: publicSession(s), question: null, summary, rewards: summary.rewards };
+      }
       return { session: publicSession(s), question: s.current ? publicQuestion(s.current) : null };
     },
   ],
@@ -1999,11 +2364,48 @@ const routes: [string, RegExp, Handler][] = [
     return { ok: true };
   }],
   ['GET', /^\/api\/local\/decks\/([\w-]+)\/fresh$/, (m) => {
-    // How many of the deck's questions this learner has never met (to write new ones before they run out).
+    // Facts with no question yet, and facts whose questions this learner has all met (to write new ones before they run out).
     const dk = deck(m[1]!);
     const seen = load().seen ?? {};
     const bank = dk.bank ?? [];
-    return { total: bank.length, unseen: bank.filter((q) => seen[q.variantKey] === undefined).length, concepts: dk.concepts.length };
+    const cover = [...factCoverage(dk.concepts, bank, seen).values()];
+    return { total: bank.length, unseen: bank.filter((q) => seen[q.variantKey] === undefined).length, concepts: dk.concepts.length, facts: cover.length, uncovered: cover.filter((x) => x.have === 0).length, spent: cover.filter((x) => x.have > 0 && x.unseen === 0).length };
+  }],
+  ['GET', /^\/api\/local\/decks\/([\w-]+)\/seen$/, (m) => {
+    // When this learner last met each of the deck's questions.
+    const seen = load().seen ?? {};
+    return { seen: Object.fromEntries((deck(m[1]!).bank ?? []).flatMap((q) => (seen[q.variantKey] !== undefined ? [[q.variantKey, seen[q.variantKey]!]] : []))) };
+  }],
+  ['PUT', /^\/api\/local\/decks\/([\w-]+)\/options$/, (m, b) => {
+    // How the learner wants this deck's questions (used for every question Claude writes from now on).
+    const dk = deck(m[1]!);
+    const options = cleanOptions(b.options);
+    if (Object.keys(options).length) dk.options = options as Record<string, unknown>;
+    else delete dk.options;
+    dk.updatedAt = now();
+    return { options: dk.options ?? {} };
+  }],
+  ['POST', /^\/api\/local\/decks\/([\w-]+)\/ideas$/, (m, b) => addIdeas(m[1]!, Array.isArray(b.concepts) ? (b.concepts as Omit<Concept, 'id'>[]) : [])],
+  ['GET', /^\/api\/local\/decks\/([\w-]+)\/questions$/, (m) => {
+    // Every question of the deck, answers included (the learner's own deck), to read, fix or remove.
+    const dk = deck(m[1]!);
+    const seen = load().seen ?? {};
+    return {
+      deck: { id: dk.id, title: dk.title, language: dk.language, mine: true },
+      concepts: dk.concepts.map((c) => ({ id: c.id, term: c.term, topic: c.topic, facts: c.keyPoints })),
+      questions: (dk.bank ?? []).map((q) => ({ ...q, answer: correctAnswerText(q), seen: seen[q.variantKey] ?? null })),
+      writing: writingNow.has(dk.id),
+    };
+  }],
+  ['POST', /^\/api\/local\/decks\/([\w-]+)\/questions$/, (m, b) => saveOwnQuestion(m[1]!, b)],
+  ['PUT', /^\/api\/local\/decks\/([\w-]+)\/questions\/([^/]+)$/, (m, b) => saveOwnQuestion(m[1]!, b, decodeURIComponent(m[2]!))],
+  ['DELETE', /^\/api\/local\/decks\/([\w-]+)\/questions\/([^/]+)$/, (m) => {
+    const dk = deck(m[1]!);
+    const key = decodeURIComponent(m[2]!);
+    const before = dk.bank?.length ?? 0;
+    dk.bank = (dk.bank ?? []).filter((q) => q.variantKey !== key);
+    dk.bankAt = now();
+    return { removed: before - dk.bank.length, count: dk.bank.length };
   }],
   [
     'POST',
