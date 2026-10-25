@@ -61,10 +61,14 @@ function learnHostClock(writtenAt: number) {
   if (gap > bestSkew) bestSkew = hostSkew = gap;
 }
 export const liveNow = () => siteClock()?.() ?? Date.now() + hostSkew;
-/** A question opens this long after the host moves on: every screen has it by then, and a 3-2-1 plays. */
-export const QUESTION_LEAD = 3500;
-/** "And the answer is…": then every screen shows it at once. */
-export const REVEAL_LEAD = 1600;
+/**
+ * A question opens this long after the host moves on, so every screen has it by then and it appears
+ * everywhere at the same moment. Short, no 3-2-1: Live moves fast. The first one gets a moment more.
+ */
+export const QUESTION_LEAD = 1500;
+export const FIRST_LEAD = 2500;
+/** "And the answer is…": a beat, then every screen shows it at once. */
+export const REVEAL_LEAD = 800;
 /** Quick reactions players can send (they float up on everyone's screen). */
 export const REACTIONS = ['👏', '🔥', '😂', '😮', '😭', '💪'];
 const roomName = (code: string) => `game-${code.toLowerCase()}`;
@@ -100,6 +104,7 @@ class HostGame {
     state: LiveState,
     private t: NonNullable<Awaited<ReturnType<typeof together>>>,
     private named: Any,
+    private deck: { deckId: string; target: number } | null = null,
   ) {
     this.state = state;
     this.unsubPeers = named.onPeers((change: Any) => void this.onPeers(change.peers));
@@ -213,7 +218,7 @@ class HostGame {
   }
 
   start() {
-    this.state = startLive(this.state, this.t.me, liveNow(), QUESTION_LEAD);
+    this.state = startLive(this.state, this.t.me, liveNow(), FIRST_LEAD);
     this.changed();
     void setLiveInvite(null); // the game has begun: invites close
   }
@@ -254,6 +259,27 @@ class HostGame {
     this.changed();
   }
 
+  /**
+   * A game longer than the questions the deck had when it started: questions Claude has written since
+   * join the end of the game (never one already in it).
+   */
+  private get over() {
+    return this.state.phase === 'podium';
+  }
+
+  private async topUp() {
+    const d = this.deck;
+    if (!d || this.state.questions.length >= d.target || this.over) return;
+    const deck = await api<{ deck: { language: Locale }; concepts: Concept[]; bank?: Question[] }>(`/api/decks/${d.deckId}/offline`).catch(() => null);
+    if (!deck || this.over) return;
+    const have = new Set(this.state.questions.map((q) => q.variantKey));
+    const more = makeQuestions(deck.concepts, deck.deck.language, d.target - this.state.questions.length, deck.bank ?? [], {}, have);
+    if (more.length === 0) return;
+    this.state = { ...this.state, questions: [...this.state.questions, ...more] };
+    void api(`/api/local/decks/${d.deckId}/seen`, { method: 'POST', body: { keys: more.map((q) => q.variantKey) } }).catch(() => {});
+    this.changed();
+  }
+
   private async reveal() {
     if (this.state.phase !== 'question' || this.revealing) return;
     this.revealing = true;
@@ -271,6 +297,7 @@ class HostGame {
     if (this.state.phase !== 'question' || this.state.index !== index) return;
     this.state = revealLive(this.state, {}, meanings, liveNow() + REVEAL_LEAD);
     this.changed();
+    void this.topUp();
   }
 
   async close() {
@@ -288,20 +315,65 @@ class HostGame {
 
 let host: HostGame | null = null;
 
-/** Formats that can be asked as "pick one of four" (A, B, C, D), like Gizmo Live. */
-const CHOICE_SOURCES: Format[] = ['multiple_choice', 'cause_effect', 'type_answer', 'fill_blank'];
+/** Formats that can be asked with one tap (A, B, C, D or true/false), like Gizmo Live. */
+const CHOICE_SOURCES: Format[] = ['multiple_choice', 'cause_effect', 'true_false', 'type_answer', 'fill_blank'];
 
-export function makeQuestions(concepts: Concept[], language: Locale, count: number, bank: Question[] = []): Question[] {
+const promptKey = (q: Question) => q.prompt.toLowerCase().replace(/[^\p{L}0-9]+/gu, ' ').trim();
+
+/**
+ * A Live game's questions: never the same one twice. The deck's real test questions, played with one
+ * tap; as many different facts and ideas as possible (one question per fact before a second one on the
+ * same fact), the ones this host played longest ago (or never) first, and the same idea never twice in
+ * a row. A game asks for more than the deck has: it's as long as the deck allows (more come as Claude
+ * writes them, see HostGame.topUp). `skip`: questions already in this game.
+ */
+export function makeQuestions(concepts: Concept[], language: Locale, count: number, bank: Question[] = [], seen: Record<string, number> = {}, skip: ReadonlySet<string> = new Set()): Question[] {
   const rng = seededRng(hashString(`${Date.now()}:${Math.random()}`));
-  // The deck's real test questions, each asked as four choices. A long game goes round them again in
-  // a new order rather than falling back to basic questions built from the notes.
-  let usable: Question[] = toLiveChoices(bank.filter((q) => LIVE_FORMATS.includes(q.format) && !OPEN_FORMATS.includes(q.format)), rng);
-  // No questions written yet: basic ones from the notes, as four choices too (three for a tiny deck).
-  if (usable.length < 3) usable = toLiveChoices(makeGenerated(concepts, language, Math.max(count, 12), rng, CHOICE_SOURCES), rng);
-  if (usable.length < 3) usable = toLiveChoices(makeGenerated(concepts, language, Math.max(count, 12), rng, CHOICE_SOURCES), rng, 3);
-  if (usable.length < 3) return [];
+  // One tap each; the same question (or the same wording) only once.
+  const keys = new Set<string>();
+  const prompts = new Set<string>();
+  const usable = toLiveChoices(bank.filter((q) => LIVE_FORMATS.includes(q.format) && !OPEN_FORMATS.includes(q.format) && !skip.has(q.variantKey)), rng).filter((q) => {
+    const p = promptKey(q);
+    if (keys.has(q.variantKey) || prompts.has(p)) return false;
+    keys.add(q.variantKey);
+    prompts.add(p);
+    return true;
+  });
+  if (usable.length < 3 && skip.size === 0) {
+    // No questions written yet: basic ones from the notes, one tap too.
+    const made = toLiveChoices(makeGenerated(concepts, language, Math.max(count, 12), rng, CHOICE_SOURCES), rng);
+    return spreadOut(made, rng).slice(0, count).map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` }));
+  }
+  // Group by fact; within a fact, the least recently played first.
+  const groups = new Map<string, Question[]>();
+  for (const q of shuffle(usable, rng)) {
+    const k = `${q.conceptId}:${q.facts?.[0] ?? '*'}`;
+    groups.set(k, [...(groups.get(k) ?? []), q]);
+  }
+  for (const list of groups.values()) list.sort((a, b) => (seen[a.variantKey] ?? -1) - (seen[b.variantKey] ?? -1));
+  // Round after round: one question from each fact, facts in a new order each time.
+  const picked: Question[] = [];
+  const lists = shuffle([...groups.values()], rng);
+  for (let round = 0; picked.length < count; round++) {
+    const layer = lists.flatMap((l) => (l[round] ? [l[round]!] : []));
+    if (layer.length === 0) break;
+    // Facts never played first, then the oldest.
+    layer.sort((a, b) => (seen[a.variantKey] ?? -1) - (seen[b.variantKey] ?? -1));
+    picked.push(...layer.slice(0, count - picked.length));
+  }
+  return spreadOut(picked, rng).map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` }));
+}
+
+/** Mixed so the same idea doesn't come twice in a row when avoidable. */
+function spreadOut(qs: Question[], rng: ReturnType<typeof seededRng>): Question[] {
+  const rest = shuffle(qs, rng);
   const out: Question[] = [];
-  while (out.length < count) out.push(...shuffle(usable, rng).slice(0, count - out.length).map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` })));
+  while (rest.length) {
+    const prev = out[out.length - 1];
+    let i = rest.findIndex((q) => q.conceptId !== prev?.conceptId);
+    if (i < 0) i = 0;
+    out.push(rest.splice(i, 1)[0]!);
+  }
   return out;
 }
 
@@ -333,15 +405,18 @@ export async function hostLocalGame(deckId: string, count: number): Promise<stri
   if (!t?.room) throw new LiveError('not_in_game');
   if (!t.canWrite) throw Object.assign(new Error('read_only'), { code: 'read_only' });
   const deck = await api<{ deck: { title: string; language: Locale }; concepts: Concept[]; bank?: Question[] }>(`/api/decks/${deckId}/offline`);
-  const questions = makeQuestions(deck.concepts, deck.deck.language, count, deck.bank ?? []);
+  const seen = await api<{ seen: Record<string, number> }>(`/api/local/decks/${deckId}/seen`).then((r) => r.seen, () => ({}));
+  const questions = makeQuestions(deck.concepts, deck.deck.language, count, deck.bank ?? [], seen);
   if (questions.length < 3) throw Object.assign(new Error('deck_too_small'), { code: 'deck_too_small' });
+  // Next game, other questions first.
+  void api(`/api/local/decks/${deckId}/seen`, { method: 'POST', body: { keys: questions.map((q) => q.variantKey) } }).catch(() => {});
   if (host) await host.close();
   let code = '';
   for (let i = 0; i < 6; i++) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
   const named = await t.room.join(roomName(code));
   const names = await namesFor([t.me]);
   const state = createLive(code, { id: t.me, name: names[t.me]?.name || 'Host', avatar: 'firefly-violet' }, deck.deck.title, questions, Date.now());
-  host = new HostGame(code, state, t, named);
+  host = new HostGame(code, state, t, named, { deckId, target: count });
   await named.presence({ player: code, host: true });
   host.subscribe(() => {});
   return code;

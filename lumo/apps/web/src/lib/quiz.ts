@@ -28,6 +28,11 @@ export interface PublicSession {
   language?: 'en' | 'fr';
   /** The current question asks again about an idea missed earlier in the round. */
   retry?: boolean;
+  /** A whole-deck round (one question per fact of the notes), and the topic of the current question. */
+  full?: boolean;
+  topic?: string;
+  /** Lumo is still writing the questions left in this round. */
+  waiting?: boolean;
 }
 
 export interface AnswerResult {
@@ -60,6 +65,12 @@ export interface AnswerResult {
   gift?: string;
   /** This answer was golden: double XP (from a surprise gift). */
   golden?: boolean;
+  /** The idea mastered with this answer. */
+  masteredTerm?: string;
+  /** The last question of a topic in a whole-deck round: how that chapter went, and the next one. */
+  topicDone?: { topic: string; right: number; total: number; next?: string };
+  /** A missed idea, right on its second chance. */
+  fixed?: boolean;
 }
 
 export interface MissedItem {

@@ -14,6 +14,7 @@ import { endHostedGame, hostLocalGame, liveNow, REACTIONS, useLocalLiveRoom, use
 import { canAskClaude } from '../local/reader';
 import { writeQuestions } from '../local/writer';
 import { READY_TO_PLAY, WritingScreen } from '../components/play/Writing';
+import { PopUp, usePops, type Pop } from '../components/play/PopUp';
 import { FRIENDS_ONLY, useFriends, useNames, useOnlineNow, useTogether } from '../local/together';
 import { useAuth } from '../lib/auth';
 import { useConfetti } from '../lib/confetti';
@@ -26,6 +27,9 @@ import { play, setMusicEnabled, setSoundEnabled, startMusic, stopMusic } from '.
 const ReactCtx = createContext<((e: string) => void) | null>(null);
 
 const errText = (t: TFunction, code: string) => t(`live.errors.${code}`, { defaultValue: t('signin.errors.network') });
+
+/** Questions a deck needs before a Live game starts (about one in five can't be played with one tap). */
+const liveNeed = (count: number) => Math.max(READY_TO_PLAY, Math.ceil(Math.min(count, 20) * 1.25));
 
 /** Live tab: join with a code, host a game from a deck, and shortcuts to friends and groups. */
 /** How many questions a Live game can have. */
@@ -65,14 +69,18 @@ export function LiveHome() {
     setError(null);
     if (LOCAL) {
       try {
-        // No test questions yet: Claude writes them first (everyone plays the good ones).
+        // Not enough test questions for this game yet: Claude writes them first (a game never asks one
+        // twice, so it needs as many as it has questions; more join the game while it's on).
         if (!skipWriting && (await canAskClaude())) {
-          const d = await api<{ bankSize?: number }>(`/api/decks/${deckId}`);
-          if ((d.bankSize ?? 0) < READY_TO_PLAY) {
+          const d = await api<{ bankSize?: number; factsCovered?: number; facts?: number }>(`/api/decks/${deckId}`);
+          const need = liveNeed(count);
+          if ((d.bankSize ?? 0) < need || (d.factsCovered ?? 0) < (d.facts ?? 0)) {
             void writeQuestions(deckId);
-            setWriting(true);
-            setBusy(false);
-            return;
+            if ((d.bankSize ?? 0) < need) {
+              setWriting(true);
+              setBusy(false);
+              return;
+            }
           }
         }
         navigate(`/live/${await hostLocalGame(deckId, count)}`);
@@ -176,6 +184,7 @@ export function LiveHome() {
         <WritingScreen
           deckId={deckId}
           bank={0}
+          need={liveNeed(count)}
           onClose={() => setWriting(false)}
           onPlay={() => {
             setWriting(false);
@@ -245,6 +254,11 @@ export function LiveRoom() {
   // What I tapped on each question, to show it on the answer screen.
   const picks = useRef<Record<string, string>>({});
   const bet = (room as { bet?: BetFn }).bet; // the server version has no bets
+  // Pop-ups: who's on fire, a new leader, everyone (or nobody) got it, halfway.
+  const { pop, push } = usePops();
+  useLivePops(room.state, room.me, push);
+  // The host's game moves on by itself after each answer (they can pause it).
+  const [autoNext, setAutoNext] = useState(true);
 
   useEffect(() => setSoundEnabled(user?.settings.sound ?? true), [user?.settings.sound]);
   useEffect(() => setMusicEnabled(user?.settings.music ?? true), [user?.settings.music]);
@@ -287,7 +301,8 @@ export function LiveRoom() {
       {s.phase !== 'podium' && <LeaveButton s={s} isHost={isHost} send={room.send} />}
       {s.phase === 'lobby' && <Lobby s={s} isHost={isHost} send={room.send} />}
       {s.phase === 'question' && <QuestionView s={s} me={room.me} answer={room.answer} bet={bet} onPick={(qid, id) => (picks.current[qid] = id)} />}
-      {s.phase === 'reveal' && <RevealView s={s} me={room.me} isHost={isHost} send={room.send} picked={s.question ? picks.current[s.question.id] : undefined} />}
+      {s.phase === 'reveal' && <RevealView s={s} me={room.me} isHost={isHost} send={room.send} picked={s.question ? picks.current[s.question.id] : undefined} autoNext={autoNext} setAutoNext={setAutoNext} />}
+      {pop && <PopUp key={pop.key} pop={pop} />}
       {s.phase === 'podium' && <Podium s={s} me={room.me} reward={room.reward} />}
       {fun.reactions && fun.reactionDone && <FloatingReactions list={fun.reactions} players={s.players} me={room.me} done={fun.reactionDone} />}
     </div>
@@ -526,8 +541,8 @@ function QuestionView({ s, me, answer, bet, onPick }: { s: LivePublic; me: strin
   };
 
   const secs = secsLeft;
-  // A 3-2-1 first: the question appears on every screen at the same moment.
-  if (s.startsAt && now < s.startsAt) return <GetReady s={s} msLeft={s.startsAt - now} />;
+  // A beat first: the question appears on every screen at the same moment.
+  if (s.startsAt && now < s.startsAt) return <GetReady s={s} />;
   return (
     <section key={q.id} className="pb-28" data-format={q.format}>
       <PlayersStrip s={s} me={me} />
@@ -666,15 +681,64 @@ function BetPanel({ s, me, bet }: { s: LivePublic; me: string; bet: BetFn }) {
   );
 }
 
-function RevealView(props: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string }) {
+/** How long the answer stays up before the host's game moves on by itself. */
+const AUTO_NEXT_MS = 6000;
+
+/** Pop-ups for the moments that make a group game: shown on every screen when the answer appears. */
+function useLivePops(s: LivePublic | null, me: string | null, push: (p: Omit<Pop, 'key'>) => void) {
+  const { t } = useTranslation();
+  const done = useRef('');
+  // The game updates many times a second: a pop-up waiting for its moment must survive those updates.
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    if (!s || !me) return;
+    const key = `${s.phase}:${s.index}`;
+    if (done.current === key) return;
+    const name = (id: string) => (id === me ? t('live.pop.you') : (s.players.find((p) => p.id === id)?.name ?? '?'));
+    if (s.phase === 'question' && s.total >= 6 && s.index === Math.floor(s.total / 2)) {
+      done.current = key;
+      const wait = Math.max(0, (s.startsAt ?? 0) - liveNow());
+      const left = s.total - s.index;
+      timers.current.push(setTimeout(() => push({ icon: '🎉', title: t('live.pop.halfway'), body: t('live.pop.halfwayBody', { n: left }), tone: 'royal' }), wait + 400));
+      return;
+    }
+    if (s.phase !== 'reveal' || !s.reveal) return;
+    done.current = key;
+    const results = s.reveal.results;
+    const players = s.players.filter((p) => results[p.id]);
+    const right = players.filter((p) => results[p.id]!.correct);
+    const pops: Omit<Pop, 'key'>[] = [];
+    const leader = s.players.find((p) => p.rank === 1);
+    if (leader && s.players.length >= 2 && leader.previousRank !== null && leader.previousRank !== 1 && leader.score > 0) pops.push({ icon: '👑', title: t('live.pop.lead', { name: name(leader.id) }), tone: 'gold' });
+    const hot = players.filter((p) => [3, 5, 7, 10].includes(results[p.id]!.streak)).sort((a, b) => results[b.id]!.streak - results[a.id]!.streak)[0];
+    if (hot) pops.push({ icon: '🔥', title: t('live.pop.streak', { name: name(hot.id), n: results[hot.id]!.streak }), tone: 'gold' });
+    if (players.length >= 2 && right.length === players.length) pops.push({ icon: '🎯', title: t('live.pop.everyone'), tone: 'good' });
+    else if (s.players.length >= 2 && right.length === 0) pops.push({ icon: '😮', title: t('live.pop.nobody'), body: t('live.pop.nobodyBody'), tone: 'royal' });
+    else if (right.length >= 2) {
+      const fastest = right.sort((a, b) => results[b.id]!.points - results[a.id]!.points)[0]!;
+      pops.push({ icon: '⚡', title: t('live.pop.fastest', { name: name(fastest.id) }), tone: 'good' });
+    }
+    const wait = Math.max(0, (s.revealAt ?? 0) - liveNow()) + 350;
+    timers.current.push(setTimeout(() => pops.slice(0, 2).forEach(push), wait));
+  }, [s, me, push, t]);
+}
+
+function RevealView(props: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string; autoNext: boolean; setAutoNext: (v: boolean) => void }) {
   const now = useGameNow(props.s);
   // "And the answer is…": every screen shows the answer at the same moment.
   if (props.s.revealAt && now < props.s.revealAt) return <Suspense s={props.s} />;
   return <RevealResults {...props} />;
 }
 
-function RevealResults({ s, me, isHost, send, picked }: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string }) {
+function RevealResults({ s, me, isHost, send, picked, autoNext, setAutoNext }: { s: LivePublic; me: string; isHost: boolean; send: Send; picked?: string; autoNext: boolean; setAutoNext: (v: boolean) => void }) {
   const { t } = useTranslation();
+  // Live moves fast: the host's game goes on by itself after a few seconds (pause to talk about it).
+  useEffect(() => {
+    if (!isHost || !autoNext) return;
+    const id = setTimeout(() => void send('live:next'), AUTO_NEXT_MS);
+    return () => clearTimeout(id);
+  }, [isHost, autoNext, s.index, send]);
   const r = s.reveal!;
   const mine = r.results[me];
   const myBet = r.bets?.[me];
@@ -731,8 +795,20 @@ function RevealResults({ s, me, isHost, send, picked }: { s: LivePublic; me: str
                 {confirmEnd ? t('live.endSure') : t('live.endGame')}
               </button>
             )}
-            <button onClick={() => void send('live:next')} className="min-w-0 flex-1 rounded-2xl bg-brand py-4 text-lg font-black text-brand-ink">
-              {last ? t('live.showPodium') : t('live.next')}
+            <button
+              type="button"
+              onClick={() => setAutoNext(!autoNext)}
+              aria-pressed={!autoNext}
+              aria-label={autoNext ? t('live.pause') : t('live.resume')}
+              title={autoNext ? t('live.pause') : t('live.resume')}
+              className="shrink-0 rounded-2xl bg-surface px-4 py-4 text-lg font-black ring-2 ring-line"
+              data-testid="live-auto"
+            >
+              {autoNext ? '⏸' : '▶'}
+            </button>
+            <button onClick={() => void send('live:next')} className="relative min-w-0 flex-1 overflow-hidden rounded-2xl bg-brand py-4 text-lg font-black text-brand-ink">
+              {autoNext && <span key={s.index} className="auto-fill absolute inset-y-0 left-0 bg-black/15" style={{ animationDuration: `${AUTO_NEXT_MS}ms` }} aria-hidden />}
+              <span className="relative">{last ? t('live.showPodium') : t('live.next')}</span>
             </button>
           </div>
         ) : (
@@ -824,19 +900,17 @@ function CountUp({ to, from }: { to: number; from: number }) {
   return <span className="w-14 text-right font-black tabular-nums">{v}</span>;
 }
 
-/** Before each question: its number and a big 3-2-1, the same on every screen. */
-function GetReady({ s, msLeft }: { s: LivePublic; msLeft: number }) {
+/** A beat before each question (no 3-2-1: Live moves fast): which question it is, the same on every screen. */
+function GetReady({ s }: { s: LivePublic }) {
   const { t } = useTranslation();
-  const n = Math.ceil(msLeft / 1000);
-  useEffect(() => play(n <= 0 ? 'go' : 'tick'), [n]);
+  useEffect(() => play('whoosh'), [s.index]);
+  const last = s.index + 1 >= s.total;
   return (
-    <section className="flex min-h-[60dvh] flex-col items-center justify-center gap-4 text-center" data-testid="live-get-ready" aria-live="polite">
-      <p className="text-sm font-black tracking-wide text-muted">{t('live.questionOf', { n: s.index + 1, total: s.total })}</p>
-      {s.question && <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-black">{t(`formats.${s.question.format}`)}</span>}
-      <p key={n} className="count-pop font-display text-gold text-9xl font-black tabular-nums" aria-label={t('live.getReadyIn', { n })}>
-        {Math.max(1, n)}
+    <section className="flex min-h-[50dvh] flex-col items-center justify-center gap-3 text-center" data-testid="live-get-ready" aria-live="polite">
+      <p key={s.index} className="slide-in font-display text-5xl font-black text-gold">
+        {s.index === 0 ? t('live.getReady') : last ? t('live.lastQuestion') : t('live.questionOf', { n: s.index + 1, total: s.total })}
       </p>
-      <p className="text-xl font-black">{t('live.getReady')}</p>
+      {s.question && <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-black">{t(`formats.${s.question.format}`)}</span>}
       <PlayersStrip s={s} me="" quiet />
     </section>
   );

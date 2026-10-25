@@ -29,7 +29,7 @@ async function managePermissions() {
  * Full-screen "Claude is writing your test" while the first questions arrive. Something to watch
  * (and a warm-up with flashcards) instead of a spinner; as soon as a few questions are ready, play.
  */
-export function WritingScreen({ deckId, bank, onPlay, onClose, onBasic }: { deckId: string; bank: number; onPlay: () => void; onClose: () => void; onBasic: () => void }) {
+export function WritingScreen({ deckId, bank, need = READY_TO_PLAY, onPlay, onClose, onBasic }: { deckId: string; bank: number; need?: number; onPlay: () => void; onClose: () => void; onBasic: () => void }) {
   const { t } = useTranslation();
   const w = useWriting(deckId);
   const lines = t('write.lines', { returnObjects: true }) as string[];
@@ -39,7 +39,8 @@ export function WritingScreen({ deckId, bank, onPlay, onClose, onBasic }: { deck
     return () => clearInterval(id);
   }, [lines.length]);
   const count = Math.max(bank, w?.bank ?? 0);
-  const ready = count >= READY_TO_PLAY;
+  // Enough to start (or Claude is done: play what there is).
+  const ready = count >= need || (w?.status === 'done' && count >= 3);
   const failed = w?.status === 'error' && count === 0;
   // Questions arrive one by one, so the bar follows them (and the finished groups).
   const pct = w && w.groups ? Math.round(Math.max(w.groupsDone / w.groups, w.expected ? w.saved / w.expected : 0) * 100) : 6;
@@ -98,7 +99,7 @@ export function WritingScreen({ deckId, bank, onPlay, onClose, onBasic }: { deck
               onClick={onPlay}
               className={`mt-6 w-full rounded-2xl py-4 text-xl font-black ${ready ? 'btn-gold breathe' : 'bg-white/15 text-white/60'}`}
             >
-              {ready ? `▶ ${t('write.playNow')}` : t('write.almost', { n: READY_TO_PLAY - count })}
+              {ready ? `▶ ${t('write.playNow')}` : t('write.almost', { n: Math.max(1, need - count) })}
             </button>
             <p className="mt-3 text-xs font-bold text-white/70">{ready ? t('write.keepsWriting') : t('write.why')}</p>
             <Link to={`/cards/${deckId}`} className="mt-5 rounded-full bg-white/10 px-4 py-2 text-sm font-black ring-1 ring-white/20">

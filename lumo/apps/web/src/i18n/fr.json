@@ -882,7 +882,7 @@
     "endSure": "Confirmer",
     "showPodium": "Voir le podium",
     "next": "Question suivante",
-    "waitingNext": "En attente de l’hôte…",
+    "waitingNext": "Prochaine question dans un instant…",
     "youWon": "Tu as gagné ! 🎉",
     "podiumTitle": "Résultats",
     "yourRank": "n° {{n}}",
@@ -940,7 +940,21 @@
     "react": "Réactions",
     "reactWith": "Réagir avec {{e}}",
     "leaveGame": "Quitter",
-    "leaveSure": "Touche encore pour quitter"
+    "leaveSure": "Touche encore pour quitter",
+    "lastQuestion": "Dernière question!",
+    "pause": "Pause : rester sur cette réponse",
+    "resume": "Continuer tout seul",
+    "pop": {
+      "you": "Toi",
+      "halfway": "À mi-chemin!",
+      "halfwayBody": "Encore {{n}} questions : tout le monde peut gagner",
+      "lead": "{{name}} prend la tête!",
+      "streak": "{{name}} : {{n}} de suite!",
+      "everyone": "Tout le monde l’a eue!",
+      "nobody": "Personne ne l’a eue!",
+      "nobodyBody": "Lis le pourquoi : elle va revenir",
+      "fastest": "{{name}} a été le plus rapide!"
+    }
   },
   "friends": {
     "title": "Amis",
@@ -1491,7 +1505,26 @@
       "combo5": "Tu es en feu ! 🔥",
       "combo10": "Inarrêtable ! 10 de suite !",
       "miss": "Pas grave, tu vas y arriver ! 💪"
-    }
+    },
+    "pop": {
+      "topicDone": "Chapitre terminé : {{topic}}",
+      "perfectTopic": "Chapitre parfait : {{topic}}!",
+      "topicScore": "{{right}}/{{total}} réussies",
+      "nextTopic": "ensuite : {{topic}}",
+      "fixed": "Corrigé!",
+      "fixedBody": "Raté avant, réussi maintenant. C’est comme ça que ça rentre.",
+      "mastered": "Maîtrisé : {{term}}",
+      "masteredBody": "Réussi de plusieurs façons : c’est acquis.",
+      "milestone25": "Le quart est fait!",
+      "milestone50": "À mi-chemin!",
+      "milestone75": "Les trois quarts!",
+      "soFar": "{{right}} bonnes sur {{n}} jusqu’ici",
+      "last5": "Les 5 dernières questions!",
+      "last5Body": "Finis en force"
+    },
+    "waiting": "Lumo écrit tes prochaines questions…",
+    "waitingBody": "Elles arrivent : le reste de tes notes est presque prêt.",
+    "waitingStop": "Arrêter ici et voir mes résultats"
   },
   "write": {
     "title": "Lumo écrit ton examen",

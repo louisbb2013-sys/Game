@@ -882,7 +882,7 @@
     "endSure": "Tap to end",
     "showPodium": "Show the podium",
     "next": "Next question",
-    "waitingNext": "Waiting for the host…",
+    "waitingNext": "Next question in a moment…",
     "youWon": "You won! 🎉",
     "podiumTitle": "Final results",
     "yourRank": "#{{n}}",
@@ -940,7 +940,21 @@
     "react": "Reactions",
     "reactWith": "React with {{e}}",
     "leaveGame": "Leave",
-    "leaveSure": "Tap again to leave"
+    "leaveSure": "Tap again to leave",
+    "lastQuestion": "Last question!",
+    "pause": "Pause: stay on this answer",
+    "resume": "Move on by itself",
+    "pop": {
+      "you": "You",
+      "halfway": "Halfway!",
+      "halfwayBody": "{{n}} questions left: anyone can still win",
+      "lead": "{{name}} takes the lead!",
+      "streak": "{{name}}: {{n}} in a row!",
+      "everyone": "Everyone got it!",
+      "nobody": "Nobody got that one!",
+      "nobodyBody": "Read the why: it'll come back",
+      "fastest": "{{name}} was fastest!"
+    }
   },
   "friends": {
     "title": "Friends",
@@ -1491,7 +1505,26 @@
       "combo5": "You're on fire! 🔥",
       "combo10": "Unstoppable! 10 in a row!",
       "miss": "It's okay, you've got this! 💪"
-    }
+    },
+    "pop": {
+      "topicDone": "Chapter done: {{topic}}",
+      "perfectTopic": "Perfect chapter: {{topic}}!",
+      "topicScore": "{{right}}/{{total}} right",
+      "nextTopic": "next: {{topic}}",
+      "fixed": "Fixed it!",
+      "fixedBody": "Missed before, right now. That's how it sticks.",
+      "mastered": "Mastered: {{term}}",
+      "masteredBody": "Right in different ways: it's yours.",
+      "milestone25": "A quarter done!",
+      "milestone50": "Halfway there!",
+      "milestone75": "Three quarters!",
+      "soFar": "{{right}} right out of {{n}} so far",
+      "last5": "Last 5 questions!",
+      "last5Body": "Finish strong"
+    },
+    "waiting": "Lumo is writing your next questions…",
+    "waitingBody": "They're on the way: the rest of your notes is almost ready.",
+    "waitingStop": "Stop here and see my results"
   },
   "write": {
     "title": "Lumo is writing your test",

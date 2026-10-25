@@ -2376,6 +2376,15 @@ const routes: [string, RegExp, Handler][] = [
     const seen = load().seen ?? {};
     return { seen: Object.fromEntries((deck(m[1]!).bank ?? []).flatMap((q) => (seen[q.variantKey] !== undefined ? [[q.variantKey, seen[q.variantKey]!]] : []))) };
   }],
+  ['POST', /^\/api\/local\/decks\/([\w-]+)\/seen$/, (m, b) => {
+    // Questions met in a Live game: next time, others come first.
+    const keys = new Set((deck(m[1]!).bank ?? []).map((q) => q.variantKey));
+    const d = load();
+    const t = now();
+    const seen = (d.seen ??= {});
+    for (const k of Array.isArray(b.keys) ? b.keys.map(String) : []) if (keys.has(k)) seen[k] = t;
+    return { ok: true };
+  }],
   ['PUT', /^\/api\/local\/decks\/([\w-]+)\/options$/, (m, b) => {
     // How the learner wants this deck's questions (used for every question Claude writes from now on).
     const dk = deck(m[1]!);

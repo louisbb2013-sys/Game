@@ -9,6 +9,7 @@ import { Creature3D } from '../components/Pet3D';
 import { ChoiceTiles, MatchTap, MultiTiles, OrderTap, TypeIn } from '../components/play/answers';
 import { ChestPick } from '../components/play/ChestPick';
 import { FeedbackSheet } from '../components/play/Feedback';
+import { PopUp, usePops } from '../components/play/PopUp';
 import { RoundEnd } from '../components/play/RoundEnd';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { api, ApiError, LOCAL } from '../lib/api';
@@ -28,7 +29,9 @@ import { explainAgain, topUpIfLow } from '../local/writer';
  * speed run (60 s against the clock), boss battle (hit the boss, keep your shields) and mock exam.
  */
 
-type Phase = 'intro' | 'answering' | 'grading' | 'followup' | 'feedback' | 'summary';
+type Phase = 'intro' | 'answering' | 'grading' | 'followup' | 'feedback' | 'waiting' | 'summary';
+/** Rounds that get pop-ups. */
+const POP_MODES = new Set(['practice', 'review', 'wrong_only', 'challenge']);
 interface Loaded {
   session: PublicSession;
   question: PublicQuestion | null;
@@ -71,6 +74,8 @@ export function Play() {
   const [giftWon, setGiftWon] = useState<GiftResult | null>(null);
   const [golden, setGolden] = useState(false);
   const [cheer, setCheer] = useState<string | null>(null);
+  // Pop-ups: a chapter done, halfway there, a fixed mistake, an idea mastered. One at a time.
+  const { pop, push: pushPop } = usePops();
   const misses = useRef(0);
   const [leftMs, setLeftMs] = useState<number | null>(null);
   const [lightLeft, setLightLeft] = useState<number | null>(null);
@@ -242,6 +247,11 @@ export function Play() {
   }, [data, mode]);
 
   const advance = useCallback(() => {
+    // Lumo is still writing what's left of a whole-deck round: wait for it.
+    if (!summary && !next && data?.session.waiting) {
+      setPhase('waiting');
+      return;
+    }
     if (summary || !next) {
       setPhase('summary');
       play('finish');
@@ -256,7 +266,7 @@ export function Play() {
     setFollowText('');
     setPhase('answering');
     play('whoosh');
-  }, [summary, next, refresh]);
+  }, [summary, next, refresh, data?.session.waiting]);
 
   /** After the feedback: a chest to pick first if one was earned, then the next question. */
   const proceed = useCallback(() => {
@@ -379,6 +389,31 @@ export function Play() {
           return;
         }
         setResult(res.result);
+        if (POP_MODES.has(mode)) {
+          const r = res.result;
+          const before = data.session;
+          const after = res.session;
+          if (r.topicDone) {
+            const perfect = r.topicDone.right === r.topicDone.total;
+            pushPop({
+              icon: perfect ? '🌟' : '🏁',
+              title: t(perfect ? 'play.pop.perfectTopic' : 'play.pop.topicDone', { topic: r.topicDone.topic }),
+              body: [t('play.pop.topicScore', { right: r.topicDone.right, total: r.topicDone.total }), r.topicDone.next ? t('play.pop.nextTopic', { topic: r.topicDone.next }) : ''].filter(Boolean).join(' · '),
+              tone: 'gold',
+            });
+          }
+          if (r.fixed) pushPop({ icon: '💪', title: t('play.pop.fixed'), body: t('play.pop.fixedBody'), tone: 'good' });
+          if (r.mastered) pushPop({ icon: '⭐', title: t('play.pop.mastered', { term: r.masteredTerm ?? '' }), body: t('play.pop.masteredBody'), tone: 'gold' });
+          // Long rounds: a quarter, halfway, three quarters, the last five.
+          if (after.total >= 20 && after.answered < after.total) {
+            for (const m of [25, 50, 75]) {
+              if (before.answered * 100 < m * after.total && after.answered * 100 >= m * after.total) {
+                pushPop({ icon: m === 50 ? '🎉' : '🚀', title: t(`play.pop.milestone${m}`), body: t('play.pop.soFar', { right: after.correct, n: after.answered }), tone: 'royal' });
+              }
+            }
+            if (after.total - after.answered === 5 && before.total - before.answered > 5) pushPop({ icon: '🏁', title: t('play.pop.last5'), body: t('play.pop.last5Body'), tone: 'royal' });
+          }
+        }
         if (res.result.gift) setGift(res.result.gift);
         if (res.result.golden) setGolden(false);
         setNext(res.next);
@@ -401,7 +436,7 @@ export function Play() {
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, mode, takeRewards, endWith, showRewards, navigate, effects, refresh, followUp],
+    [answer, data, phase, mode, takeRewards, endWith, showRewards, navigate, effects, refresh, followUp, pushPop, t],
   );
 
   // Speed run: no explanation panel, straight to the next question. Boss: a right answer moves on by itself.
@@ -416,6 +451,30 @@ export function Play() {
       return () => clearTimeout(id);
     }
   }, [phase, result, mode, advance, proceed, summary]);
+
+  // Waiting for Lumo's next questions: check every few seconds (the round ends if nothing more comes).
+  useEffect(() => {
+    if (phase !== 'waiting' || !data) return;
+    const id = setInterval(() => {
+      void api<Loaded & { summary?: SessionSummary; rewards?: Rewards }>(`/api/sessions/${data.session.id}`).then((r) => {
+        if (r.question) {
+          setData({ session: r.session, question: r.question });
+          setAnswer(null);
+          setResult(null);
+          setNext(null);
+          setPhase('answering');
+          play('whoosh');
+        } else if (r.summary) {
+          if (r.rewards) endWith(r.rewards);
+          setSummary(r.summary);
+          setPhase('summary');
+          play('finish');
+          void refresh();
+        }
+      }, () => {});
+    }, 2500);
+    return () => clearInterval(id);
+  }, [phase, data, endWith, refresh]);
 
   const askHint = async () => {
     if (!data || phase !== 'answering') return;
@@ -437,7 +496,7 @@ export function Play() {
   const restart = async (m: Mode) => {
     if (!data) return;
     try {
-      const res = await api<Loaded>(`/api/decks/${data.session.deckId}/sessions`, { method: 'POST', body: { mode: m, length: m === 'review' || m === 'wrong_only' ? 8 : 10 } });
+      const res = await api<Loaded>(`/api/decks/${data.session.deckId}/sessions`, { method: 'POST', body: { mode: m, length: m === 'review' || m === 'wrong_only' ? 10 : 10, ...(m === 'practice' && data.session.full ? { full: true } : {}) } });
       setData(res);
       setAnswer(null);
       setResult(null);
@@ -527,7 +586,7 @@ export function Play() {
         ) : mode === 'boss' && s.boss ? (
           <Shields n={s.boss.shields} />
         ) : (
-          <Progress answered={s.answered} total={s.total} />
+          <Progress answered={s.answered} total={s.total} count={s.total >= 20} />
         )}
         {mode === 'challenge' && <Hearts n={s.hearts} />}
         {mode !== 'exam' && mode !== 'speed' && <Combo n={s.combo} />}
@@ -565,6 +624,7 @@ export function Play() {
           </div>
         </div>
       )}
+      {pop && <PopUp key={pop.key} pop={pop} />}
       {gift && <SurpriseGift key={gift} sessionId={s.id} id={gift} onOpened={giftOpened} onGone={giftGone} />}
       {giftWon && (
         <div className="pointer-events-none fixed inset-x-0 top-40 z-40 flex justify-center px-4" role="status" data-testid="gift-won">
@@ -586,6 +646,11 @@ export function Play() {
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black tracking-wide text-white/90 uppercase">{askLabel(q, t)}</span>
             {s.retry && <span className="rounded-full bg-amber-300/90 px-2.5 py-1 text-xs font-black text-night">🔁 {t('play.again')}</span>}
+            {s.full && s.topic && (
+              <span className="max-w-[40vw] truncate rounded-full bg-white/10 px-2.5 py-1 text-xs font-black text-white/80" data-testid="round-topic">
+                📚 {s.topic}
+              </span>
+            )}
             {golden && (
               <span className="golden-chip rounded-full px-2.5 py-1 text-xs font-black text-night" data-testid="golden">
                 ✨ {t('play.gift.goldenChip')}
@@ -707,7 +772,7 @@ export function Play() {
                   })
               : undefined
           }
-          last={!next}
+          last={!next && !s.waiting}
           auto={autoNext}
         />
       )}
@@ -717,6 +782,24 @@ export function Play() {
             ⚔️ {t('play.boss.hit', { n: result.damage ?? 0 })}
             {result.shield === 'mended' ? ` · 🛡️ ${t('play.boss.mended')}` : ''}
           </p>
+        </div>
+      )}
+
+      {phase === 'waiting' && (
+        <div className="fixed inset-0 z-40 grid place-items-center bg-night/80 p-6 text-center backdrop-blur-sm" role="status" aria-live="polite" data-testid="round-waiting">
+          <div className="pop-in max-w-sm">
+            <div className="relative mx-auto w-fit">
+              <Lumo size={110} mood="thinking" glow={0.9} />
+              <span className="write-bob absolute -right-5 bottom-1 text-4xl" aria-hidden>
+                ✍️
+              </span>
+            </div>
+            <h2 className="mt-3 text-2xl font-black">{t('play.waiting')}</h2>
+            <p className="mt-1 font-bold text-white/80">{t('play.waitingBody')}</p>
+            <button type="button" onClick={() => void finishRun()} className="mt-6 rounded-2xl bg-white/15 px-5 py-3 font-black ring-1 ring-white/25">
+              {t('play.waitingStop')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -823,7 +906,7 @@ function askLabel(q: PublicQuestion, t: (k: string) => string): string {
   }
 }
 
-function Progress({ answered, total }: { answered: number; total: number }) {
+function Progress({ answered, total, count }: { answered: number; total: number; count?: boolean }) {
   const { t } = useTranslation();
   const p = total ? Math.min(1, answered / total) : 0;
   return (
@@ -831,6 +914,12 @@ function Progress({ answered, total }: { answered: number; total: number }) {
       <div className="h-4 flex-1 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-label={t('play.progress')} aria-valuenow={Math.round(p * 100)} aria-valuemin={0} aria-valuemax={100}>
         <div className="bar-tip h-full rounded-full bg-gradient-to-r from-emerald-400 via-lime-300 to-yellow-300 transition-[width] duration-500" style={{ width: `${Math.max(5, p * 100)}%` }} />
       </div>
+      {/* Long rounds say where you are. */}
+      {count && (
+        <span className="shrink-0 text-xs font-black text-white/75 tabular-nums" data-testid="round-count">
+          {Math.min(answered + 1, total)}/{total}
+        </span>
+      )}
     </div>
   );
 }
