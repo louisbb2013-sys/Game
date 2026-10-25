@@ -101,25 +101,36 @@ describe('live game engine', () => {
 });
 
 describe('live: four choices and bets', () => {
-  it('every question becomes four choices (A-D), wrong answers borrowed from the deck when needed', () => {
+  it('every question is one tap: own options kept, true/false kept, short answers get their written wrong answers', () => {
     const set: Question[] = [
-      { id: 'q1', conceptId: 'c1', format: 'multiple_choice', bloom: 'remember', language: 'en', prompt: 'Powerhouse of the cell?', explanation: 'x', variantKey: 'v1', options: [{ id: 'a', text: 'Mitochondria' }, { id: 'b', text: 'Ribosome' }, { id: 'c', text: 'Nucleus' }], correctId: 'a', optionNotes: { b: 'makes proteins' } },
-      { id: 'q2', conceptId: 'c2', format: 'type_answer', bloom: 'remember', language: 'en', prompt: 'Green pigment?', explanation: 'x', variantKey: 'v2', accepted: ['Chlorophyll', 'chlorophyl'] },
+      { id: 'q1', conceptId: 'c1', format: 'multiple_choice', bloom: 'remember', language: 'en', prompt: 'Powerhouse of the cell?', explanation: 'x', variantKey: 'v1', options: [{ id: 'a', text: 'Mitochondria' }, { id: 'b', text: 'Ribosome' }, { id: 'c', text: 'Nucleus' }], correctId: 'a', optionNotes: { b: 'makes proteins' }, facts: [0] },
+      { id: 'q2', conceptId: 'c2', format: 'type_answer', bloom: 'remember', language: 'en', prompt: 'Green pigment?', explanation: 'x', variantKey: 'v2', accepted: ['Chlorophyll', 'chlorophyl'], distractors: ['Carotene', 'Melanin', 'Hemoglobin'] },
       { id: 'q3', conceptId: 'c3', format: 'fill_blank', bloom: 'remember', language: 'en', prompt: 'Complete:', explanation: 'x', variantKey: 'v3', text: 'Plants release ___.', blanks: [{ accepted: ['Oxygen'] }] },
       { id: 'q4', conceptId: 'c4', format: 'multiple_choice', bloom: 'remember', language: 'en', prompt: 'Stores DNA?', explanation: 'x', variantKey: 'v4', options: ['Nucleus', 'Vacuole', 'Cell wall', 'Golgi', 'Lysosome'].map((text, i) => ({ id: `o${i}`, text })), correctId: 'o0' },
       { id: 'q5', conceptId: 'c5', format: 'ordering', bloom: 'understand', language: 'en', prompt: 'Order', explanation: 'x', variantKey: 'v5', items: [{ id: 'a', text: 'one' }, { id: 'b', text: 'two' }], correctOrder: ['a', 'b'] },
+      { id: 'q6', conceptId: 'c6', format: 'true_false', bloom: 'understand', language: 'en', prompt: 'Plant cells have a cell wall.', explanation: 'x', variantKey: 'v6', options: [{ id: 't', text: 'True' }, { id: 'f', text: 'False' }], correctId: 't' },
     ];
     const out = toLiveChoices(set, seededRng(7));
-    expect(out.map((q) => q.id)).toEqual(['q1', 'q2', 'q3', 'q4']); // the ordering one can't be a choice
+    expect(out.map((q) => q.id)).toEqual(['q1', 'q2', 'q3', 'q4', 'q6']); // the ordering one can't be a tap
     for (const q of out) {
-      expect(q.format).toBe('multiple_choice');
-      expect(q.options).toHaveLength(4);
-      expect(new Set(q.options.map((o) => o.text.toLowerCase())).size).toBe(4);
+      expect(new Set(q.options.map((o) => o.text.toLowerCase())).size).toBe(q.options.length);
       expect(q.options.some((o) => o.id === q.correctId)).toBe(true);
     }
-    expect(out[1]!.options.find((o) => o.id === out[1]!.correctId)!.text).toBe('Chlorophyll');
-    expect(out[2]!.prompt).toContain('Plants release ___.');
+    // Multiple choice keeps its own three options (nothing borrowed that could also be right).
+    expect(out[0]!.options.map((o) => o.text).sort()).toEqual(['Mitochondria', 'Nucleus', 'Ribosome']);
     expect(out[0]!.optionNotes).toEqual({ b: 'makes proteins' }); // notes kept for options still there
+    expect(out[0]!.facts).toEqual([0]);
+    // A short answer becomes four choices with the wrong answers written for it.
+    expect(out[1]!.options).toHaveLength(4);
+    expect(out[1]!.options.find((o) => o.id === out[1]!.correctId)!.text).toBe('Chlorophyll');
+    expect(out[1]!.options.map((o) => o.text)).toEqual(expect.arrayContaining(['Carotene', 'Melanin', 'Hemoglobin']));
+    // A fill-in borrows from the deck's other short answers.
+    expect(out[2]!.prompt).toContain('Plants release ___.');
+    expect(out[2]!.options.length).toBeGreaterThanOrEqual(3);
+    expect(out[3]!.options).toHaveLength(4);
+    // True/false stays true/false, in its order.
+    expect(out[4]!.format).toBe('true_false');
+    expect(out[4]!.options.map((o) => o.text)).toEqual(['True', 'False']);
   });
 
   it('a good bet wins its stake in XP, a bad one loses it', () => {

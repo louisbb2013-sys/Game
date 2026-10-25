@@ -19,6 +19,8 @@ interface Base<F extends Format> {
   context?: string;
   /** Fingerprint of this exact wording/options, used to avoid repeats. */
   variantKey: string;
+  /** Which of the concept's facts (indexes into its keyPoints) this question tests. Unset = the idea as a whole. */
+  facts?: number[];
 }
 
 export interface ChoiceQ extends Base<'multiple_choice' | 'cause_effect' | 'true_false'> {
@@ -33,6 +35,8 @@ export interface MultiSelectQ extends Base<'multiple_select'> {
 }
 export interface TypeAnswerQ extends Base<'type_answer'> {
   accepted: string[];
+  /** Tempting wrong answers (for playing it as a choice in Live). */
+  distractors?: string[];
 }
 export interface FillBlankQ extends Base<'fill_blank'> {
   /** Text with "___" marking each blank, in order. */

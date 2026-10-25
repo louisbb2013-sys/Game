@@ -20,6 +20,7 @@ export * from './quiz/draft';
 export * from './quiz/sampleBank';
 export * from './quiz/planner';
 export * from './quiz/session';
+export * from './quiz/round';
 export * from './quiz/samples';
 export * from './quiz/answers';
 export * from './quiz/extract';

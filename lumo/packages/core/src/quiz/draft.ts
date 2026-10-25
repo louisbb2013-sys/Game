@@ -29,15 +29,29 @@ function bloomOf(level: unknown, type: DraftType): Bloom {
   return type === 'tf' || type === 'typed' || type === 'match' ? 'remember' : type === 'written' ? 'understand' : 'understand';
 }
 
-/** Six words in a row taken from the notes = a lifted sentence, not a real question. */
+/**
+ * A sentence lifted from the notes, not a real question: a long run of the notes' words in a row
+ * (9+), or a shorter run (5+) that is most of the question. Short names and terms can repeat.
+ */
 export function copiesNotes(text: string, c: Pick<Concept, 'summary' | 'keyPoints'>): boolean {
-  const notes = words([c.summary, ...c.keyPoints].join(' . '));
-  if (notes.length < 6) return false;
-  const grams = new Set<string>();
-  for (let i = 0; i + 6 <= notes.length; i++) grams.add(notes.slice(i, i + 6).join(' '));
   const w = words(text);
-  for (let i = 0; i + 6 <= w.length; i++) if (grams.has(w.slice(i, i + 6).join(' '))) return true;
-  return false;
+  if (w.length < 5) return false;
+  const notes = [c.summary, ...c.keyPoints].map(words);
+  let longest = 0;
+  for (const n of notes) {
+    // Longest run of consecutive words shared with this sentence of the notes.
+    const prev = new Array<number>(n.length + 1).fill(0);
+    for (let i = 1; i <= w.length; i++) {
+      let diag = 0;
+      for (let j = 1; j <= n.length; j++) {
+        const up = prev[j]!;
+        prev[j] = w[i - 1] === n[j - 1] ? diag + 1 : 0;
+        if (prev[j]! > longest) longest = prev[j]!;
+        diag = up;
+      }
+    }
+  }
+  return longest >= 9 || (longest >= 5 && longest >= w.length * 0.6);
 }
 
 const GIVEAWAY = /\b(all|none|both) of (the|these) (above|answers|options)\b|\btoutes? (les|ces) (réponses|réponse)s? (ci-dessus|précédentes)?\b|\baucune (de ces|des) réponses?\b|\btoutes ces réponses\b/i;
@@ -74,7 +88,8 @@ export interface DraftContext {
  * Shapes (c = the concept's number in the list Claude was given):
  *   {"c":1,"type":"mcq","level":"apply","context":"…","q":"…","options":["…","…","…","…"],"answer":2,"why":"…","wrong":["…","…","","…"]}
  *   {"c":1,"type":"tf","q":"<statement>","answer":false,"why":"…"}
- *   {"c":1,"type":"typed","q":"…","accepted":["…"],"why":"…"}
+ *   {"c":1,"type":"typed","q":"…","accepted":["…"],"wrong":["tempting","wrong","answers"],"why":"…"}
+ * Any line may carry "f": the fact(s) of the concept it tests, numbered from 1 (e.g. "f":2 or "f":[1,3]).
  *   {"c":1,"type":"multi","q":"…","options":[…5],"answer":[0,3],"why":"…"}
  *   {"c":1,"type":"order","q":"…","steps":["first",…],"why":"…"}
  *   {"c":1,"type":"match","q":"…","pairs":[["left","right"],…],"why":"…"}
@@ -95,6 +110,11 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
   if (copiesNotes(prompt, concept) || (context && copiesNotes(context, concept))) return null;
   if (!context && NEEDS_DOCUMENT.test(prompt)) return null;
   const bloom = bloomOf(d.level, type);
+  // Which of the concept's facts it tests ("f": 2 or [1, 3], numbered from 1 as Claude was shown them).
+  const facts = [...new Set((Array.isArray(d.f) ? d.f : d.f === undefined ? [] : [d.f]).map(Number))]
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= concept.keyPoints.length)
+    .map((n) => n - 1)
+    .slice(0, 4);
   const meta = (format: Format) => ({ conceptId: concept.id, format, bloom, language: ctx.language, seed: ctx.seed });
   const withContext = (q: Question | null): Question | null => {
     if (!q) return null;
@@ -102,6 +122,7 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
       q.context = context;
       q.variantKey = computeVariantKey(q);
     }
+    if (facts.length) q.facts = facts;
     return q;
   };
 
@@ -153,7 +174,12 @@ export function questionFromDraft(raw: unknown, ctx: DraftContext): Question | n
     case 'typed': {
       const accepted = strs(d.accepted ?? d.answer, 8, 80);
       if (accepted.length === 0 || accepted.some((a) => leaks(prompt, a))) return null;
-      return withContext(buildQuestion({ prompt, accepted, explanation: why }, meta('type_answer')));
+      const q = withContext(buildQuestion({ prompt, accepted, explanation: why }, meta('type_answer')));
+      // Tempting wrong answers, so it can also be played as a choice (in Live).
+      const right = new Set(accepted.map((a) => words(a).join(' ')));
+      const distractors = strs(d.wrong ?? d.near, 3, 80).filter((x) => !right.has(words(x).join(' ')));
+      if (q?.format === 'type_answer' && distractors.length) q.distractors = distractors;
+      return q;
     }
     case 'multi': {
       const options = strs(d.options, 6, 220);

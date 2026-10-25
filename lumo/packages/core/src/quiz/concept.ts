@@ -27,6 +27,7 @@ export interface Concept {
   kind: ConceptKind;
   term: string;
   summary: string;
+  /** Every fact of this sub-aspect, one testable statement each: each one gets its own question. */
   keyPoints: string[];
   misconceptions: string[];
   examples: string[];
