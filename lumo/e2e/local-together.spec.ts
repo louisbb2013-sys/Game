@@ -73,7 +73,7 @@ test('friends, a shared deck and a two-player Live game on the website', async (
       await answerCurrent(p, f); // a colour tile is sent with one tap
       if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Lock in answer' }).click();
     }
-    await expect(b.getByText('Waiting for the host…')).toBeVisible({ timeout: 15_000 });
+    await expect(b.getByText('Next question in a moment…')).toBeVisible({ timeout: 15_000 });
     if (i === 1) await b.screenshot({ path: 'e2e/screens/web-reveal.png', fullPage: true });
     await a.getByRole('button', { name: i < 5 ? 'Next question' : 'Show the podium' }).click();
   }
@@ -222,7 +222,7 @@ test('decks made on two devices are both kept', async ({ browser }) => {
   await expect(a.getByText('The Water Cycle')).toBeVisible();
 });
 
-test('website Live: 100 questions, the host ends early', async ({ browser }) => {
+test('website Live: a 100-question game asks each question once (as many as the deck has), and the host ends early', async ({ browser }) => {
   test.setTimeout(120_000);
   const ctx = await browser.newContext();
   const a = await ctx.newPage();
@@ -242,7 +242,12 @@ test('website Live: 100 questions, the host ends early', async ({ browser }) => 
   await b.getByRole('button', { name: /Cells — the basics/ }).click({ timeout: 15_000 });
   await expect(a.getByRole('button', { name: 'Start with 2 players' })).toBeVisible({ timeout: 10_000 });
   await a.getByRole('button', { name: 'Start with 2 players' }).click();
-  await expect(b.getByText('Question 1 of 100')).toBeVisible({ timeout: 15_000 });
+  // Never the same question twice: the game is as long as the deck's questions allow.
+  const first = b.getByText(/^Question 1 of \d+$/);
+  await expect(first).toBeVisible({ timeout: 15_000 });
+  const total = Number((await first.textContent())!.match(/of (\d+)/)![1]);
+  expect(total).toBeGreaterThanOrEqual(5);
+  expect(total).toBeLessThan(100);
   for (const p of [a, b]) {
     const section = p.locator('section[data-format]');
     await expect(section).toBeVisible();

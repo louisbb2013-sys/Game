@@ -107,7 +107,7 @@ test('live: two players play a full game to the podium', async ({ browser }) => 
     await expect(guest.page.getByTestId('live-verdict')).toBeVisible();
     await expect(guest.page.getByText(/✓ Right answer|^Answer$/).first()).toBeVisible();
     if (i === 1) await guest.page.screenshot({ path: 'e2e/screens/live-reveal.png', fullPage: true });
-    await expect(guest.page.getByText('Waiting for the host…')).toBeVisible();
+    await expect(guest.page.getByText('Next question in a moment…')).toBeVisible();
     await host.page.getByRole('button', { name: i < 5 ? 'Next question' : 'Show the podium' }).click();
   }
 

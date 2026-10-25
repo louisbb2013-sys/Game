@@ -2,6 +2,7 @@ import {
   allAnswered,
   betLive,
   chooseFormat,
+  correctAnswerText,
   createLive,
   generateLocal,
   hashString,
@@ -68,7 +69,7 @@ export const liveNow = () => siteClock()?.() ?? Date.now() + hostSkew;
 export const QUESTION_LEAD = 1500;
 export const FIRST_LEAD = 2500;
 /** "And the answer is…": a beat, then every screen shows it at once. */
-export const REVEAL_LEAD = 800;
+export const REVEAL_LEAD = 1200;
 /** Quick reactions players can send (they float up on everyone's screen). */
 export const REACTIONS = ['👏', '🔥', '😂', '😮', '😭', '💪'];
 const roomName = (code: string) => `game-${code.toLowerCase()}`;
@@ -318,7 +319,8 @@ let host: HostGame | null = null;
 /** Formats that can be asked with one tap (A, B, C, D or true/false), like Gizmo Live. */
 const CHOICE_SOURCES: Format[] = ['multiple_choice', 'cause_effect', 'true_false', 'type_answer', 'fill_blank'];
 
-const promptKey = (q: Question) => q.prompt.toLowerCase().replace(/[^\p{L}0-9]+/gu, ' ').trim();
+/** The same question, even with its options in another order or a small change: same wording, same right answer. */
+const sameKey = (q: Question) => `${q.prompt} ${correctAnswerText(q)}`.toLowerCase().replace(/[^\p{L}0-9]+/gu, ' ').trim();
 
 /**
  * A Live game's questions: never the same one twice. The deck's real test questions, played with one
@@ -333,7 +335,7 @@ export function makeQuestions(concepts: Concept[], language: Locale, count: numb
   const keys = new Set<string>();
   const prompts = new Set<string>();
   const usable = toLiveChoices(bank.filter((q) => LIVE_FORMATS.includes(q.format) && !OPEN_FORMATS.includes(q.format) && !skip.has(q.variantKey)), rng).filter((q) => {
-    const p = promptKey(q);
+    const p = sameKey(q);
     if (keys.has(q.variantKey) || prompts.has(p)) return false;
     keys.add(q.variantKey);
     prompts.add(p);

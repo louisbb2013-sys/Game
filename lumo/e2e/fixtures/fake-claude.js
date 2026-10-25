@@ -92,17 +92,40 @@
   const conceptLines = (p) => (String(p).match(/^\d+\. .+$/gm) || []).map((line) => line.replace(/^\d+\. /, '').split(' — ')[0]);
   // Claude writing test questions: one JSON object per line, streamed in a few chunks like the real thing.
   const bankLines = (p) => conceptLines(p).flatMap((term, i) => [
-    { c: i + 1, type: 'mcq', level: 'apply', context: 'Bank scenario ' + (i + 1) + ': in a lab, a student notices something new.', q: 'Which idea best explains what the student noticed?', options: [term, 'A common mix-up', 'Something unrelated', 'The opposite idea'], answer: 0, why: 'Because of ' + term + '.', wrong: ['', 'This is the classic misconception.', 'This has nothing to do with it.', 'This is backwards.'] },
-    { c: i + 1, type: 'tf', level: 'understand', q: 'Bank statement ' + (i + 1) + ': this idea describes something real.', answer: true, why: 'It is a real idea from the course.' },
-    { c: i + 1, type: 'written', level: 'analyze', q: 'Bank question ' + (i + 1) + ': explain why this idea matters in a new situation.', points: ['names the idea', 'gives a reason'], model: 'A model answer.', why: 'A full answer names the idea and gives a reason.' },
+    { c: i + 1, f: 1, type: 'mcq', level: 'apply', context: 'Bank scenario ' + (i + 1) + ': in a lab, a student notices something new.', q: 'Which idea best explains what the student noticed?', options: [term, 'A common mix-up', 'Something unrelated', 'The opposite idea'], answer: 0, why: 'Because of ' + term + '.', wrong: ['', 'This is the classic misconception.', 'This has nothing to do with it.', 'This is backwards.'] },
+    { c: i + 1, f: 1, type: 'tf', level: 'understand', q: 'Bank statement ' + (i + 1) + ': this idea describes something real.', answer: true, why: 'It is a real idea from the course.' },
+    { c: i + 1, f: 1, type: 'written', level: 'analyze', q: 'Bank question ' + (i + 1) + ': explain why this idea matters in a new situation.', points: ['names the idea', 'gives a reason'], model: 'A model answer.', why: 'A full answer names the idea and gives a reason.' },
   ].map((o) => JSON.stringify(o)));
   // Every prompt sent to Claude, so tests can check what Lumo told it (e.g. the learner's memory).
   window.__prompts = [];
+  // Reading notes, photos or a topic: one line for the deck, then one line per sub-aspect with its facts.
+  const RECIT = [
+    ['Récit psychologique', 'Récit qui explore les pensées et les émotions d’un personnage.'],
+    ['Narrateur', 'Celui qui raconte l’histoire.'],
+    ['Monologue intérieur', 'Pensées du personnage rapportées comme il les vit.'],
+    ['Focalisation interne', 'On voit l’histoire par les yeux d’un personnage.'],
+    ['Schéma narratif', 'Les cinq étapes d’une histoire.'],
+    ['Élément déclencheur', 'Ce qui vient briser la situation initiale.'],
+    ['Dénouement', 'Ce qui met fin aux péripéties.'],
+  ];
+  const deckLines = (p) => {
+    const lines = [{ title: 'Le récit psychologique', subject: 'Français', summary: 'Un récit centré sur la vie intérieure.' }];
+    // Adding notes to a deck: only what's new (a new fact about an idea it has, and a new idea).
+    if (String(p).includes('The deck ALREADY has these sub-aspects')) {
+      lines.push({ topic: 'Récit', kind: 'definition', term: 'Narrateur', summary: 'Celui qui raconte l’histoire.', facts: ['Le narrateur peut être un personnage de l’histoire.'] });
+      lines.push({ topic: 'Récit', kind: 'definition', term: 'Chute', summary: 'Fin surprenante d’une nouvelle.', facts: ['La chute surprend le lecteur à la toute fin.'] });
+    } else for (const [term, summary] of RECIT) lines.push({ topic: 'Récit', kind: 'definition', term, summary, facts: [summary] });
+    return lines.map((o) => JSON.stringify(o)).join('\n') + '\n';
+  };
   const writeBank = async (p, o = {}) => {
     window.__prompts.push(String(p));
     if (sMode === 'hang') return new Promise(() => {});
     if (sMode === 'deny') throw { code: 'not_granted', message: 'declined' };
     if (String(p).includes('Explain it again')) return { text: 'Think of it like a crowded hallway: people spread out to where there is more room.', truncated: false };
+    if (String(p).includes('Break it into the precise sub-aspects')) {
+      await new Promise((r) => setTimeout(r, sMode === 'slow' ? 1500 : 300));
+      return { text: deckLines(p), truncated: false };
+    }
     const text = bankLines(p).join('\n') + '\n';
     const cut = Math.max(1, Math.floor(text.length / 3));
     for (const end of [cut, cut * 2, text.length]) {

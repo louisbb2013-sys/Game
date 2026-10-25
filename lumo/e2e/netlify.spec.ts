@@ -122,7 +122,7 @@ test('Google sign-in and a name/password friend: add a friend, share a deck, pla
       await answerCurrent(p, f);
       if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Lock in answer' }).click();
     }
-    await expect(b.getByText('Waiting for the host…')).toBeVisible({ timeout: 15_000 });
+    await expect(b.getByText('Next question in a moment…')).toBeVisible({ timeout: 15_000 });
     await a.getByRole('button', { name: i < 5 ? 'Next question' : 'Show the podium' }).click();
   }
   await expect(a.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 15_000 });
@@ -267,11 +267,17 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   const [ta, tb] = await Promise.all(shownAt);
   expect(Math.abs(ta - tb)).toBeLessThan(1000);
 
-  // Every question: four answers, A to D.
+  // Every question is one tap: its own options lettered A, B, C (D), or true / false.
   await expect(b.getByText('Question 1 of 5')).toBeVisible({ timeout: 15_000 });
   for (const p of [a, b]) {
-    await expect(p.locator('section[data-format="multiple_choice"] .tile')).toHaveCount(4);
-    await expect(p.locator('.tile-letter')).toHaveText(['A', 'B', 'C', 'D']);
+    const format = await p.locator('section[data-format]').getAttribute('data-format');
+    expect(['multiple_choice', 'true_false']).toContain(format);
+    const tiles = await p.locator('section[data-format] .tile').count();
+    if (format === 'true_false') expect(tiles).toBe(2);
+    else {
+      expect(tiles).toBeGreaterThanOrEqual(3);
+      await expect(p.locator('.tile-letter')).toHaveText(['A', 'B', 'C', 'D'].slice(0, tiles));
+    }
   }
   // The friend bets 25 XP that the host gets it right; the host sees someone bet on them.
   await b.getByTestId('bet-panel').getByRole('radio', { name: '25 XP' }).click();
@@ -286,9 +292,7 @@ test('Live like Gizmo: invite a friend in one tap, four answers A-D, XP bets, a 
   await b.screenshot({ path: 'e2e/screens/netlify-live-answered.png' });
   const revealedAt = [a, b].map((p) => p.getByTestId('live-verdict').waitFor({ timeout: 20_000 }).then(() => Date.now()));
   await b.locator('section[data-format] .tile').first().click();
-  // "And the answer is…", then both screens show the answer together.
-  await expect(b.getByTestId('live-suspense')).toBeVisible({ timeout: 10_000 });
-  await b.screenshot({ path: 'e2e/screens/netlify-live-suspense.png' });
+  // A quick "And the answer is…" (a page that checks in just after may skip it), then both screens show the answer together.
   const [ra, rb] = await Promise.all(revealedAt);
   expect(Math.abs(ra - rb)).toBeLessThan(1000);
   // The answer screen says it plainly, in green or red, and shows the right answer on the tiles.
