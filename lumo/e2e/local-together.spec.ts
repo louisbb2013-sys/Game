@@ -216,6 +216,8 @@ test('decks made on two devices are both kept', async ({ browser }) => {
   await a.evaluate((acc) => localStorage.setItem('fake:db', acc!), account);
   await open(a, 'u_d');
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  // (Wait for the Learn page: Home also shows the last deck.)
+  await expect(a.getByRole('heading', { name: "My decks", level: 1 })).toBeVisible();
   await expect(a.getByText('Cells — the basics')).toBeVisible();
   await expect(a.getByText('The Water Cycle')).toBeVisible();
 });
@@ -415,6 +417,7 @@ test('website: an older deck without questions gets them written the first time 
   // Back inside Claude (slow to answer, not allowed yet): Play opens the writing screen.
   await a.goto(`${process.env.MULTI_URL}?uid=u_old&sample=slow`);
   await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await expect(a.getByRole('heading', { name: "My decks", level: 1 })).toBeVisible();
   await a.getByText('The Water Cycle').click();
   await a.getByRole('button', { name: /^Play\b/ }).click();
   const writing = a.getByRole('dialog', { name: 'Lumo is writing your test' });

@@ -495,7 +495,7 @@ function makeSample(s: SessionInfo) {
       if (a < 0 || b < a) throw Object.assign(new Error('bad_json'), { code: 'upstream_error' });
       return JSON.parse(text.slice(a, b + 1)) as T;
     },
-    limits: async () => ({ images: { maxCount: 5, maxInputBytes: 4_000_000, mediaTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'] } }),
+    limits: async () => ({ images: { maxCount: 5 /* per request; a deck takes more, read 5 at a time */, maxInputBytes: 4_000_000, mediaTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'] } }),
   });
 }
 

@@ -212,6 +212,14 @@ test('make a deck straight from a photo: from Home, and from the create page', a
   await expect(p.getByRole('img', { name: /Photo 2/ })).toBeVisible();
   await p.getByRole('button', { name: /Read my files/ }).click();
   await expect(p.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 20_000 });
+
+  // More than 5 pages: up to 20, read 5 at a time and put together into one deck.
+  await p.goto(`${process.env.NETLIFY_URL}chat`);
+  await expect(p.getByText(/up to 20 files/)).toBeVisible();
+  await p.locator('#deck-photos').setInputFiles(Array.from({ length: 7 }, (_, i) => ({ name: `page${i + 1}.png`, mimeType: 'image/png', buffer: PNG })));
+  await expect(p.getByRole('img', { name: /Photo 7/ })).toBeVisible();
+  await p.getByRole('button', { name: /Read my files/ }).click();
+  await expect(p.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 20_000 });
   await p.context().close();
 });
 

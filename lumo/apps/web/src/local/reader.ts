@@ -36,12 +36,18 @@ export function getSample(): Promise<Sample | null> {
   return samplePromise;
 }
 
-/** What this view can send: null = no photo reading here. */
+/** Photos (or files) one deck can be made from: they're read a few at a time (see readPhotos). */
+export const PHOTOS_PER_DECK = 20;
+/** Most concepts one deck keeps when many pages are read. */
+const MAX_CONCEPTS = 40;
+
+/** What this view can send: null = no photo reading here. `maxCount` is per deck; `perCall` per request. */
 export async function photoLimits() {
   const s = await getSample();
   if (!s) return null;
   const l = await s.limits().catch(() => null);
-  return l?.images ?? null;
+  if (!l?.images) return null;
+  return { ...l.images, perCall: l.images.maxCount, maxCount: Math.max(l.images.maxCount, PHOTOS_PER_DECK) };
 }
 
 export class ReaderError extends Error {
@@ -95,19 +101,43 @@ Reply with only one JSON object, no other text:
    "steps"?: string[] (only for processes, in order), "causeEffects"?: [{"cause": string, "effect": string}]}]}
 Aim for 6-25 concepts. If the files hold no readable study material, reply {"title": "", "concepts": []}.`;
 
-/** Photos (and optional instructions) → a deck draft. Throws ReaderError with a code for the UI. */
+/**
+ * Photos (and optional instructions) → a deck draft. Many pages are read a few at a time (all at
+ * once), then put together. Throws ReaderError with a code for the UI.
+ */
 export async function readPhotos(files: File[], language: Locale, extra: string, signal?: AbortSignal) {
   const s = await getSample();
   if (!s) throw new ReaderError('unavailable');
-  let raw: { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
-  try {
-    raw = await s.json(PROMPT(language, extra) + (await aboutLearner()), { images: files, signal, modelTier: 'default' });
-  } catch (e) {
-    throw new ReaderError(String((e as { code?: string })?.code ?? 'upstream_error'));
+  const per = Math.max(1, (await s.limits().catch(() => null))?.images?.maxCount ?? 5);
+  const groups: File[][] = [];
+  for (let i = 0; i < files.length; i += per) groups.push(files.slice(i, i + per));
+  const about = await aboutLearner();
+  type Raw = { title?: unknown; subject?: unknown; summary?: unknown; concepts?: unknown };
+  const results = await Promise.allSettled(
+    groups.map((group, i) => {
+      const part = groups.length > 1 ? `\n(These are pages ${i * per + 1}-${i * per + group.length} of ${files.length}; the other pages are read separately, so cover only these.)` : '';
+      return s.json<Raw>(PROMPT(language, extra) + part + about, { images: group, signal, modelTier: 'default' });
+    }),
+  );
+  const read = results.flatMap((r) => (r.status === 'fulfilled' && r.value ? [r.value] : []));
+  if (!read.length) {
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    throw new ReaderError(String((failed?.reason as { code?: string } | undefined)?.code ?? 'upstream_error'));
   }
-  const concepts = clean(raw?.concepts);
+  // The same idea seen on two pages is kept once.
+  const seen = new Set<string>();
+  const concepts = read
+    .flatMap((raw) => clean(raw.concepts))
+    .filter((c) => {
+      const key = c.term.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, MAX_CONCEPTS);
   if (concepts.length === 0) throw new ReaderError('nothing_found');
-  return { title: str(raw.title, 120), subject: str(raw.subject, 80), summary: str(raw.summary, 1000), language, concepts };
+  const first = read.find((raw) => str(raw.title, 120)) ?? read[0]!;
+  return { title: str(first.title, 120), subject: str(first.subject, 80), summary: str(first.summary, 1000), language, concepts };
 }
 
 const TOPIC_PROMPT = (topic: string, language: Locale, research: boolean) => `You are Lumo, a study helper for school students. A student typed what they want to study, with no notes:
