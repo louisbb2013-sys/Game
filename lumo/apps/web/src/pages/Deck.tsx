@@ -161,7 +161,9 @@ export function Deck() {
     const m = autoplay.current;
     autoplay.current = null;
     navigate(location.pathname, { replace: true, state: null }); // coming back here doesn't start another round
-    void start(m);
+    // A whole-deck round left halfway picks up where it stopped.
+    if (m === 'practice' && data.resume && LOCAL) navigate(`/quiz/${data.resume.id}`);
+    else void start(m);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, ai]);
 
@@ -286,7 +288,8 @@ export function Deck() {
           </span>
         </span>
       </button>
-      {LOCAL && (
+      {/* A short round only where the whole deck is clearly longer. */}
+      {LOCAL && (data.roundSize ?? 0) > QUICK + 5 && (
         <button type="button" onClick={() => void start('quick')} disabled={!!starting} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-3 font-black ring-1 ring-line hover:ring-brand disabled:opacity-60" data-testid="play-quick">
           <span aria-hidden>{starting === 'quick' ? '⏳' : '⏱️'}</span> {t('hub.quick', { count: QUICK })}
         </button>

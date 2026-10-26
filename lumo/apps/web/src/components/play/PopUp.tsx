@@ -27,7 +27,8 @@ export function PopUp({ pop }: { pop: Pop }) {
   useEffect(() => play(pop.tone === 'royal' ? 'whoosh' : 'star'), [pop.key, pop.tone]);
   const tone = pop.tone === 'gold' ? 'bg-gradient-to-r from-amber-300 to-yellow-200 text-night' : pop.tone === 'good' ? 'bg-gradient-to-r from-emerald-400 to-lime-300 text-night' : 'royal text-white';
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-20 z-40 flex justify-center px-4" role="status" aria-live="polite" data-testid="pop-up">
+    // At the very top, over the progress bar (banners like "Lightning!" and combos sit lower); taps go through.
+    <div className="pointer-events-none fixed inset-x-0 top-2 z-50 flex justify-center px-4 pt-[env(safe-area-inset-top)]" role="status" aria-live="polite" data-testid="pop-up">
       <div className={`pop-drop flex max-w-sm items-center gap-3 rounded-3xl px-4 py-3 shadow-2xl ring-2 ring-white/40 ${tone}`}>
         <span className="pop-icon text-4xl" aria-hidden>
           {pop.icon}

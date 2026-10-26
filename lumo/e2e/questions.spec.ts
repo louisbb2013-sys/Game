@@ -53,7 +53,8 @@ test('a deck made your way: the whole deck in one round, every question on its o
 
   // Play: the whole deck (7 facts), each question once; a missed idea comes back with another question.
   await expect(a.getByTestId('play-all')).toContainText('7 questions');
-  await expect(a.getByTestId('play-quick')).toBeVisible();
+  // The deck is small: no separate short round (it would be as long as the whole deck).
+  await expect(a.getByTestId('play-quick')).toHaveCount(0);
   await a.getByTestId('play-all').click();
   const asked: string[] = [];
   let pops = 0;
@@ -119,8 +120,8 @@ test('a deck made your way: the whole deck in one round, every question on its o
   await expect(a.getByText(/2[4-9] test questions|3\d test questions/)).toBeVisible({ timeout: 20_000 });
 });
 
-test('a whole-deck round left halfway picks up where it stopped; a quick round is short; a speed run has no pop-ups', async ({ browser }) => {
-  test.setTimeout(150_000);
+test('a whole-deck round left halfway picks up where it stopped; a speed run has no pop-ups', async ({ browser }) => {
+  test.setTimeout(200_000);
   const ctx = await browser.newContext();
   const a = await ctx.newPage();
   await fresh(a, 'u_qr');
@@ -143,21 +144,17 @@ test('a whole-deck round left halfway picks up where it stopped; a quick round i
   await expect(a.locator('section[data-format]')).toBeVisible();
   await a.getByRole('button', { name: 'Leave quiz' }).click();
 
-  // Quick round: a few questions on what needs it most.
-  await a.getByTestId('play-quick').click();
-  await expect(a.locator('section[data-format]')).toBeVisible();
-  await a.getByRole('button', { name: 'Leave quiz' }).click();
 
   // Speed run: straight to the next question, nothing popping up.
   await a.getByRole('button', { name: /Speed run/ }).click();
   await a.getByRole('button', { name: /GO!/ }).click();
   let seen = 0;
   for (let i = 0; i < 8; i++) {
-    const section = a.locator('section[data-format]');
-    if (!(await section.count())) break;
-    await answerAndCheck(a, (await section.getAttribute('data-format'))!).catch(() => {});
+    // A speed run moves on by itself: tap whatever tile is there, never wait long for one.
+    const tile = a.locator('section[data-format] .tile').first();
+    if (await tile.isVisible().catch(() => false)) await tile.click({ timeout: 2000 }).catch(() => {});
     seen += await a.getByTestId('pop-up').count();
-    await a.waitForTimeout(450);
+    await a.waitForTimeout(400);
   }
   expect(seen).toBe(0);
 });

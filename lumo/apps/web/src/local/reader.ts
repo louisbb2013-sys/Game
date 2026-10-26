@@ -270,6 +270,7 @@ export function readingPrompt(source: Source, language: Locale, o: { options?: D
     '- One line = ONE sub-aspect: a single term, person, place, event, date, rule, process, part, cause or category. Something with several sides (a war: its causes, its main battles, its results) is split into one sub-aspect per side.',
     `- "facts": ${detail === 'key' ? '1-3' : '1-5'} facts about that sub-aspect, each one short, complete sentence that stands alone and that a test could ask about (who, what, when, where, how many, why, how, what it causes, what it is made of). One piece of information per fact (don't pack a date, a person and a cause into one sentence), but a short list that answers one question stays one fact (e.g. "On the forum, Romans did business, politics and religion"). More facts than that: split the sub-aspect in two.`,
     '- Each fact appears ONCE in the whole deck: never repeat a fact, a date or an event under another sub-aspect (put it under the one it fits best).',
+    '- Everything a test could ask goes in "facts"; "synonyms", "examples", "steps" and "causeEffects" only add to the facts, never replace them.',
     `- ${amount}`,
     `- ${fromWhere}`,
     detail === 'deep' ? '- For each sub-aspect, add one more fact that explains WHY or HOW (what a good teacher would add at this level), only if you are sure it is correct.' : '',

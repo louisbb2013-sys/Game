@@ -332,6 +332,8 @@ export function writingPrompt(deck: { title: string; subject: string; language: 
       if (c.examples.length) bits.push(`   Examples from the notes: ${c.examples.slice(0, 2).join('; ')}`);
       if (c.misconceptions.length) bits.push(`   Mistakes students make: ${c.misconceptions.slice(0, 3).join('; ')}`);
       if (c.steps?.length) bits.push(`   Steps in order: ${c.steps.join(' → ')}`);
+      if (c.causeEffects?.length) bits.push(`   Causes → effects: ${c.causeEffects.map((x) => `${x.cause} → ${x.effect}`).join('; ')}`);
+      if (c.synonyms.length) bits.push(`   Also called: ${c.synonyms.slice(0, 4).join(', ')}`);
       const already = t.needs.filter((x) => x.already.length);
       if (already.length) bits.push(`   Already asked (write DIFFERENT questions, from other angles): ${already.map((x) => `${x.fact >= 0 ? `[${x.fact + 1}] ` : ''}${x.already.map((p) => `"${p.slice(0, 90).replace(/\n/g, ' ')}"`).join('; ')}`).join(' · ')}`);
       return bits.join('\n');
@@ -363,12 +365,13 @@ Wrong options (they make or break a test):
 - Each wrong option is what a student with a real gap would pick: a common misconception, a confusion with another idea of this deck, a nearby date or number, a person or place of the same kind.
 - Same category and form as the right answer (dates with dates, cities with cities), same length and style; the right one must NOT be the longest or the most detailed.
 - 4 options when there are 3 genuinely tempting wrong answers, else 3. Never a joke option, never an option that is also right.
-- "typed": the answer is 1-3 words (a term, name, date or number); "accepted" lists every acceptable form (synonyms, with/without article, singular/plural, common spellings, a name with and without the first name); "wrong" gives 3 tempting wrong answers of the same kind.
+- "typed": the answer is 1-3 words (a term, name, date or number); "accepted" lists every acceptable form (synonyms, with/without article, singular/plural, common spellings, a name with and without the first name, a date or number with and without its unit or era, e.g. "27 av. J.-C.", "-27", "27 avant Jésus-Christ"); "wrong" gives 3 tempting wrong answers of the same kind.
 
 Rules (strict):
 - Never copy the notes: no 5 or more words in a row from them. Invent new examples, names, numbers and excerpts.
 - The question states the whole problem: it can be answered with the options covered. Never give the answer away (don't name the concept in a question whose answer is that concept; don't repeat a question word only in the right option).
 - No "all/none of the above", no "always/never" giveaways, no trick wording, no double negatives; avoid "NOT"/"SAUF" questions.
+- The right answer, and every rubric point of a "written" one, is something the facts above say or directly imply: a student who learned these notes can answer every question. (Wrong options, documents and new situations can bring in other things.)
 - Exactly one defensible answer. Check every fact; if you are not completely sure something is accurate, write a different question.
 - Keep each question short (25 words at most) and clear for this age; a "context" can be up to 70 words.
 - "why": 1-2 kind sentences that teach WHY the answer is right (not just repeat it).

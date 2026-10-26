@@ -94,7 +94,7 @@ export function NewDeck() {
     started.current = true;
     const text = incoming.current?.text?.trim() ?? '';
     const photos = incoming.current?.files ?? [];
-    navigate(location.pathname, { replace: true, state: null }); // coming back here doesn't start again
+    navigate(location.pathname + location.search, { replace: true, state: null }); // coming back here doesn't start again
     if (ai && photos.length)
       void addFiles(photos).then((ready) => {
         if (ready.length) void run('upload', '', ready);
