@@ -1814,7 +1814,8 @@
     "nothingNew": "Everything in there is already in your deck.",
     "open": "Add notes",
     "openBody": "Photos, a PDF or text: more questions",
-    "added": "Added {{ideas}} new ideas and {{facts}} new facts. Lumo is writing their questions."
+    "added": "Added to your deck: new ideas {{ideas}}, new facts {{facts}}. Lumo is writing their questions.",
+    "go": "Add to my deck"
   },
   "questions": {
     "open": "All questions",

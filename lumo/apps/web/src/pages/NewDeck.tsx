@@ -294,7 +294,7 @@ export function NewDeck() {
               ))}
             </div>
             <button disabled={topic.trim().length < 3} className="btn-gold w-full rounded-2xl py-4 text-lg font-black disabled:opacity-60">
-              ✨ {t('local.makeFromTopic')}
+              ✨ {addTo ? t('addNotes.go') : t('local.makeFromTopic')}
             </button>
           </form>
         )}
@@ -348,7 +348,7 @@ export function NewDeck() {
               </ul>
             )}
             <button type="button" disabled={files.length === 0} onClick={() => void run('upload')} className="btn-gold w-full rounded-2xl py-4 text-lg font-black disabled:opacity-60">
-              ✨ {t('create.readFiles')}
+              ✨ {addTo ? t('addNotes.go') : t('create.readFiles')}
             </button>
             <p className="text-xs text-muted">{t(NETLIFY ? 'create.privacySite' : 'local.photosPrivacy')}</p>
           </section>
@@ -391,7 +391,7 @@ export function NewDeck() {
             </div>
             {!ai && <p className="rounded-2xl bg-surface-2 px-3 py-2 text-xs text-muted">{t('local.notesTip')}</p>}
             <button disabled={notes.trim().length < (ai ? 3 : 20)} className="btn-gold w-full rounded-2xl py-4 text-lg font-black disabled:opacity-60">
-              ✨ {t('local.makeDeck')}
+              ✨ {addTo ? t('addNotes.go') : t('local.makeDeck')}
             </button>
           </form>
         )}

@@ -138,6 +138,18 @@ function clean(raw: unknown): ConceptInput[] {
 
 const PART = /\s\((\d+)\)$/;
 
+/** Words that carry a fact's meaning (not "the", "le", "est"…). */
+const SMALL = new Set('the a an of in on at to is are was were and or for by with from that this it its le la les un une des de du au aux et ou en est sont était dans par pour sur avec qui que ce cette ces se sa son ses leur leurs'.split(' '));
+function factWords(f: string): Set<string> {
+  return new Set(norm(f).split(' ').filter((w) => w && !SMALL.has(w)));
+}
+/** Two facts that say the same thing in nearly the same words. */
+function similar(a: Set<string>, b: Set<string>): boolean {
+  let both = 0;
+  for (const w of a) if (b.has(w)) both++;
+  return both / (a.size + b.size - both) >= 0.8;
+}
+
 /**
  * The same sub-aspect read twice (on two pages, or already in the deck) is kept once, with all its
  * facts; one with too many facts is split in parts ("Rome", "Rome (2)"), each fact still its own question.
@@ -161,7 +173,21 @@ export function mergeIdeas(lists: ConceptInput[][]): ConceptInput[] {
     if (!had.examples.length) had.examples = c.examples;
     if (!had.misconceptions.length) had.misconceptions = c.misconceptions;
   }
+  // The same fact written twice (under two ideas, or read on two pages): kept the first time only.
+  const met: Set<string>[] = [];
+  const emptied = new Set<ConceptInput>();
+  for (const c of byKey.values()) {
+    const had = c.keyPoints.length;
+    c.keyPoints = c.keyPoints.filter((f) => {
+      const w = factWords(f);
+      if (w.size >= 3 && met.some((m) => similar(m, w))) return false;
+      met.push(w);
+      return true;
+    });
+    if (had && !c.keyPoints.length) emptied.add(c); // everything it said is said elsewhere
+  }
   return [...byKey.values()]
+    .filter((c) => !emptied.has(c))
     .flatMap((c) => {
       if (c.keyPoints.length <= MAX_FACTS) return [c];
       const parts: ConceptInput[] = [];
@@ -242,7 +268,8 @@ export function readingPrompt(source: Source, language: Locale, o: { options?: D
     'How to break it down:',
     '- "topic": the section or chapter it belongs to (2-8 words). Every sub-aspect of the same section uses exactly the same topic, and lines follow the order of the material.',
     '- One line = ONE sub-aspect: a single term, person, place, event, date, rule, process, part, cause or category. Something with several sides (a war: its causes, its main battles, its results) is split into one sub-aspect per side.',
-    `- "facts": ${detail === 'key' ? '1-3' : '1-5'} facts about that sub-aspect, each one short, complete sentence that stands alone and that a test could ask about (who, what, when, where, how many, why, how, what it causes, what it is made of). One idea per fact: never join two facts with "and". More facts than that: split the sub-aspect in two.`,
+    `- "facts": ${detail === 'key' ? '1-3' : '1-5'} facts about that sub-aspect, each one short, complete sentence that stands alone and that a test could ask about (who, what, when, where, how many, why, how, what it causes, what it is made of). One piece of information per fact (don't pack a date, a person and a cause into one sentence), but a short list that answers one question stays one fact (e.g. "On the forum, Romans did business, politics and religion"). More facts than that: split the sub-aspect in two.`,
+    '- Each fact appears ONCE in the whole deck: never repeat a fact, a date or an event under another sub-aspect (put it under the one it fits best).',
     `- ${amount}`,
     `- ${fromWhere}`,
     detail === 'deep' ? '- For each sub-aspect, add one more fact that explains WHY or HOW (what a good teacher would add at this level), only if you are sure it is correct.' : '',

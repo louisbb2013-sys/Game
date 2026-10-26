@@ -288,6 +288,9 @@ const EXAMPLES: Record<Locale, string> = {
   ].join('\n'),
 };
 
+/** A text cut at a word, for a short list. */
+const short = (t: string, n: number) => (t.length <= n ? t : `${t.slice(0, t.lastIndexOf(' ', n) > n / 2 ? t.lastIndexOf(' ', n) : n)}…`);
+
 /** The mix of question kinds, from the learner's choices for this deck. */
 function mixLine(o: DeckOptions | undefined): string {
   const styles = o?.styles ?? [];
@@ -343,7 +346,7 @@ Write everything in ${fr ? 'French, with the vocabulary Québec schools use (PFE
 ${o?.focus ? `The student says: """${o.focus}"""\n` : ''}
 What the student studied: each idea has numbered facts, and next to each fact how many questions to write on it.
 ${list}
-${others.length ? `\nOther ideas in this deck (use them for tempting wrong answers, and to make the student tell similar ideas apart): ${others.map((c) => `${c.term} (${c.summary.slice(0, 70)})`).join('; ')}\n` : ''}${about}
+${others.length ? `\nOther ideas in this deck (use them for tempting wrong answers, and to make the student tell similar ideas apart): ${others.map((c) => `${c.term} (${short(c.summary, 80)})`).join('; ')}\n` : ''}${about}
 Write exactly the number of questions asked for each fact (${total} lines in all). Each question tests that fact and gives its number in "f" (a question that needs two facts of the same idea lists both). They must feel like a good teacher's test or a ministry exam at this level: they check that the student KNOWS and UNDERSTANDS each fact and can USE it, never that they remember the notes' wording.
 
 When a fact gets two or more questions, each one takes a DIFFERENT angle, for example:

@@ -38,16 +38,23 @@ function need(slot: FactSlot, log: FactLog, states: ReadonlyMap<string, ConceptS
   return n + rng() * 0.4;
 }
 
-/** Reorder so the same idea never comes twice in a row when avoidable (and, with `topics`, nor the same topic). */
-function spread(slots: FactSlot[], topicOf: (id: string) => string, topics: boolean): FactSlot[] {
+/**
+ * Reorder so the same idea never comes twice in a row when avoidable (and, with `topics`, nor the same
+ * topic): each time, an item of the idea with the most items left, so no idea piles up at the end.
+ */
+function spread(slots: FactSlot[], topicOf: (id: string) => string, topics: boolean, rng: Rng): FactSlot[] {
+  const left = new Map<string, FactSlot[]>();
+  for (const x of slots) left.set(x.conceptId, [...(left.get(x.conceptId) ?? []), x]);
   const out: FactSlot[] = [];
-  const rest = slots.slice();
-  while (rest.length) {
-    const prev = out[out.length - 1];
-    let i = topics ? rest.findIndex((x) => x.conceptId !== prev?.conceptId && topicOf(x.conceptId) !== (prev ? topicOf(prev.conceptId) : undefined)) : -1;
-    if (i < 0) i = rest.findIndex((x) => x.conceptId !== prev?.conceptId);
-    if (i < 0) i = 0;
-    out.push(rest.splice(i, 1)[0]!);
+  while (out.length < slots.length) {
+    const prev = out[out.length - 1]?.conceptId;
+    const open = [...left.entries()].filter(([, l]) => l.length);
+    let pool = open.filter(([id]) => id !== prev && (!topics || prev === undefined || topicOf(id) !== topicOf(prev)));
+    if (pool.length === 0) pool = open.filter(([id]) => id !== prev);
+    if (pool.length === 0) pool = open;
+    const most = Math.max(...pool.map(([, l]) => l.length));
+    const top = pool.filter(([, l]) => l.length === most);
+    out.push(top[Math.floor(rng() * top.length)]![1].shift()!);
   }
   return out;
 }
@@ -71,7 +78,7 @@ export function planFullRound(concepts: readonly Concept[], states: ReadonlyMap<
   }
   const topicOf = new Map(concepts.map((c) => [c.id, c.topic || '']));
   const order = [...new Set(concepts.map((c) => c.topic || ''))];
-  return order.flatMap((topic) => spread(shuffle(slots.filter((s) => topicOf.get(s.conceptId) === topic), rng), (id) => topicOf.get(id) ?? '', false));
+  return order.flatMap((topic) => spread(shuffle(slots.filter((s) => topicOf.get(s.conceptId) === topic), rng), (id) => topicOf.get(id) ?? '', false, rng));
 }
 
 /**
@@ -96,7 +103,7 @@ export function planQuickRound(concepts: readonly Concept[], states: ReadonlyMap
     }
   }
   const topicOf = new Map(concepts.map((c) => [c.id, c.topic || '']));
-  return spread(shuffle(picked, rng), (id) => topicOf.get(id) ?? '', true);
+  return spread(shuffle(picked, rng), (id) => topicOf.get(id) ?? '', true, rng);
 }
 
 /**

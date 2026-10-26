@@ -6,6 +6,28 @@ import { api, NETLIFY } from '../lib/api';
 import { FRIENDS_ONLY, myPublicDecks, setPublicDecks, sharedDeck, useNames, useSharedDecks, useTogether, type PublicDeck } from '../local/together';
 import { shareOrCopy } from './QrCode';
 
+/**
+ * The questions a shared deck carries (friends' copies play right away): about two per fact, one-tap
+ * ones first, so many decks fit in the one document a learner shares them in. A friend's own Claude
+ * writes more later.
+ */
+function shareableBank(concepts: Concept[], bank: Question[]): Question[] {
+  const rank = (q: Question) => (q.format === 'multiple_choice' || q.format === 'true_false' ? 0 : q.format === 'type_answer' ? 1 : 2);
+  const per = new Map<string, number>();
+  const facts = concepts.reduce((a, c) => a + Math.max(1, c.keyPoints.length), 0);
+  return bank
+    .slice()
+    .sort((a, b) => rank(a) - rank(b))
+    .filter((q) => {
+      const k = `${q.conceptId}:${q.facts?.[0] ?? '*'}`;
+      const n = per.get(k) ?? 0;
+      if (n >= (q.facts?.length ? 2 : 3)) return false;
+      per.set(k, n + 1);
+      return true;
+    })
+    .slice(0, Math.max(40, facts * 2));
+}
+
 type Shared = PublicDeck & { ownerId: string; fromFriend: boolean };
 
 /** Copy a shared deck into my decks (its questions come along, so it plays right away). */
@@ -91,7 +113,7 @@ export function ShareDeckToggle({ deckId }: { deckId: string }) {
       const list = (await myPublicDecks()).filter((d) => d.id !== deckId);
       if (next !== 'private') {
         const d = await api<{ deck: { id: string; title: string; subject: string; language: Locale }; concepts: Concept[]; bank?: Question[] }>(`/api/decks/${deckId}/offline`);
-        list.unshift({ ...d.deck, concepts: d.concepts, bank: d.bank ?? [], visibility: next, updatedAt: Date.now() });
+        list.unshift({ ...d.deck, concepts: d.concepts, bank: shareableBank(d.concepts, d.bank ?? []), visibility: next, updatedAt: Date.now() });
       }
       await setPublicDecks(list);
       setVis(next);

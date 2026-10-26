@@ -93,8 +93,8 @@
   // Claude writing test questions: one JSON object per line, streamed in a few chunks like the real thing.
   const bankLines = (p) => conceptLines(p).flatMap((term, i) => [
     { c: i + 1, f: 1, type: 'mcq', level: 'apply', context: 'Bank scenario ' + (i + 1) + ': in a lab, a student notices something new.', q: 'Which idea best explains what the student noticed?', options: [term, 'A common mix-up', 'Something unrelated', 'The opposite idea'], answer: 0, why: 'Because of ' + term + '.', wrong: ['', 'This is the classic misconception.', 'This has nothing to do with it.', 'This is backwards.'] },
-    { c: i + 1, f: 1, type: 'tf', level: 'understand', q: 'Bank statement ' + (i + 1) + ': this idea describes something real.', answer: true, why: 'It is a real idea from the course.' },
-    { c: i + 1, f: 1, type: 'written', level: 'analyze', q: 'Bank question ' + (i + 1) + ': explain why this idea matters in a new situation.', points: ['names the idea', 'gives a reason'], model: 'A model answer.', why: 'A full answer names the idea and gives a reason.' },
+    { c: i + 1, f: 1, type: 'tf', level: 'understand', q: 'Bank statement ' + (i + 1) + ': ' + term + ' describes something real.', answer: true, why: 'It is a real idea from the course.' },
+    { c: i + 1, f: 1, type: 'written', level: 'analyze', q: 'Bank question ' + (i + 1) + ': explain why ' + term + ' matters in a new situation.', points: ['names the idea', 'gives a reason'], model: 'A model answer.', why: 'A full answer names the idea and gives a reason.' },
   ].map((o) => JSON.stringify(o)));
   // Every prompt sent to Claude, so tests can check what Lumo told it (e.g. the learner's memory).
   window.__prompts = [];

@@ -366,15 +366,21 @@ export function makeQuestions(concepts: Concept[], language: Locale, count: numb
   return spreadOut(picked, rng).map((q) => ({ ...q, id: `${q.id}-${Math.floor(rng() * 1e9).toString(36)}` }));
 }
 
-/** Mixed so the same idea doesn't come twice in a row when avoidable. */
+/**
+ * Mixed so the same idea doesn't come twice in a row when avoidable: each time, a question from the
+ * idea with the most questions left (other than the last one's), so no idea piles up at the end.
+ */
 function spreadOut(qs: Question[], rng: ReturnType<typeof seededRng>): Question[] {
-  const rest = shuffle(qs, rng);
+  const left = new Map<string, Question[]>();
+  for (const q of shuffle(qs, rng)) left.set(q.conceptId, [...(left.get(q.conceptId) ?? []), q]);
   const out: Question[] = [];
-  while (rest.length) {
-    const prev = out[out.length - 1];
-    let i = rest.findIndex((q) => q.conceptId !== prev?.conceptId);
-    if (i < 0) i = 0;
-    out.push(rest.splice(i, 1)[0]!);
+  while (out.length < qs.length) {
+    const prev = out[out.length - 1]?.conceptId;
+    const choices = [...left.entries()].filter(([id, l]) => l.length && id !== prev);
+    const pool = choices.length ? choices : [...left.entries()].filter(([, l]) => l.length);
+    const most = Math.max(...pool.map(([, l]) => l.length));
+    const top = pool.filter(([, l]) => l.length === most);
+    out.push(top[Math.floor(rng() * top.length)]![1].shift()!);
   }
   return out;
 }

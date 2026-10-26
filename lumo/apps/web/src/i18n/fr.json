@@ -1811,7 +1811,8 @@
     "nothingNew": "Tout ça est déjà dans ton paquet.",
     "open": "Ajouter des notes",
     "openBody": "Photos, PDF ou texte : plus de questions",
-    "added": "{{ideas}} nouvelles notions et {{facts}} nouveaux faits ajoutés. Lumo écrit leurs questions."
+    "added": "Ajouté à ton paquet : nouvelles notions {{ideas}}, nouveaux faits {{facts}}. Lumo écrit leurs questions.",
+    "go": "Ajouter à mon paquet"
   },
   "questions": {
     "open": "Toutes les questions",
