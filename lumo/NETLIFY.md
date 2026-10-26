@@ -24,11 +24,11 @@ my account and data** removes an extra account completely.
 
 ## AI: free allowance or your own key
 
-- **Netlify credits (default):** Claude runs through Netlify's AI Gateway and uses the team's credits (Free: 300 a month; Personal: 1000), **shared with the team's other sites** (bakyos.ca). Netlify **pauses every site if they run out**, so Lumo stops using AI for the month once `LUMO_AI_MONTHLY_USD` has been spent (default $0.75; this site is set to **$1**, about 180 credits). The month starts on `LUMO_AI_RESET_DAY`, the day the team's credits renew (this site: **17**); without it, on the 1st.
+- **Netlify credits (default):** Claude runs through Netlify's AI Gateway and uses the team's credits (Free: 300 a month; Personal: 1000), **shared with the team's other sites** (bakyos.ca). Netlify **pauses every site if they run out**, so Lumo stops using AI for the month once `LUMO_AI_MONTHLY_USD` has been spent (default $0.75; this site is set to **$2**, about 360 credits of the Personal plan's 1000). The month starts on `LUMO_AI_RESET_DAY`, the day the team's credits renew (this site: **17**); without it, on the 1st.
 - **No paid web search on shared credits:** web search costs about a cent per search, so through the gateway decks are built from what Claude knows. `LUMO_AI_WEB_SEARCH=on` turns it back on (with your own key it is always on).
 - **Background checks:** the site checks for new friends' decks, invites and game moves at a calm pace (every 10–15 s, about every second only during a Live game, never while the tab is hidden), since every check is a request Netlify counts. In a Live game every page keeps the site's time (each answer from `/api/data` carries it in `x-lumo-now`), so questions open and answers show on every screen at the same moment.
 - **Unlimited:** an adult creates a key at <https://console.anthropic.com> (pay as you go) and adds it in Netlify: **Project configuration → Environment variables → Add a variable**, key `ANTHROPIC_API_KEY`, marked **secret**. Lumo then uses that key and the monthly cap no longer applies. Never paste the key in a chat.
-- **Model:** `CLAUDE_MODEL`. This site uses **`claude-haiku-5-5`** (about 40 times cheaper: roughly a cent per deck without web search, so about 100 decks a month within the $1 cap). Without the variable it's `claude-opus-5-5` (the best questions, but only a few decks a month for free).
+- **Model:** `CLAUDE_MODEL`. This site uses **`claude-haiku-5-5`** (about 40 times cheaper: about 3-4 cents for a big deck now that every fact gets two questions, so about 55-65 big decks a month within the $2 cap). Without the variable it's `claude-opus-5-5` (the best questions, but only a few decks a month for free).
 
 ## Credits and deploys
 
