@@ -17,6 +17,14 @@ Claude page: https://claude.ai/artifact/4k4wSSahgNoFufuCLYDrHM (republish `lumo/
 - `netlify/`: function `auth`; edge functions `data` (data, rooms, gifts) and `claude` (AI proxy); `lib/` and `tests/`.
 - `apps/server`: older Fastify/Postgres version (still tested, not deployed). `e2e/`: Playwright specs.
 
+## Question system
+- A deck = topics → sub-aspects (`Concept`) → facts (`keyPoints`, one testable fact each). `reader.ts` asks Claude for one JSON line per sub-aspect; `mergeIdeas` drops repeated facts.
+- `writer.ts` writes 2 questions per fact from different angles, each tagged `"f"` (→ `Question.facts`), then fills any fact left without one. `topUpIfLow` writes a new angle when every question of a fact was met.
+- Play = the whole deck, one question per fact (`planFullRound` in `core/quiz/round.ts`, max 150), topic by topic; a miss comes back only with another question; never the same question twice in a round. Quick round = `planQuickRound`. A round waits (`writingNow`) for questions Claude is still writing.
+- Live (`liveLocal.ts` `makeQuestions`): one-tap questions, never repeated, spread over facts; more join mid-game; no 3-2-1.
+- Account copy (Claude page store: 256 KB per document): `deck-<id>`, `bank-<id>-<k>` (question parts), `prog-<id>` (progress, seen, fact log), `main`.
+- Real-output check: run the prompts from `readingPrompt`/`writingPrompt` through the small model and parse with `readDeckLines`/`questionFromDraft`.
+
 ## Commands (run in `lumo/`)
 - Unit tests: `service postgresql start; npm test` and `npm run test:netlify`. Typecheck: `cd apps/web && npx tsc --noEmit -p .`
 - Builds: `npm run build:netlify -w @lumo/web` (website), `npm run build:local -w @lumo/web` (Claude page).
