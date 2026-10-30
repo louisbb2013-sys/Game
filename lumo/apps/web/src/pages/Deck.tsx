@@ -319,6 +319,7 @@ export function Deck() {
             />
           )}
           <ChallengeTile onClick={() => void start('challenge')} busy={starting === 'challenge'} />
+          <ModeTile tone="from-violet-700 to-indigo-950" icon="🗡️" title={t('quest.title')} body={t('quest.tile')} onClick={() => void start('quest')} busy={starting === 'quest'} />
         </section>
       ) : (
         <section className="grid grid-cols-2 gap-3">
@@ -452,7 +453,7 @@ export function Deck() {
             void (async () => {
               setStarting(m);
               try {
-                const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode: m === 'speed' || m === 'boss' || m === 'quick' ? 'practice' : m, length: 10 } });
+                const res = await api<{ session: { id: string } }>(`/api/decks/${id}/sessions`, { method: 'POST', body: { mode: m === 'speed' || m === 'boss' || m === 'quest' || m === 'quick' ? 'practice' : m, length: 10 } });
                 navigate(`/quiz/${res.session.id}`, { state: res });
               } catch (e) {
                 setError(e instanceof ApiError ? e.code : 'network');

@@ -122,6 +122,12 @@
     if (sMode === 'hang') return new Promise(() => {});
     if (sMode === 'deny') throw { code: 'not_granted', message: 'declined' };
     if (String(p).includes('Explain it again')) return { text: 'Think of it like a crowded hallway: people spread out to where there is more room.', truncated: false };
+    if (String(p).includes('You are Lumo, a friendly firefly')) {
+      const text = 'Here is your chess lesson game!\n```html\n<!doctype html><html><head><title>Chess</title></head><body><h1 id="t">Knight moves</h1><button onclick="document.getElementById(\'t\').textContent=\'Right!\'">L-shape</button></body></html>\n```';
+      o.onText && o.onText({ text: text.slice(0, 40), delta: text.slice(0, 40) });
+      await new Promise((r) => setTimeout(r, 150));
+      return { text, truncated: false };
+    }
     if (String(p).includes('Break it into the precise sub-aspects')) {
       await new Promise((r) => setTimeout(r, sMode === 'slow' ? 1500 : 300));
       return { text: deckLines(p), truncated: false };

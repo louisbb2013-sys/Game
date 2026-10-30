@@ -1,4 +1,9 @@
 import {
+  newQuest,
+  questTurn,
+  QUEST_MONSTERS,
+  type QuestAbility,
+  type QuestState,
   BLOOM_LEVELS,
   bloomIndex,
   PASS,
@@ -197,6 +202,8 @@ interface StoredSession {
     points?: number;
     /** Boss battle: the boss's health and the player's shields. */
     boss?: { hp: number; max: number; shields: number };
+    /** Monster Quest: the learner's health, the monster and the spells resting. */
+    quest?: QuestState;
     /** Chests earned (one per 3 right answers) and chests already opened. */
     picks?: number;
     picked?: number;
@@ -1463,7 +1470,11 @@ const LIGHTNING_FORMATS: Format[] = ['multiple_choice', 'true_false'];
 const LIGHTNING_MODES: SessionMode[] = ['practice', 'review', 'wrong_only', 'challenge'];
 const LIGHTNING_MS = 10_000;
 
-const modeFormats = (s: StoredSession): readonly Format[] => s.state.formats ?? (s.mode === 'speed' ? SPEED_FORMATS : LOCAL_FORMATS);
+/** Monster Quest: quick formats, so a fight keeps moving. */
+const QUEST_FORMATS: Format[] = ['multiple_choice', 'true_false', 'type_answer', 'cause_effect'];
+/** Rounds that never run dry: more ideas join before the queue empties. */
+const ENDLESS = (m: SessionMode) => m === 'speed' || m === 'quest';
+const modeFormats = (s: StoredSession): readonly Format[] => s.state.formats ?? (s.mode === 'speed' ? SPEED_FORMATS : s.mode === 'quest' ? QUEST_FORMATS : LOCAL_FORMATS);
 
 /** Variant keys of the questions this round already asked (and the one on screen): a round never asks one twice. */
 const usedIn = (s: StoredSession) => new Set([...s.state.history.map((h) => h.variantKey), ...(s.current ? [s.current.variantKey] : [])]);
@@ -1486,7 +1497,7 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[], 
     const target: ConceptProgress = fit.shift ? { ...base, bloom: BLOOM_LEVELS[Math.max(0, Math.min(BLOOM_LEVELS.length - 1, bloomIndex(base.bloom) + fit.shift))]! } : base;
     const opts = { allowed: modeFormats(s), usedThisSession: usedIn(s), lastSeen: d.seen ?? {}, now: now(), formatBoost: fit.boost, ...(fact >= 0 ? { fact } : {}) };
     let picked = pickFromBank(bank, conceptId, target, opts, rng);
-    if (!picked && s.mode === 'speed') {
+    if (!picked && ENDLESS(s.mode)) {
       // A speed run never stops before the clock: any one-tap question of the deck it hasn't asked yet,
       // and once it has asked them all, they come round again (never the one just asked).
       const pool = bank.filter((q) => modeFormats(s).includes(q.format));
@@ -1526,9 +1537,9 @@ function canAskAgain(s: StoredSession, q: Question, fact: number): boolean {
  * The next question. An item whose questions Claude hasn't written yet goes to the back of the round
  * (while it's writing) or is left out. Null with `waiting`: Claude is still writing what's left.
  */
-/** A speed run keeps going until the clock stops it: more ideas join its queue before it runs dry. */
+/** A speed run (or a quest) keeps going until the clock (or the fight) stops it: more ideas join its queue before it runs dry. */
 function refillSpeed(s: StoredSession) {
-  if (s.mode !== 'speed' || s.state.queue.length >= 3) return;
+  if (!ENDLESS(s.mode) || s.state.queue.length >= 3 || s.state.endedReason) return;
   const dk = deck(s.deckId);
   const more = pickConcepts(dk.concepts, statesMap(dk.concepts.map((c) => c.id)), 20, 'speed', now(), seededRng(hashString(`${s.id}:${s.state.answered}`)));
   s.state.queue = [...s.state.queue, ...more];
@@ -1593,6 +1604,7 @@ function publicSession(s: StoredSession) {
     timeLimitMs: s.state.timeLimitMs,
     points: s.state.points,
     boss: s.state.boss,
+    quest: s.state.quest,
     chests: Math.max(0, (s.state.picks ?? 0) - (s.state.picked ?? 0)),
     lightning: s.current && s.state.lightning === s.current.id ? LIGHTNING_MS : undefined,
     best: s.mode === 'speed' ? (load().bests?.[s.deckId]?.speed ?? 0) : undefined,
@@ -1639,14 +1651,14 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
   const u = load().user;
   if (mode === 'challenge' && currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, now()).hearts <= 0) throw new LocalError(403, 'no_hearts');
   const exam = mode === 'exam';
-  const allowed: readonly Format[] = formats?.length ? formats : exam ? EXAM_FORMATS : mode === 'speed' ? SPEED_FORMATS : LOCAL_FORMATS;
+  const allowed: readonly Format[] = formats?.length ? formats : exam ? EXAM_FORMATS : mode === 'speed' ? SPEED_FORMATS : mode === 'quest' ? QUEST_FORMATS : LOCAL_FORMATS;
   const wholeDeck = full && mode === 'practice' && !formats?.length;
   // With a bank, only ideas that already have questions (Claude may still be writing the rest), except in
   // a whole-deck round: there, ideas still being written come later in the round.
   const covered = dk.bank?.length && !(wholeDeck && writingNow.has(deckId)) ? new Set(dk.bank.filter((q) => allowed.includes(q.format)).map((q) => q.conceptId)) : null;
   const pool = covered ? dk.concepts.filter((c) => covered.has(c.id)) : dk.concepts;
   if (pool.length === 0) throw new LocalError(422, 'no_questions');
-  const count = mode === 'speed' ? 40 : mode === 'boss' ? BOSS_LENGTH : length;
+  const count = mode === 'speed' || mode === 'quest' ? 40 : mode === 'boss' ? BOSS_LENGTH : length;
   const rng = seededRng(hashString(`${u.id}:${now()}`));
   const states = statesMap(pool.map((c) => c.id));
   const log = load().factLog ?? {};
@@ -1679,6 +1691,7 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
       ...(exam ? { startedAt: now(), timeLimitMs: examTimeLimitMs(ids.length) } : {}),
       ...(mode === 'speed' ? { startedAt: now(), timeLimitMs: SPEED_MS, points: 0 } : {}),
       ...(mode === 'boss' ? { boss: { hp: BOSS_HP, max: BOSS_HP, shields: BOSS_SHIELDS } } : {}),
+      ...(mode === 'quest' ? { quest: newQuest() } : {}),
       ...(wholeDeck ? { full: true } : {}),
       picks: 0,
       picked: 0,
@@ -1715,6 +1728,7 @@ function getSession(id: string): StoredSession {
 /** Stars for a round: 3 when (almost) everything was right or every miss got fixed later. */
 function starsFor(s: StoredSession): number {
   if (s.mode === 'boss') return s.state.endedReason === 'boss_defeated' ? Math.max(1, s.state.boss?.shields ?? 1) : 0;
+  if (s.mode === 'quest') return s.state.endedReason === 'quest_won' ? 3 : Math.min(2, s.state.quest?.defeated ?? 0);
   const answered = s.state.answered;
   if (answered === 0) return 0;
   const accuracy = s.state.correct / answered;
@@ -1785,6 +1799,9 @@ function finish(s: StoredSession) {
     mine.bossWins = (mine.bossWins ?? 0) + 1;
     coins += 15;
   }
+  // Monster Quest: each beaten monster already paid; the whole run beaten pays a little more.
+  const questWon = s.mode === 'quest' && s.state.endedReason === 'quest_won';
+  if (questWon) coins += 20;
   coins = withGold(coins);
   u.coins += coins;
   s.status = 'done';
@@ -1797,6 +1814,8 @@ function finish(s: StoredSession) {
   // A chest for a finished round: better for a perfect round, a beaten boss or a new record.
   let chest: ChestKind | null = null;
   if (bossWon) chest = (s.state.boss?.shields ?? 0) >= BOSS_SHIELDS ? 'epic' : 'rare';
+  else if (questWon) chest = 'epic';
+  else if (s.mode === 'quest') chest = (s.state.quest?.defeated ?? 0) >= 3 ? 'rare' : (s.state.quest?.defeated ?? 0) >= 1 ? 'common' : null;
   else if (newBest && previousBest > 0) chest = 'common';
   else if (s.mode !== 'speed' && s.mode !== 'boss' && s.state.answered >= 5) chest = accuracy === 1 ? 'rare' : 'common';
   if (chest) {
@@ -1822,6 +1841,7 @@ function finish(s: StoredSession) {
     best: s.mode === 'speed' ? Math.max(previousBest, s.state.points ?? 0) : undefined,
     newBest,
     boss: s.state.boss,
+    quest: s.state.quest,
     chestsLeft: Math.max(0, (s.state.picks ?? 0) - (s.state.picked ?? 0)),
     missed: (s.state.missed ?? []).slice(0, 12),
     rewards,
@@ -1832,7 +1852,7 @@ function finish(s: StoredSession) {
   };
 }
 
-async function answer(sessionId: string, questionId: string, a: Answer, timeMs?: number) {
+async function answer(sessionId: string, questionId: string, a: Answer, timeMs?: number, ability?: QuestAbility) {
   const t = now();
   const s = getSession(sessionId);
   if (s.status !== 'active') throw new LocalError(409, 'session_done');
@@ -1941,12 +1961,23 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
       if (boss.shields === 0) s.state.endedReason = 'out_of_hearts';
     }
   }
+  // Monster Quest: a right answer casts the spell picked; a miss lets the monster strike.
+  let questMove: (Omit<ReturnType<typeof questTurn>, 'state'> & { coins: number }) | undefined;
+  if (s.mode === 'quest' && s.state.quest) {
+    const { state: qs, ...turn } = questTurn(s.state.quest, ability ?? 'strike', g.correct, outcome.combo);
+    s.state.quest = qs;
+    const coins = turn.defeated ? withGold(turn.defeated.coins) : 0;
+    u.coins += coins;
+    s.state.petCoins = (s.state.petCoins ?? 0) + coins;
+    questMove = { ...turn, coins };
+    if (turn.finished) s.state.endedReason = turn.finished === 'won' ? 'quest_won' : 'quest_lost';
+  }
   // Now and then, a surprise gift drops in after a right answer (tap it to open). Not in a mock exam,
   // never in the first few answers, at most two a round.
   let gift: string | undefined;
   const answeredNow = s.state.answered;
   const maxGifts = Math.max(2, Math.floor(s.state.total / 15));
-  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && answeredNow >= 3 && (s.state.gifts ?? 0) < maxGifts && answeredNow >= (s.state.giftAfter ?? 0) && Math.random() < GIFT_CHANCE) {
+  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && s.mode !== 'quest' && answeredNow >= 3 && (s.state.gifts ?? 0) < maxGifts && answeredNow >= (s.state.giftAfter ?? 0) && Math.random() < GIFT_CHANCE) {
     gift = uid();
     s.state.gift = { id: gift, at: now() };
     s.state.gifts = (s.state.gifts ?? 0) + 1;
@@ -1955,7 +1986,7 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   // Every few right answers earn a chest to pick (every 3 in a short round, every 6 in a long one; not in a mock exam or a speed run).
   let chest = false;
   const chestEvery = s.state.total >= 40 ? 6 : 3;
-  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && s.state.correct > 0 && s.state.correct % chestEvery === 0) {
+  if (g.correct && s.mode !== 'exam' && s.mode !== 'speed' && s.mode !== 'quest' && s.state.correct > 0 && s.state.correct % chestEvery === 0) {
     s.state.picks = (s.state.picks ?? 0) + 1;
     chest = true;
   }
@@ -1968,7 +1999,7 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   const { gradedBy: _g, ...result } = g;
   return {
     rewards,
-    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, masteredTerm: masteredNow ? concepts.find((c) => c.id === q.conceptId)?.term : undefined, points, damage, shield, chest, lightning, petCoins, petGift, gift, golden, topicDone, fixed },
+    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, masteredTerm: masteredNow ? concepts.find((c) => c.id === q.conceptId)?.term : undefined, points, damage, shield, chest, lightning, quest: questMove, petCoins, petGift, gift, golden, topicDone, fixed },
     session: publicSession(s),
     next: next ? publicQuestion(next) : null,
     summary,
@@ -2463,7 +2494,7 @@ const routes: [string, RegExp, Handler][] = [
       return { session: publicSession(s), question: s.current ? publicQuestion(s.current) : null };
     },
   ],
-  ['POST', /^\/api\/sessions\/([\w-]+)\/answer$/, (m, b) => answer(m[1]!, String(b.questionId), b.answer as Answer, Number(b.timeMs))],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/answer$/, (m, b) => answer(m[1]!, String(b.questionId), b.answer as Answer, Number(b.timeMs), typeof b.ability === 'string' ? (b.ability as QuestAbility) : undefined)],
   ['POST', /^\/api\/sessions\/([\w-]+)\/end$/, (m) => endRun(getSession(m[1]!), 'time_up')],
   ['POST', /^\/api\/sessions\/([\w-]+)\/go$/, (m) => goNow(m[1]!)],
   ['POST', /^\/api\/sessions\/([\w-]+)\/hint$/, (m) => hint(m[1]!)],

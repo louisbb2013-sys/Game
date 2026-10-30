@@ -672,7 +672,9 @@
       "galaxy_dragon": "Dragon galactique",
       "prism_axolotl": "Axolotl prisme",
       "nebula_manta": "Raie nébuleuse",
-      "lumo_firefly": "Luciole Lumo"
+      "lumo_firefly": "Luciole Lumo",
+      "solar_lion": "Lion solaire",
+      "divine_griffin": "Griffon divin"
     },
     "rarity": {
       "common": "Commun",
@@ -682,7 +684,9 @@
       "mythical": "Mythique",
       "exotic": "Exotique",
       "galaxial": "Galaxial",
-      "lumo": "Lumo"
+      "lumo": "Lumo",
+      "celestial": "Céleste",
+      "divine": "Divin"
     },
     "mood": {
       "happy": "Heureux",
@@ -1867,6 +1871,208 @@
       "duplicate": "Cette question est déjà dans le paquet.",
       "concept_not_found": "Choisis une notion.",
       "network": "Impossible d’enregistrer. Réessaie."
+    }
+  },
+  "petx": {
+    "boostLockedTitle": "Gros boost au niveau 50",
+    "boostLocked": "Au niveau {{level}}, ce pet choisit un gros boost (moitié de la puissance), pleine puissance au niveau 100. Maintenant : niveau {{now}}.",
+    "boostFull": "Boost à pleine puissance",
+    "boostFullBody": "Niveau 100 : le boost est à pleine puissance. Tu peux le changer quand tu veux.",
+    "boostHalf": "Boost débloqué (moitié)",
+    "boostHalfBody": "Choisis-en un. Il double au niveau {{level}}.",
+    "boostPick": "Choisis un boost",
+    "boostLine": {
+      "xp": "+{{pct}} % d'XP",
+      "coins": "+{{n}} pièces par réponse",
+      "egg": "+{{pct}} % vitesse des œufs",
+      "heart": "+{{pct}} % de chance de regagner un cœur"
+    },
+    "makerTitle": "Crée un pet",
+    "makerBody": "Choisis son look, son nom et sa rareté, puis dépense ses points sur 2 bonus maximum. Plus il est rare, plus il coûte et plus il a de points. Lumo vérifie les règles.",
+    "name": "Nom",
+    "look": "Look",
+    "rarity": "Rareté",
+    "bonuses": "Bonus (jusqu'à {{max}})",
+    "points": "Points",
+    "pointsUsed": "Points utilisés : {{used}} / {{budget}}",
+    "kind": {
+      "xp": "XP",
+      "coins": "Pièces",
+      "egg": "Vitesse des œufs",
+      "heart": "Cœurs"
+    },
+    "less": "Moins de {{kind}}",
+    "more": "Plus de {{kind}}",
+    "rules": "Règles : jusqu'à {{max}} sortes de bonus, selon les points de la rareté. La rareté Lumo ne peut pas être créée.",
+    "problems": {
+      "no_bonus": "Choisis au moins un bonus.",
+      "too_many_points": "Trop de points pour cette rareté.",
+      "name": "Donne un nom à ton pet.",
+      "not_enough_coins": "Pas encore assez de pièces.",
+      "bad_rarity": "Cette rareté ne peut pas être créée.",
+      "bad_body": "Choisis un look.",
+      "too_many_kinds": "Seulement 2 sortes de bonus.",
+      "bad_value": "Cette valeur n'est pas permise.",
+      "bad_pet_name": "Choisis un autre nom."
+    },
+    "make": "Créer mon pet",
+    "designed": "Créé par toi",
+    "lumoPowerHint": "Le pouvoir Lumo s'additionne pour chaque pet Lumo de ton équipe et grandit avec son niveau.",
+    "feedAll_one": "Tout nourrir ({{count}} collation)",
+    "feedAll_other": "Tout nourrir ({{count}} collations)",
+    "design": "Créer un pet",
+    "buyEggs": "Acheter des œufs",
+    "giftRarity": "Rareté",
+    "giftLevel": "Niveau"
+  },
+  "shopx": {
+    "eggsTitle": "Œufs par rareté",
+    "eggsBody": "Choisis la rareté : l'œuf donne un pet de cette rareté.",
+    "buyEgg": "Acheter un œuf {{rarity}}",
+    "eggBought": "Œuf {{rarity}} acheté! Il est dans tes pets.",
+    "less": "Un de moins",
+    "more": "Un de plus",
+    "max": "Max",
+    "boughtN": "Acheté : {{n}} × {{item}}"
+  },
+  "importx": {
+    "title": "Importer des cartes",
+    "body": "Tu viens de Gizmo, Quizlet ou Knowt? Colle tes cartes : une par ligne, le terme et la définition séparés par une tabulation, « - », « : » ou « ; ».",
+    "label": "Tes cartes",
+    "placeholder": "photosynthèse - comment les plantes font leur nourriture avec la lumière\nmitose : division d'une cellule en 2 cellules identiques",
+    "go": "Créer mon deck",
+    "defaultTitle": "Mes cartes importées",
+    "noCards": "Aucune carte trouvée. Mets-en une par ligne, comme : terme - définition",
+    "whyTitle": "Tu viens de Gizmo?",
+    "whyBody": "Apporte tes cartes en quelques secondes, et obtiens plus que des cartes :",
+    "reasons": [
+      "Lumo écrit de vraies questions d'examen à partir de tes notes",
+      "Des rondes qui couvrent chaque fait du deck, jamais la même question deux fois",
+      "Des pets, des grades, des cadeaux quotidiens, la Quête des monstres et le Live entre amis",
+      "Gratuit, en français et en anglais"
+    ]
+  },
+  "grades": {
+    "names": {
+      "grade4": "Grade 4",
+      "grade3": "Grade 3",
+      "grade2": "Grade 2",
+      "semi1": "Semi-grade 1",
+      "grade1": "Grade 1",
+      "special1": "Grade spécial 1",
+      "special": "Grade spécial"
+    },
+    "next": "Prochain : {{grade}} au niveau {{level}}",
+    "top": "Le plus haut grade!",
+    "promoted": "Promu au {{grade}}!",
+    "promotedCoins": "+{{coins}} pièces",
+    "promotedChest": "+{{coins}} pièces et un {{chest}}"
+  },
+  "daily": {
+    "title": "Cadeau du jour",
+    "streak_one": "{{count}} jour de suite",
+    "streak_other": "{{count}} jours de suite",
+    "day": "Jour {{n}}",
+    "claim": "Ouvrir le cadeau du jour",
+    "comeBack": "Reviens demain pour le prochain",
+    "gotCoins": "+{{n}} pièces!",
+    "gotChest": "Un coffre! Ouvre-le dans tes récompenses.",
+    "got": {
+      "pet_food": "+{{n}} collations pour pets!",
+      "xp_boost": "Un boost d'XP!",
+      "egg_rare": "Un œuf rare!"
+    }
+  },
+  "sandboxx": {
+    "stars_one": "{{count}} étoile",
+    "stars_other": "{{count}} étoiles",
+    "played_one": "{{count}} partie jouée",
+    "played_other": "{{count}} parties jouées",
+    "rank": {
+      "rookie": "Débutant",
+      "explorer": "Explorateur",
+      "master": "Maître",
+      "legend": "Légende"
+    },
+    "dailyTitle": "Défi du jour : XP double",
+    "dailyDone": "Défi du jour réussi!",
+    "dailyBody": "Joue-le aujourd'hui pour gagner l'XP double.",
+    "dailyWon": "Défi du jour réussi : XP double!",
+    "surprise": "Surprends-moi",
+    "askLumo": "Demande à Lumo de créer n'importe quel jeu",
+    "new": "Nouveau",
+    "bestStars": "Record : {{n}}★"
+  },
+  "quest": {
+    "title": "Quête des monstres",
+    "tile": "Bats 5 monstres avec des sorts",
+    "rules": "Choisis un sort, puis réponds. Bonne réponse : ton sort frappe. Mauvaise : le monstre te frappe. Bats les 5 monstres!",
+    "wave": "{{n}}/{{total}}",
+    "monsterHp": "Vie du monstre",
+    "yourHp": "Ta vie",
+    "shieldUp": "Bouclier actif",
+    "pick": "Choisis un sort",
+    "beaten_one": "{{count}} monstre battu",
+    "beaten_other": "{{count}} monstres battus",
+    "spells": {
+      "strike": "Coup",
+      "fireball": "Boule de feu",
+      "heal": "Soin",
+      "shield": "Bouclier"
+    },
+    "spellHelp": {
+      "strike": "Coup : {{n}} dégâts, toujours prêt.",
+      "fireball": "Boule de feu : {{n}} dégâts, puis repos 2 tours.",
+      "heal": "Soin : +{{n}} de vie, puis repos 3 tours.",
+      "shield": "Bouclier : bloque le prochain coup, puis repos 2 tours."
+    },
+    "cast": {
+      "strike": "Coup! -{{n}}",
+      "fireball": "Boule de feu! -{{n}}",
+      "heal": "Soigné +{{h}}",
+      "shield": "Bouclier! -{{n}}"
+    },
+    "defeated": "Monstre battu! +{{coins}} pièces",
+    "won": "Quête réussie!",
+    "lost_one": "Vaincu après {{count}} monstre",
+    "lost_other": "Vaincu après {{count}} monstres",
+    "left_one": "{{count}} monstre battu",
+    "left_other": "{{count}} monstres battus",
+    "monsters": {
+      "slime": "Gluant",
+      "goblin": "Gobelin",
+      "golem": "Golem de pierre",
+      "wyvern": "Wyverne",
+      "shadow_king": "Roi des ombres"
+    }
+  },
+  "askLumo": {
+    "title": "Parle à Lumo",
+    "sub": "Discute de tout ce que tu apprends. Lumo peut même créer des jeux.",
+    "homeBody": "Discute comme avec Claude : explique, questionne, ou crée un jeu pour apprendre.",
+    "hello": "Salut! Demande-moi n'importe quoi : expliquer une leçon, te questionner, planifier ton étude, ou créer un jeu pour apprendre (échecs, maths, langues…).",
+    "ideas": {
+      "chess": "Crée-moi un jeu pour apprendre les échecs",
+      "quiz": "Questionne-moi sur le passé composé",
+      "explain": "Explique la photosynthèse comme un jeu vidéo",
+      "game": "Crée un jeu de vitesse sur les tables de multiplication"
+    },
+    "decksHint": "Tu veux un deck à partir de tes notes?",
+    "makeDeck": "Créer un deck",
+    "new": "Nouvelle discussion",
+    "placeholder": "Demande n'importe quoi à Lumo…",
+    "send": "Envoyer",
+    "stop": "Arrêter",
+    "thinking": "Lumo réfléchit…",
+    "building": "Lumo crée ton jeu…",
+    "play": "Jouer au jeu",
+    "backToChat": "Retour à la discussion",
+    "errors": {
+      "unavailable": "L'IA de Lumo n'est pas disponible ici en ce moment.",
+      "rate_limited": "Trop de messages. Attends une minute et réessaie.",
+      "not_granted": "Permets à Lumo d'utiliser Claude, puis réessaie.",
+      "refused": "Lumo ne peut pas aider avec ça. Essaie autre chose.",
+      "upstream_error": "Quelque chose n'a pas marché. Réessaie."
     }
   }
 }

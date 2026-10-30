@@ -672,7 +672,9 @@
       "galaxy_dragon": "Galaxy Dragon",
       "prism_axolotl": "Prism Axolotl",
       "nebula_manta": "Nebula Manta",
-      "lumo_firefly": "Lumo Firefly"
+      "lumo_firefly": "Lumo Firefly",
+      "solar_lion": "Solar Lion",
+      "divine_griffin": "Divine Griffin"
     },
     "rarity": {
       "common": "Common",
@@ -682,7 +684,9 @@
       "mythical": "Mythical",
       "exotic": "Exotic",
       "galaxial": "Galaxial",
-      "lumo": "Lumo"
+      "lumo": "Lumo",
+      "celestial": "Celestial",
+      "divine": "Divine"
     },
     "mood": {
       "happy": "Happy",
@@ -1870,6 +1874,208 @@
       "duplicate": "This question is already in the deck.",
       "concept_not_found": "Pick an idea for it.",
       "network": "Couldn't save. Try again."
+    }
+  },
+  "petx": {
+    "boostLockedTitle": "Big boost at level 50",
+    "boostLocked": "At level {{level}}, this pet picks a big boost (half power), full power at level 100. Now: level {{now}}.",
+    "boostFull": "Full power boost",
+    "boostFullBody": "Level 100: the boost is at full power. You can change it any time.",
+    "boostHalf": "Boost unlocked (half power)",
+    "boostHalfBody": "Pick one. It doubles to full power at level {{level}}.",
+    "boostPick": "Pick a boost",
+    "boostLine": {
+      "xp": "+{{pct}}% XP",
+      "coins": "+{{n}} coins an answer",
+      "egg": "+{{pct}}% egg speed",
+      "heart": "+{{pct}}% chance of a heart back"
+    },
+    "makerTitle": "Design a pet",
+    "makerBody": "Pick its look, name and rarity, then spend its points on up to 2 bonuses. Rarer pets cost more and get more points. Lumo checks the rules.",
+    "name": "Name",
+    "look": "Look",
+    "rarity": "Rarity",
+    "bonuses": "Bonuses (up to {{max}})",
+    "points": "Points",
+    "pointsUsed": "Points used: {{used}} / {{budget}}",
+    "kind": {
+      "xp": "XP",
+      "coins": "Coins",
+      "egg": "Egg speed",
+      "heart": "Hearts"
+    },
+    "less": "Less {{kind}}",
+    "more": "More {{kind}}",
+    "rules": "Rules: up to {{max}} kinds of bonus, within the points of the rarity. Lumo rarity can't be designed.",
+    "problems": {
+      "no_bonus": "Pick at least one bonus.",
+      "too_many_points": "Too many points for this rarity.",
+      "name": "Give your pet a name.",
+      "not_enough_coins": "Not enough coins yet.",
+      "bad_rarity": "This rarity can't be designed.",
+      "bad_body": "Pick a look.",
+      "too_many_kinds": "Only 2 kinds of bonus.",
+      "bad_value": "That bonus value isn't allowed.",
+      "bad_pet_name": "Pick another name."
+    },
+    "make": "Make my pet",
+    "designed": "Designed",
+    "lumoPowerHint": "Lumo power adds up for each Lumo pet on your team and grows with its level.",
+    "feedAll_one": "Feed all ({{count}} snack)",
+    "feedAll_other": "Feed all ({{count}} snacks)",
+    "design": "Design a pet",
+    "buyEggs": "Buy eggs",
+    "giftRarity": "Rarity",
+    "giftLevel": "Level"
+  },
+  "shopx": {
+    "eggsTitle": "Rarity eggs",
+    "eggsBody": "Pick the rarity: the egg hatches a pet of that rarity.",
+    "buyEgg": "Buy {{rarity}} egg",
+    "eggBought": "{{rarity}} egg bought! It's in your pets.",
+    "less": "One less",
+    "more": "One more",
+    "max": "Max",
+    "boughtN": "Bought {{n}} × {{item}}"
+  },
+  "importx": {
+    "title": "Import cards",
+    "body": "Coming from Gizmo, Quizlet or Knowt? Paste your cards: one per line, term and definition split by a tab, \" - \", \":\" or \";\".",
+    "label": "Your cards",
+    "placeholder": "photosynthesis - how plants make food from light\nmitosis: cell division into 2 identical cells",
+    "go": "Make my deck",
+    "defaultTitle": "My imported cards",
+    "noCards": "No cards found. Put one per line, like: term - definition",
+    "whyTitle": "Switching from Gizmo?",
+    "whyBody": "Bring your cards in seconds, then get more than flashcards:",
+    "reasons": [
+      "Lumo writes real test questions from your notes, not just flip cards",
+      "Whole-deck rounds that cover every fact, never the same question twice",
+      "Pets, grades, daily gifts, Monster Quest and Live games with friends",
+      "Free, in English and French"
+    ]
+  },
+  "grades": {
+    "names": {
+      "grade4": "Grade 4",
+      "grade3": "Grade 3",
+      "grade2": "Grade 2",
+      "semi1": "Semi-grade 1",
+      "grade1": "Grade 1",
+      "special1": "Special grade 1",
+      "special": "Special grade"
+    },
+    "next": "Next: {{grade}} at level {{level}}",
+    "top": "Highest grade!",
+    "promoted": "Promoted to {{grade}}!",
+    "promotedCoins": "+{{coins}} coins",
+    "promotedChest": "+{{coins}} coins and a {{chest}}"
+  },
+  "daily": {
+    "title": "Daily gift",
+    "streak_one": "{{count}} day in a row",
+    "streak_other": "{{count}} days in a row",
+    "day": "Day {{n}}",
+    "claim": "Open today's gift",
+    "comeBack": "Come back tomorrow for the next one",
+    "gotCoins": "+{{n}} coins!",
+    "gotChest": "A chest! Open it in your rewards.",
+    "got": {
+      "pet_food": "+{{n}} pet snacks!",
+      "xp_boost": "An XP boost!",
+      "egg_rare": "A rare egg!"
+    }
+  },
+  "sandboxx": {
+    "stars_one": "{{count}} star",
+    "stars_other": "{{count}} stars",
+    "played_one": "{{count}} game played",
+    "played_other": "{{count}} games played",
+    "rank": {
+      "rookie": "Rookie",
+      "explorer": "Explorer",
+      "master": "Master",
+      "legend": "Legend"
+    },
+    "dailyTitle": "Today's challenge: double XP",
+    "dailyDone": "Today's challenge done!",
+    "dailyBody": "Play it today to earn double XP.",
+    "dailyWon": "Daily challenge done: double XP!",
+    "surprise": "Surprise me",
+    "askLumo": "Ask Lumo to build any game",
+    "new": "New",
+    "bestStars": "Best: {{n}}★"
+  },
+  "quest": {
+    "title": "Monster Quest",
+    "tile": "Beat 5 monsters with spells",
+    "rules": "Pick a spell, then answer. Right: your spell hits. Wrong: the monster hits you. Beat all 5 monsters!",
+    "wave": "{{n}}/{{total}}",
+    "monsterHp": "Monster health",
+    "yourHp": "Your health",
+    "shieldUp": "Shield up",
+    "pick": "Pick a spell",
+    "beaten_one": "{{count}} monster beaten",
+    "beaten_other": "{{count}} monsters beaten",
+    "spells": {
+      "strike": "Strike",
+      "fireball": "Fireball",
+      "heal": "Heal",
+      "shield": "Shield"
+    },
+    "spellHelp": {
+      "strike": "Strike: {{n}} damage, always ready.",
+      "fireball": "Fireball: {{n}} damage, then rests 2 turns.",
+      "heal": "Heal: +{{n}} health, then rests 3 turns.",
+      "shield": "Shield: blocks the next hit, then rests 2 turns."
+    },
+    "cast": {
+      "strike": "Strike! -{{n}}",
+      "fireball": "Fireball! -{{n}}",
+      "heal": "Healed +{{h}}",
+      "shield": "Shield up! -{{n}}"
+    },
+    "defeated": "Monster beaten! +{{coins}} coins",
+    "won": "Quest complete!",
+    "lost_one": "Defeated after {{count}} monster",
+    "lost_other": "Defeated after {{count}} monsters",
+    "left_one": "{{count}} monster beaten",
+    "left_other": "{{count}} monsters beaten",
+    "monsters": {
+      "slime": "Slime",
+      "goblin": "Goblin",
+      "golem": "Stone Golem",
+      "wyvern": "Wyvern",
+      "shadow_king": "Shadow King"
+    }
+  },
+  "askLumo": {
+    "title": "Ask Lumo",
+    "sub": "Chat about anything you learn. Lumo can even build games.",
+    "homeBody": "Chat like with Claude: explain, quiz, or build a study game.",
+    "hello": "Hi! Ask me anything: explain a lesson, quiz you, plan your studying, or build a game to learn (chess, maths, languages…).",
+    "ideas": {
+      "chess": "Make me a chess lesson game for beginners",
+      "quiz": "Quiz me on the French passé composé",
+      "explain": "Explain photosynthesis like a video game",
+      "game": "Build a times-table speed game"
+    },
+    "decksHint": "Want a deck from your notes?",
+    "makeDeck": "Make a deck",
+    "new": "New chat",
+    "placeholder": "Ask Lumo anything…",
+    "send": "Send",
+    "stop": "Stop",
+    "thinking": "Lumo is thinking…",
+    "building": "Building your game…",
+    "play": "Play the game",
+    "backToChat": "Back to chat",
+    "errors": {
+      "unavailable": "Lumo's AI isn't available here right now.",
+      "rate_limited": "Too many messages. Wait a minute and try again.",
+      "not_granted": "Allow Lumo to use Claude, then try again.",
+      "refused": "Lumo can't help with that one. Try something else.",
+      "upstream_error": "Something went wrong. Try again."
     }
   }
 }

@@ -16,6 +16,7 @@ const ChatHome = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Cha
 const Deck = lazy(() => import('./pages/Deck').then((m) => ({ default: m.Deck })));
 const DeckQuestions = lazy(() => import('./pages/DeckQuestions').then((m) => ({ default: m.DeckQuestions })));
 const Sandbox = lazy(() => import('./pages/Sandbox').then((m) => ({ default: m.Sandbox })));
+const AskLumo = lazy(() => import('./pages/AskLumo').then((m) => ({ default: m.AskLumo })));
 const SandboxPlay = lazy(() => import('./pages/SandboxPlay').then((m) => ({ default: m.SandboxPlay })));
 const League = lazy(() => import('./pages/League').then((m) => ({ default: m.League })));
 const Pets = lazy(() => import('./pages/Pets').then((m) => ({ default: m.Pets })));
@@ -101,6 +102,7 @@ function AppRoutes() {
             <Route path="chat" element={LOCAL ? <NewDeck /> : <ChatHome />} />
             <Route path="chat/:id" element={<Chat />} />
             <Route path="sandbox" element={<Sandbox />} />
+            <Route path="lumo" element={<AskLumo />} />
             <Route path="sandbox/play/:id" element={<SandboxPlay />} />
             <Route path="live" element={<LiveHome />} />
             <Route path="friends" element={LOCAL ? <LocalFriends /> : <Friends />} />

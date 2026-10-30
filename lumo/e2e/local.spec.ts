@@ -92,7 +92,7 @@ test('pets climb the rarities: Common → Rare with enough level and coins; the 
   expect(Math.round(box.width)).toBe(view.width);
   expect(Math.round(box.height)).toBe(view.height);
   await expect(page.getByTestId('pet-rarity')).toHaveText('Common');
-  await expect(page.getByRole('list', { name: 'Rarity' }).getByRole('listitem')).toHaveText(['Common', 'Rare', 'Epic', 'Legendary', 'Mythical', 'Exotic', 'Galaxial', 'Lumo']);
+  await expect(page.getByRole('list', { name: 'Rarity' }).getByRole('listitem')).toHaveText(['Common', 'Rare', 'Epic', 'Legendary', 'Mythical', 'Exotic', 'Galaxial', 'Celestial', 'Divine', 'Lumo']);
   // Not yet: the pet needs level 4 and 200 coins.
   await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Rare');
   await expect(page.getByTestId('pet-upgrade').getByRole('button', { name: 'Upgrade' })).toBeDisabled();
@@ -268,7 +268,7 @@ test('while playing, a surprise gift drops in now and then: tap it before it flo
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.coins)).toBe(before + 3);
 });
 
-test('a Lumo-rarity pet has Lumo power: +50% XP and +50% coins on top of its own bonus', async ({ page }) => {
+test('a Lumo-rarity pet has Lumo power (no separate bonus of its own): +50% XP and +50% coins', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto(process.env.LOCAL_URL!);
   await page.evaluate(() => localStorage.clear());
@@ -287,7 +287,7 @@ test('a Lumo-rarity pet has Lumo power: +50% XP and +50% coins on top of its own
   await page.reload();
   await page.getByRole('link', { name: 'Pets' }).first().click();
   const team = page.getByTestId('team-buffs');
-  await expect(team).toContainText('+75% XP'); // its own +25 %, plus Lumo power
+  await expect(team).toContainText('+50% XP'); // Lumo power only: nothing that doesn't add up
   await expect(team).toContainText('+50% coins');
   await expect(team).toContainText('+20% heart chance');
   await expect(team).toContainText('+50% faster egg');

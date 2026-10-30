@@ -1,6 +1,6 @@
-import type { PublicQuestion } from '@lumo/core';
+import type { PublicQuestion, QuestAbility, QuestState } from '@lumo/core';
 
-export type Mode = 'practice' | 'review' | 'challenge' | 'wrong_only' | 'exam' | 'speed' | 'boss';
+export type Mode = 'practice' | 'review' | 'challenge' | 'wrong_only' | 'exam' | 'speed' | 'boss' | 'quest';
 
 export interface PublicSession {
   id: string;
@@ -21,6 +21,8 @@ export interface PublicSession {
   points?: number;
   best?: number;
   boss?: { hp: number; max: number; shields: number };
+  /** Monster Quest: your health, the monster's, and the spells resting. */
+  quest?: QuestState;
   /** Chests waiting to be picked. */
   chests?: number;
   /** The current question is a lightning one: answer within this many ms for double XP. */
@@ -71,6 +73,8 @@ export interface AnswerResult {
   topicDone?: { topic: string; right: number; total: number; next?: string };
   /** A missed idea, right on its second chance. */
   fixed?: boolean;
+  /** Monster Quest: what the spell did and what the monster did back. */
+  quest?: { ability: QuestAbility; dealt: number; healed: number; taken: number; blocked: boolean; defeated: { monster: number; coins: number } | null; coins: number; finished: 'won' | 'lost' | null };
 }
 
 export interface MissedItem {
@@ -88,6 +92,7 @@ export interface SessionSummary {
   best?: number;
   newBest?: boolean;
   boss?: { hp: number; max: number; shields: number };
+  quest?: QuestState;
   chestsLeft?: number;
   missed?: MissedItem[];
   answered: number;
@@ -100,7 +105,7 @@ export interface SessionSummary {
   heartsGained: number;
   /** Coins the team's pets paid during the round (part of `coins`). */
   petCoins?: number;
-  endedReason: 'done' | 'out_of_hearts' | 'time_up' | 'boss_defeated' | 'boss_escaped';
+  endedReason: 'done' | 'out_of_hearts' | 'time_up' | 'boss_defeated' | 'boss_escaped' | 'quest_won' | 'quest_lost';
   concepts: { id: string; term: string; score: number; band: string }[];
 }
 

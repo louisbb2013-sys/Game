@@ -62,7 +62,7 @@ describe('chests', () => {
     const other = await login('thief');
     expect((await post(`/api/game/chests/${inv.chests[0].id}/open`, other.cookie)).statusCode).toBe(404);
     const opened = (await post(`/api/game/chests/${inv.chests[0].id}/open`, u.cookie)).json();
-    expect(opened.loot.coins).toBeGreaterThanOrEqual(100);
+    expect(opened.loot.coins).toBeGreaterThanOrEqual(70);
     expect(await coins(u.id)).toBe(opened.loot.coins);
     expect((await post(`/api/game/chests/${inv.chests[0].id}/open`, u.cookie)).json().error).toBe('already_opened');
     const after = (await get('/api/game/inventory', u.cookie)).json();

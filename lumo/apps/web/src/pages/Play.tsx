@@ -1,4 +1,4 @@
-import { EGG_EMOJI, MAX_HEARTS, type Answer, type PublicQuestion, type Rarity } from '@lumo/core';
+import { EGG_EMOJI, MAX_HEARTS, QUEST_ABILITIES, type Answer, type PublicQuestion, type QuestAbility, type Rarity } from '@lumo/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
@@ -10,6 +10,7 @@ import { ChoiceTiles, MatchTap, MultiTiles, OrderTap, TypeIn } from '../componen
 import { ChestPick } from '../components/play/ChestPick';
 import { FeedbackSheet } from '../components/play/Feedback';
 import { PopUp, usePops } from '../components/play/PopUp';
+import { QuestArena } from '../components/play/Quest';
 import { RoundEnd } from '../components/play/RoundEnd';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { api, ApiError, LOCAL } from '../lib/api';
@@ -53,7 +54,7 @@ export function Play() {
   // Speed runs and boss battles open with their intro from the very first frame (no flash of the question).
   const [phase, setPhase] = useState<Phase>(() => {
     const s = (location.state as Loaded | null)?.session;
-    return s && s.answered === 0 && (s.mode === 'speed' || s.mode === 'boss') ? 'intro' : 'answering';
+    return s && s.answered === 0 && (s.mode === 'speed' || s.mode === 'boss' || s.mode === 'quest') ? 'intro' : 'answering';
   });
   const [result, setResult] = useState<AnswerResult | null>(null);
   const [next, setNext] = useState<PublicQuestion | null>(null);
@@ -68,6 +69,9 @@ export function Play() {
   const [egg, setEgg] = useState<Rewards['egg'] | null>(null);
   const [buddy, setBuddy] = useState<{ species: string; rarity: Rarity } | null>(null);
   const [bossDown, setBossDown] = useState(false);
+  // Monster Quest: the spell picked for the next answer.
+  const [spell, setSpell] = useState<QuestAbility>('strike');
+  const heroRef = useRef<HTMLDivElement>(null);
   const [petGift, setPetGift] = useState<AnswerResult['petGift'] | null>(null);
   // Little surprises while playing: a gift to tap, a golden question, the buddy cheering.
   const [gift, setGift] = useState<string | null>(null);
@@ -171,7 +175,7 @@ export function Play() {
   // Soft lounge music while a round is on (darker for the boss, quicker for the speed run); none in the mock exam.
   const playing = !!data && phase !== 'intro' && phase !== 'summary' && mode !== 'exam';
   useEffect(() => {
-    if (playing) startMusic(mode === 'boss' ? 'boss' : mode === 'speed' ? 'speed' : 'calm');
+    if (playing) startMusic(mode === 'boss' || mode === 'quest' ? 'boss' : mode === 'speed' ? 'speed' : 'calm');
     else stopMusic();
   }, [playing, mode]);
   useEffect(() => () => stopMusic(), []);
@@ -179,7 +183,7 @@ export function Play() {
   // Speed runs and boss battles open with an intro; a fresh question resets the per-question state.
   useEffect(() => {
     if (!data) return;
-    if (data.session.answered === 0 && (mode === 'speed' || mode === 'boss') && phase === 'answering' && !endsAt.current) setPhase('intro');
+    if (data.session.answered === 0 && (mode === 'speed' || mode === 'boss' || mode === 'quest') && phase === 'answering' && !endsAt.current) setPhase('intro');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.session.id]);
   useEffect(() => {
@@ -339,6 +343,26 @@ export function Play() {
         if (r.shield === 'lost') setTimeout(() => play('shield'), 150);
         if (r.shield === 'mended') setTimeout(() => play('heal'), 250);
       }
+      if (mode === 'quest' && r.quest) {
+        const qm = r.quest;
+        if (qm.dealt) {
+          shake(bossRef.current, 'boss-hit');
+          play(qm.ability === 'fireball' ? 'crit' : 'hit');
+          floatText(`${QUEST_ABILITIES[qm.ability].emoji} -${qm.dealt}`, bossRef.current, { color: qm.ability === 'fireball' ? '#fdba74' : '#fca5a5', size: qm.ability === 'fireball' ? 34 : 28 });
+          burst(bossRef.current, { count: qm.ability === 'fireball' ? 30 : 16, colors: ['#f87171', '#fde047', '#ffffff'] });
+        }
+        if (qm.healed) {
+          setTimeout(() => play('heal'), 200);
+          floatText(`💚 +${qm.healed}`, heroRef.current, { color: '#86efac' });
+        }
+        if (qm.taken) {
+          shake(heroRef.current);
+          floatText(`-${qm.taken} ❤️`, heroRef.current, { color: '#fca5a5' });
+        }
+        if (qm.blocked) floatText(`🛡️`, heroRef.current, { size: 34 });
+        if (qm.coins) setTimeout(() => floatText(`+${qm.coins} 🪙`, bossRef.current, { color: '#fcd34d', size: 26 }), 450);
+        if (qm.defeated) setTimeout(() => play('win'), 300);
+      }
     },
     [mode, say],
   );
@@ -354,7 +378,7 @@ export function Play() {
       try {
         const res = await api<AnswerResponse & { rewards?: Rewards }>(`/api/sessions/${data.session.id}/answer`, {
           method: 'POST',
-          body: { questionId: data.question.id, answer: a, timeMs: Date.now() - startedAt.current },
+          body: { questionId: data.question.id, answer: a, timeMs: Date.now() - startedAt.current, ...(mode === 'quest' ? { ability: spell } : {}) },
         });
         if (ending.current) return; // the speed run's clock ran out while this answer was on its way
         if (res.summary && res.rewards && mode === 'exam') {
@@ -422,6 +446,8 @@ export function Play() {
         if (res.result.chest) setChests((c) => c + 1);
         setPhase('feedback');
         requestAnimationFrame(() => effects(res.result!));
+        // A spell that now rests can't be picked: back to a strike.
+        if (mode === 'quest' && res.session.quest && res.session.quest.cooldowns[spell] > 0) setSpell('strike');
         if (mode === 'boss' && res.summary?.endedReason === 'boss_defeated') {
           setBossDown(true);
           setTimeout(() => play('win'), 300);
@@ -436,7 +462,7 @@ export function Play() {
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, mode, takeRewards, endWith, showRewards, navigate, effects, refresh, followUp, pushPop, t],
+    [answer, data, phase, mode, takeRewards, endWith, showRewards, navigate, effects, refresh, followUp, pushPop, t, spell],
   );
 
   // Speed run: no explanation panel, straight to the next question. Boss: a right answer moves on by itself.
@@ -446,7 +472,7 @@ export function Play() {
       const id = setTimeout(advance, result.correct ? 380 : 900);
       return () => clearTimeout(id);
     }
-    if (mode === 'boss' && result.correct) {
+    if ((mode === 'boss' || mode === 'quest') && result.correct) {
       const id = setTimeout(proceed, summary ? 1300 : 1000);
       return () => clearTimeout(id);
     }
@@ -512,7 +538,7 @@ export function Play() {
       endsAt.current = null;
       ending.current = false;
       setLeftMs(null);
-      setPhase(m === 'speed' || m === 'boss' ? 'intro' : 'answering');
+      setPhase(m === 'speed' || m === 'boss' || m === 'quest' ? 'intro' : 'answering');
       navigate(`/quiz/${res.session.id}`, { replace: true, state: res });
     } catch (e) {
       setError(e instanceof ApiError ? e.code : 'network');
@@ -585,6 +611,8 @@ export function Play() {
           <SpeedBar leftMs={leftMs ?? s.timeLimitMs ?? 60_000} total={s.timeLimitMs ?? 60_000} points={s.points ?? 0} best={s.best ?? 0} />
         ) : mode === 'boss' && s.boss ? (
           <Shields n={s.boss.shields} />
+        ) : mode === 'quest' && s.quest ? (
+          <p className="flex-1 text-sm font-black text-white/80">🗡️ {t('quest.beaten', { count: s.quest.defeated })}</p>
         ) : (
           <Progress answered={s.answered} total={s.total} count={s.total >= 20} />
         )}
@@ -616,6 +644,8 @@ export function Play() {
           </div>
         </div>
       )}
+
+      {mode === 'quest' && s.quest && <QuestArena ref={bossRef} heroRef={heroRef} quest={s.quest} spell={spell} onSpell={setSpell} locked={locked} down={!!summary && summary.endedReason === 'quest_won'} />}
 
       {petGift && (
         <div className="pointer-events-none fixed inset-x-0 top-36 z-40 flex justify-center" role="status" data-testid="pet-gift">
@@ -750,7 +780,7 @@ export function Play() {
         </div>
       )}
 
-      {phase === 'feedback' && result && mode !== 'speed' && !(mode === 'boss' && result.correct) && (
+      {phase === 'feedback' && result && mode !== 'speed' && !((mode === 'boss' || mode === 'quest') && result.correct) && (
         <FeedbackSheet
           key={`sheet-${q?.id}`}
           result={result}
@@ -775,6 +805,14 @@ export function Play() {
           last={!next && !s.waiting}
           auto={autoNext}
         />
+      )}
+      {phase === 'feedback' && result && mode === 'quest' && result.correct && result.quest && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4">
+          <p className="combo-pop max-w-md rounded-2xl bg-green-500 px-4 py-3 text-center font-black text-night shadow-xl" data-testid="quest-cast">
+            {QUEST_ABILITIES[result.quest.ability].emoji} {t(`quest.cast.${result.quest.ability}`, { n: result.quest.dealt, h: result.quest.healed })}
+            {result.quest.defeated ? ` · ${t('quest.defeated', { coins: result.quest.coins })}` : ''}
+          </p>
+        </div>
       )}
       {phase === 'feedback' && result && mode === 'boss' && result.correct && (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4">
@@ -1024,7 +1062,7 @@ function Intro({ mode, onGo, bossName, bossSpecies }: { mode: Mode; onGo: () => 
     return () => clearTimeout(id);
   }, [count, onGo]);
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-night/85 p-6 text-center backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={mode === 'boss' ? t('play.boss.title') : t('play.modes.speed')}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-night/85 p-6 text-center backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={mode === 'boss' ? t('play.boss.title') : mode === 'quest' ? t('quest.title') : t('play.modes.speed')}>
       {count !== null ? (
         <span key={count} className="count-pop text-8xl font-black text-amber-300 drop-shadow-[0_6px_0_rgb(0_0_0/0.4)]">
           {count === 0 ? t('play.go') : count}
@@ -1038,17 +1076,17 @@ function Intro({ mode, onGo, bossName, bossSpecies }: { mode: Mode; onGo: () => 
               </Creature3D>
             </div>
           ) : (
-            <p className="text-6xl">⚡</p>
+            <p className="text-6xl">{mode === 'quest' ? '🗡️' : '⚡'}</p>
           )}
-          <h2 className="mt-2 text-3xl font-black">{mode === 'boss' ? t('play.boss.title') : t('play.modes.speed')}</h2>
-          <p className="mt-2 font-bold text-white/85">{mode === 'boss' ? t('play.boss.rules', { name: bossName }) : t('play.speedRules')}</p>
+          <h2 className="mt-2 text-3xl font-black">{mode === 'boss' ? t('play.boss.title') : mode === 'quest' ? t('quest.title') : t('play.modes.speed')}</h2>
+          <p className="mt-2 font-bold text-white/85">{mode === 'boss' ? t('play.boss.rules', { name: bossName }) : mode === 'quest' ? t('quest.rules') : t('play.speedRules')}</p>
           <button
             type="button"
             autoFocus
             onClick={() => (mode === 'speed' ? setCount(3) : (play('go'), onGo()))}
             className="btn-gold breathe mt-6 w-full rounded-2xl px-8 py-4 text-xl font-black"
           >
-            {mode === 'boss' ? `⚔️ ${t('play.boss.fight')}` : `▶ ${t('play.go')}`}
+            {mode === 'boss' || mode === 'quest' ? `⚔️ ${t('play.boss.fight')}` : `▶ ${t('play.go')}`}
           </button>
         </div>
       )}

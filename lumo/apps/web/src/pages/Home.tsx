@@ -171,6 +171,7 @@ function YourDecks({ decks }: { decks: DeckListItem[] | null }) {
 function Explore() {
   const { t } = useTranslation();
   const items = [
+    { to: '/lumo', icon: '💬', title: t('askLumo.title'), body: t('askLumo.homeBody') },
     { to: '/live', icon: '⚡', title: t('home.liveTitle'), body: t('home.liveBody') },
     { to: '/sandbox', icon: '🎨', title: t('home.sandboxTitle'), body: t('home.sandboxBody') },
     { to: '/friends', icon: '🤝', title: t('home.friendsTitle'), body: t('home.friendsBody') },
@@ -180,7 +181,7 @@ function Explore() {
       <h2 id="explore" className="text-2xl font-black">
         {t('home.explore')}
       </h2>
-      <ul className="grid gap-3 sm:grid-cols-3">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {items.map((x) => (
           <li key={x.to}>
             <Link to={x.to} className="panel flex h-full items-start gap-3 p-4 transition hover:-translate-y-0.5">

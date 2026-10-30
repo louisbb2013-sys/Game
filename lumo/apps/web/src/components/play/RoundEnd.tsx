@@ -16,8 +16,8 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
   const { t } = useTranslation();
   const mode = summary.mode ?? 'practice';
   const stars = summary.stars ?? (summary.accuracy >= 0.9 ? 3 : summary.accuracy >= 0.7 ? 2 : summary.accuracy >= 0.4 ? 1 : 0);
-  const won = mode === 'boss' ? summary.endedReason === 'boss_defeated' : mode === 'speed' ? true : summary.endedReason !== 'out_of_hearts';
-  useConfetti(won && (stars >= 2 || !!summary.newBest || mode === 'boss'));
+  const won = mode === 'boss' ? summary.endedReason === 'boss_defeated' : mode === 'quest' ? summary.endedReason === 'quest_won' : mode === 'speed' ? true : summary.endedReason !== 'out_of_hearts';
+  useConfetti(won && (stars >= 2 || !!summary.newBest || mode === 'boss' || mode === 'quest'));
   const starsRef = useRef<HTMLDivElement>(null);
   const xp = useCountUp(summary.xp, 900);
   const points = useCountUp(summary.points ?? 0, 900);
@@ -34,7 +34,13 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
   }, [stars, won]);
 
   const title =
-    mode === 'boss'
+    mode === 'quest'
+      ? summary.endedReason === 'quest_won'
+        ? t('quest.won')
+        : summary.endedReason === 'quest_lost'
+          ? t('quest.lost', { count: summary.quest?.defeated ?? 0 })
+          : t('quest.left', { count: summary.quest?.defeated ?? 0 })
+      : mode === 'boss'
       ? summary.endedReason === 'boss_defeated'
         ? t('play.end.bossWon')
         : summary.endedReason === 'boss_escaped'
@@ -146,7 +152,7 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
             </button>
           )}
           <button type="button" onClick={onAgain} className="btn-gold rounded-2xl py-4 text-lg font-black">
-            {mode === 'boss' && !won ? `⚔️ ${t('play.end.rematch')}` : `▶ ${t('play.end.again')}`}
+            {(mode === 'boss' || mode === 'quest') && !won ? `⚔️ ${t('play.end.rematch')}` : `▶ ${t('play.end.again')}`}
           </button>
           <div className="grid grid-cols-2 gap-3">
             {missed.length > 0 ? (
