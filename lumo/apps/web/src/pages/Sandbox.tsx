@@ -56,15 +56,20 @@ export function Sandbox() {
       setBusy(null);
     }
   };
+  // Anything that isn't a format of this deck ("teach me chess", "why is the sky blue?") goes to Lumo's chat.
+  const chat = () => navigate('/lumo', { state: { ask: ask.trim() } });
   const submitAsk = async (e: FormEvent) => {
     e.preventDefault();
     if (!ask.trim()) return;
+    if (!deckId) return chat();
     setBusy('ask');
     setError(null);
     try {
-      open((await api<{ id: string }>('/api/sandbox/ask', { method: 'POST', body: { text: ask, deckId: deckId || undefined } })).id);
+      open((await api<{ id: string }>('/api/sandbox/ask', { method: 'POST', body: { text: ask, deckId } })).id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.code : 'network');
+      const code = err instanceof ApiError ? err.code : 'network';
+      if (code === 'unknown_format' || code === 'no_deck') return chat();
+      setError(code);
       setBusy(null);
     }
   };

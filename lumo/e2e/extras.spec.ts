@@ -60,4 +60,13 @@ test('Monster Quest: pick a spell, answer to cast it', async ({ page }) => {
     await page.waitForTimeout(1300);
   }
   await expect(page.getByRole('progressbar', { name: 'Monster health' })).not.toHaveAttribute('aria-valuenow', '60');
+
+  // The bac à sable box: a format makes that game; anything else goes straight to Lumo's chat.
+  await page.goto(`${process.env.MULTI_URL}?uid=u_ex2&sample=ok`);
+  await page.getByRole('link', { name: /Study Sandbox/ }).click();
+  await page.getByLabel('Ask Lumo anything, or ask for a format').fill('Teach me chess with a game');
+  await page.getByLabel('Ask Lumo anything, or ask for a format').press('Enter');
+  await expect(page.getByRole('heading', { name: 'Ask Lumo' })).toBeVisible();
+  await expect(page.getByTestId('ask-messages')).toContainText('Teach me chess with a game');
+  await expect(page.getByTestId('ask-open-game')).toBeVisible();
 });

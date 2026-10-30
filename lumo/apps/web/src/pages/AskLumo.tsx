@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { Lumo } from '../components/Lumo';
 import { getSample } from '../local/reader';
 
@@ -89,6 +89,11 @@ export function AskLumo() {
   }, [msgs]);
   useEffect(() => () => stop.current?.abort(), []);
 
+  // Sent here with a question (from the bac à sable box): ask it right away, once.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const asked = useRef(false);
+
   const send = async (raw: string) => {
     const said = raw.trim().slice(0, 4000);
     if (!said || busy) return;
@@ -122,6 +127,15 @@ export function AskLumo() {
     stop.current = null;
     setBusy(false);
   };
+
+  useEffect(() => {
+    const q = (location.state as { ask?: string } | null)?.ask;
+    if (!q || asked.current) return;
+    asked.current = true;
+    navigate(location.pathname, { replace: true, state: null });
+    void send(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fresh = () => {
     stop.current?.abort();

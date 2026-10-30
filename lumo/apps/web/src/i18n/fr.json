@@ -382,8 +382,8 @@
     "subtitle": "Étudie comme tu veux — chaque format te fait réfléchir.",
     "needDeck": "Crée d’abord un paquet (envoie tes notes à Lumo), puis choisis n’importe quel format ici.",
     "fromDeck": "À partir du paquet",
-    "askLabel": "Demande n’importe quel format",
-    "askPlaceholder": "« Fais-moi des mots croisés sur l’osmose »",
+    "askLabel": "Demande n’importe quoi à Lumo, ou un format",
+    "askPlaceholder": "Demande n’importe quoi à Lumo, ou « fais-moi des mots croisés sur l’osmose »",
     "make": "Créer",
     "groups": {
       "watch": "🎬 Regarder et écouter",
@@ -2070,7 +2070,7 @@
     "errors": {
       "unavailable": "L'IA de Lumo n'est pas disponible ici en ce moment.",
       "rate_limited": "Trop de messages. Attends une minute et réessaie.",
-      "not_granted": "Permets à Lumo d'utiliser Claude, puis réessaie.",
+      "not_granted": "Connecte-toi d'abord (sur la page Claude : permets à Lumo d'utiliser Claude), puis réessaie.",
       "refused": "Lumo ne peut pas aider avec ça. Essaie autre chose.",
       "upstream_error": "Quelque chose n'a pas marché. Réessaie."
     }

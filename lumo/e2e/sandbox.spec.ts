@@ -83,7 +83,7 @@ test.describe('Study Sandbox players', () => {
     await expect(page.getByRole('heading', { name: 'Study Sandbox' })).toBeVisible();
     for (const name of ['Explainer video', 'Podcast', 'Crossword', 'Escape room', 'Mind map', 'Memory tricks']) await expect(page.getByText(name, { exact: true })).toBeVisible();
     await page.screenshot({ path: 'e2e/screens/sb-hub.png', fullPage: true });
-    await page.getByLabel('Ask for any format').fill('make me a word search about osmosis');
+    await page.getByLabel('Ask Lumo anything, or ask for a format').fill('make me a word search about osmosis');
     await btn(page, 'Make it').click();
     await expect(page.getByRole('heading', { name: /Word search/ })).toBeVisible();
   });

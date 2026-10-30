@@ -382,8 +382,8 @@
     "subtitle": "Study any way you like — every format makes you think.",
     "needDeck": "Make a deck first (send Lumo your notes), then pick any format here.",
     "fromDeck": "From deck",
-    "askLabel": "Ask for any format",
-    "askPlaceholder": "“Make me a crossword about osmosis”",
+    "askLabel": "Ask Lumo anything, or ask for a format",
+    "askPlaceholder": "Ask Lumo anything, or “make me a crossword about osmosis”",
     "make": "Make it",
     "groups": {
       "watch": "🎬 Watch & listen",
@@ -2073,7 +2073,7 @@
     "errors": {
       "unavailable": "Lumo's AI isn't available here right now.",
       "rate_limited": "Too many messages. Wait a minute and try again.",
-      "not_granted": "Allow Lumo to use Claude, then try again.",
+      "not_granted": "Sign in first (on the Claude page: allow Lumo to use Claude), then try again.",
       "refused": "Lumo can't help with that one. Try something else.",
       "upstream_error": "Something went wrong. Try again."
     }

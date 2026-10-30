@@ -7,14 +7,15 @@ import { json, limiter, randomId, type Session } from './session.ts';
  * page picks it up and claims it once.
  *
  *   g/<uid>/<giftId>   { id, species, tier, level, from, at, claimed? }
- *   c/<uid>            { at }   this learner unlocked creator mode with the creator code
+ *   c2/<uid>           { at }   this learner unlocked creator mode with the current creator code
+ *                               (unlocks with the old code, under c/, no longer count)
  *
  * Creators: the learners listed in LUMO_CREATORS (comma-separated ids), and any account where the
  * creator typed the creator code (only its SHA-256 is here; LUMO_CREATOR_CODE_HASH can replace it).
  * Each creator account also gets one Lumo pet.
  */
 
-const CREATOR_CODE_HASH = '18ca0707ef32b0f8fd4588152e1de8363b61981a3422c0f0ca8b40a21e292793';
+const CREATOR_CODE_HASH = '6e570fcdb856087050e3e008b30742396b1547db441ff8f8e4fc97deecb310f5';
 const FIRST_GIFT = 'creator-lumo';
 const tries = limiter(10, 10 * 60_000);
 const GIFT_SPECIES = new Set(['lumo_firefly', 'moss_turtle', 'cloud_sheep', 'pixel_owl', 'comet_fox', 'crystal_cat', 'star_jelly', 'bubble_octo', 'ember_dragon', 'puddle_frog', 'acorn_squirrel', 'snow_penguin', 'lucky_bunny', 'rock_dino', 'mystic_unicorn', 'cosmic_whale', 'aurora_peacock', 'celestial_phoenix', 'galaxy_dragon', 'prism_axolotl', 'nebula_manta', 'solar_lion', 'divine_griffin']);
@@ -44,7 +45,7 @@ const nameOf = async (kv: KV, uid: string) => String((await read(kv, `d/profiles
 
 export async function isCreator(kv: KV, env: Env, me: Session): Promise<boolean> {
   const listed = (env('LUMO_CREATORS') ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-  return listed.includes(me.u) || (await kv.etag(`c/${me.u}`)) !== null;
+  return listed.includes(me.u) || (await kv.etag(`c2/${me.u}`)) !== null;
 }
 
 /** The creator code as typed ("abcd-efgh …"), boiled down and hashed. */
@@ -76,7 +77,7 @@ export async function gifts(kv: KV, env: Env, body: Record<string, unknown>, me:
     if (!tries(me.u, now)) return json(429, { error: 'rate_limited' });
     const code = String(body.code ?? '').slice(0, 64);
     if (!code || (await codeHash(code)) !== (env('LUMO_CREATOR_CODE_HASH') ?? CREATOR_CODE_HASH)) return json(403, { error: 'bad_code' });
-    await kv.set(`c/${me.u}`, JSON.stringify({ at: now }));
+    await kv.set(`c2/${me.u}`, JSON.stringify({ at: now }));
     return json(200, { ok: true });
   }
   if (op === 'list') {
