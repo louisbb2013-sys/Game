@@ -1,8 +1,9 @@
-import { ITEMS, type ItemId } from '@lumo/core';
+import { ITEMS, RARITIES, RARITY_EGG_PRICE, type ItemId, type Rarity } from '@lumo/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
-import { ChestArt, ItemArt } from '../components/Art';
+import { ChestArt, EggArt, ItemArt, RARITY_TONE } from '../components/Art';
+import { LOCAL } from '../lib/api';
 import { CoinIcon } from '../components/icons';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -34,6 +35,8 @@ export function Shop() {
   const [inv, setInv] = useState<Inventory | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [opening, setOpening] = useState<{ kind: string; result: Loot | null } | null>(null);
+  // How many of each item to buy (1 by default; "max" = as many as the coins pay for).
+  const [qty, setQty] = useState<Partial<Record<ItemId, number>>>({});
 
   const load = useCallback(() => api<Inventory>('/api/game/inventory').then(setInv), []);
   useEffect(() => void load(), [load]);
@@ -88,6 +91,37 @@ export function Shop() {
       )}
 
       {tab === 'shop' ? (
+        <>
+        {LOCAL && (
+          // An egg of each rarity: the pet inside is always that rarity.
+          <section className="space-y-2" data-testid="rarity-eggs">
+            <h2 className="font-black">🥚 {t('shopx.eggsTitle')}</h2>
+            <p className="text-xs text-muted">{t('shopx.eggsBody')}</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {RARITIES.filter((r): r is Rarity => !!RARITY_EGG_PRICE[r]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  disabled={inv.coins < RARITY_EGG_PRICE[r]!}
+                  onClick={() =>
+                    void act(async () => {
+                      const res = await api<{ pet: { species: string; emoji: string; rarity: Rarity }; duplicate: boolean; snacks: number }>('/api/game/shop/egg', { method: 'POST', body: { rarity: r } });
+                      showRewards({ xp: 0, levelUp: null, badges: [], questsCompleted: [], hatched: { species: res.pet.species, emoji: res.pet.emoji, rarity: res.pet.rarity, duplicate: res.duplicate, snacks: res.snacks } });
+                    }, t('shopx.eggBought', { rarity: t(`pets.rarity.${r}`) }))
+                  }
+                  className="flex flex-col items-center gap-1 rounded-2xl bg-surface p-2 ring-1 ring-line disabled:opacity-40"
+                  aria-label={t('shopx.buyEgg', { rarity: t(`pets.rarity.${r}`), price: RARITY_EGG_PRICE[r] })}
+                >
+                  <EggArt rarity={r} size={44} />
+                  <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black ${RARITY_TONE[r]}`}>{t(`pets.rarity.${r}`)}</span>
+                  <span className="flex items-center gap-0.5 text-xs font-black">
+                    <CoinIcon size={14} /> {RARITY_EGG_PRICE[r]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
         <div className="grid grid-cols-2 gap-3">
           {SHOP_ORDER.map((id) => {
             const def = ITEMS[id];
@@ -99,18 +133,37 @@ export function Shop() {
                 <span className="font-black">{t(`items.${id}.name`)}</span>
                 <span className="flex-1 text-xs text-muted">{t(`items.${id}.desc`)}</span>
                 {have > 0 && <span className="text-xs font-bold text-brand">{t('shop.owned', { n: have })}</span>}
+                {!isTheme && LOCAL && (
+                  // How many: − n + and Max.
+                  <div className="flex items-center gap-1" data-testid={`qty-${id}`}>
+                    <button type="button" aria-label={t('shopx.less')} onClick={() => setQty((q) => ({ ...q, [id]: Math.max(1, (q[id] ?? 1) - 1) }))} className="grid size-8 place-items-center rounded-lg bg-surface-2 font-black">
+                      −
+                    </button>
+                    <span className="min-w-6 text-center font-black tabular-nums">{qty[id] ?? 1}</span>
+                    <button type="button" aria-label={t('shopx.more')} onClick={() => setQty((q) => ({ ...q, [id]: Math.min(99, (q[id] ?? 1) + 1) }))} className="grid size-8 place-items-center rounded-lg bg-surface-2 font-black">
+                      +
+                    </button>
+                    <button type="button" onClick={() => setQty((q) => ({ ...q, [id]: Math.max(1, Math.min(99, Math.floor(inv.coins / (def.price ?? 1)))) }))} className="ml-auto rounded-lg bg-surface-2 px-2 py-1 text-xs font-black">
+                      {t('shopx.max')}
+                    </button>
+                  </div>
+                )}
                 <button
-                  disabled={(isTheme && have > 0) || inv.coins < (def.price ?? 0)}
-                  onClick={() => void act(() => api('/api/game/shop/buy', { method: 'POST', body: { itemId: id } }), t('shop.bought', { item: t(`items.${id}.name`) }))}
+                  disabled={(isTheme && have > 0) || inv.coins < (def.price ?? 0) * (isTheme ? 1 : (qty[id] ?? 1))}
+                  onClick={() => {
+                    const n = isTheme ? 1 : (qty[id] ?? 1);
+                    void act(() => api('/api/game/shop/buy', { method: 'POST', body: { itemId: id, qty: n } }), n > 1 ? t('shopx.boughtN', { n, item: t(`items.${id}.name`) }) : t('shop.bought', { item: t(`items.${id}.name`) }));
+                  }}
                   className="flex items-center justify-center gap-1 rounded-xl bg-brand py-2 font-black text-brand-ink disabled:opacity-40"
-                  aria-label={t('shop.buyFor', { item: t(`items.${id}.name`), price: def.price })}
+                  aria-label={t('shop.buyFor', { item: t(`items.${id}.name`), price: (def.price ?? 0) * (isTheme ? 1 : (qty[id] ?? 1)) })}
                 >
-                  <CoinIcon size={18} /> {def.price}
+                  <CoinIcon size={18} /> {(def.price ?? 0) * (isTheme ? 1 : (qty[id] ?? 1))}
                 </button>
               </div>
             );
           })}
         </div>
+        </>
       ) : (
         <div className="space-y-4">
           <section>

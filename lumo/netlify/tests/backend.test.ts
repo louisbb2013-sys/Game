@@ -293,7 +293,12 @@ describe('gifts from the creator (Lumo-rarity pets)', () => {
     expect((await s.gifts(louis.token, { op: 'give', username: 'Mia', species: 'not_a_pet' })).status).toBe(400);
     const got = (await s.gifts(mia.token, { op: 'list' })).body;
     expect(got.creator).toBe(false);
-    expect(got.gifts).toEqual([expect.objectContaining({ species: 'galaxy_dragon', tier: 'lumo', from: louis.uid })]);
+    expect(got.gifts).toEqual([expect.objectContaining({ species: 'galaxy_dragon', tier: 'lumo', level: 1, from: louis.uid })]);
+    // Any rarity and any level, up to 100.
+    expect((await s.gifts(louis.token, { op: 'give', username: 'Mia', species: 'solar_lion', tier: 'divine', level: 250 })).status).toBe(200);
+    expect((await s.gifts(louis.token, { op: 'give', username: 'Mia', species: 'comet_fox', tier: 'mega' })).status).toBe(400);
+    const more = (await s.gifts(mia.token, { op: 'list' })).body.gifts;
+    expect(more).toEqual(expect.arrayContaining([expect.objectContaining({ species: 'solar_lion', tier: 'divine', level: 100 })]));
     // Ten wrong guesses, then even the right code has to wait.
     const guesser = (await s.google('g3')).body;
     for (let i = 0; i < 10; i++) expect((await s.gifts(guesser.token, { op: 'unlock', code: `GUESS-${i}` })).status).toBe(403);

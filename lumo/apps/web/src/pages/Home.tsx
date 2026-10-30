@@ -7,6 +7,7 @@ import { CameraIcon, CoinIcon, FlameIcon, HeartIcon, TextIcon, UploadIcon } from
 import { DeckCard } from '../components/DeckCard';
 import { loadSession } from '../netlify/cloud';
 import { Lumo, type LumoMood } from '../components/Lumo';
+import { DailyGift, GradeChip } from '../components/Grade';
 import { api, ApiError, LOCAL, NETLIFY } from '../lib/api';
 import { EggRing, type EggState } from '../components/Egg';
 import { Creature3D } from '../components/Pet3D';
@@ -295,10 +296,13 @@ export function Home() {
             <span className="text-lg font-black">{t('home.level', { level: user.level.level })}</span>
             <span className="text-sm font-bold text-muted">{t('home.xpToNext', { current: user.level.current, needed: user.level.needed })}</span>
           </div>
+          {user.grade && <GradeChip grade={user.grade} />}
           <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label={t('home.levelProgress')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(user.level.ratio * 100)}>
             <div className="h-full rounded-full bg-gradient-to-r from-[#c9973a] to-[#f6e2a0] transition-[width] duration-700" style={{ width: `${Math.max(3, user.level.ratio * 100)}%` }} />
           </div>
         </section>
+
+        {LOCAL && <DailyGift />}
 
         <section className="grid grid-cols-3 gap-3">
           <Tile icon={<FlameIcon size={26} />} value={user.streak.days} label={t('stats.streak')} />

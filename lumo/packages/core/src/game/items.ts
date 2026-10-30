@@ -2,11 +2,11 @@ import { pickWeighted, type Rng } from '../rng';
 import { HOUR_MS, MINUTE_MS, type Millis } from '../types';
 
 /**
- * Rarities, lowest to highest. Galaxial is the top anyone can reach (by eggs or upgrades); Lumo is the
- * ultimate rarity and only ever comes as a gift from the game's creator.
+ * Rarities, lowest to highest. Divine is the top anyone can reach (by eggs, upgrades or a custom pet);
+ * Lumo is the ultimate rarity and only ever comes as a gift from the game's creator.
  */
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythical' | 'exotic' | 'galaxial' | 'lumo';
-export const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'legendary', 'mythical', 'exotic', 'galaxial', 'lumo'];
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythical' | 'exotic' | 'galaxial' | 'celestial' | 'divine' | 'lumo';
+export const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'legendary', 'mythical', 'exotic', 'galaxial', 'celestial', 'divine', 'lumo'];
 /** The tier after this one (null at the top). */
 export const nextRarity = (r: Rarity): Rarity | null => RARITIES[RARITIES.indexOf(r) + 1] ?? null;
 
@@ -33,6 +33,8 @@ export const PET_SPECIES = [
   { id: 'galaxy_dragon', emoji: '🐲', rarity: 'mythical', color: '#7C3AED' },
   { id: 'prism_axolotl', emoji: '🦎', rarity: 'exotic', color: '#22D3EE' },
   { id: 'nebula_manta', emoji: '🌌', rarity: 'galaxial', color: '#6366F1' },
+  { id: 'solar_lion', emoji: '🦁', rarity: 'celestial', color: '#F59E0B' },
+  { id: 'divine_griffin', emoji: '🪽', rarity: 'divine', color: '#FDE68A' },
   // Lumo the firefly: only ever a gift from the creator.
   { id: 'lumo_firefly', emoji: '✨', rarity: 'lumo', color: '#FACC15' },
 ] as const satisfies readonly { id: string; emoji: string; rarity: Rarity; color: string }[];
@@ -83,8 +85,8 @@ export const XP_BOOST_BONUS = 0.5; // +50% while active
 export function hatch(egg: 'egg_common' | 'egg_rare', rng: Rng): PetSpeciesId {
   const weights: Record<Rarity, number> =
     egg === 'egg_common'
-      ? { common: 70, rare: 24, epic: 5, legendary: 1, mythical: 0, exotic: 0, galaxial: 0, lumo: 0 }
-      : { common: 0, rare: 58, epic: 32, legendary: 8, mythical: 1.6, exotic: 0.3, galaxial: 0.1, lumo: 0 };
+      ? { common: 70, rare: 24, epic: 5, legendary: 1, mythical: 0, exotic: 0, galaxial: 0, celestial: 0, divine: 0, lumo: 0 }
+      : { common: 0, rare: 58, epic: 32, legendary: 8, mythical: 1.6, exotic: 0.3, galaxial: 0.1, celestial: 0.03, divine: 0.01, lumo: 0 };
   const rarity = pickWeighted(
     RARITIES.map((r) => ({ item: r, weight: weights[r] })),
     rng,
@@ -96,10 +98,13 @@ export function hatch(egg: 'egg_common' | 'egg_rare', rng: Rng): PetSpeciesId {
 // ---------------- the study egg (Gizmo-style: answering questions hatches it) ----------------
 
 /** Questions to answer before an egg of each rarity hatches. */
-export const EGG_TARGET: Record<Rarity, number> = { common: 15, rare: 30, epic: 50, legendary: 75, mythical: 100, exotic: 120, galaxial: 150, lumo: 200 };
+export const EGG_TARGET: Record<Rarity, number> = { common: 15, rare: 30, epic: 50, legendary: 75, mythical: 100, exotic: 120, galaxial: 150, celestial: 180, divine: 220, lumo: 260 };
 /** The very first egg hatches quickly, so the reward comes on day one. */
 export const FIRST_EGG_TARGET = 5;
-export const EGG_EMOJI: Record<Rarity, string> = { common: '🥚', rare: '🪺', epic: '🔮', legendary: '🌟', mythical: '💠', exotic: '🧬', galaxial: '🌌', lumo: '✨' };
+export const EGG_EMOJI: Record<Rarity, string> = { common: '🥚', rare: '🪺', epic: '🔮', legendary: '🌟', mythical: '💠', exotic: '🧬', galaxial: '🌌', celestial: '☀️', divine: '👑', lumo: '✨' };
+
+/** Eggs of a chosen rarity in the shop: the pet inside is always of that rarity. */
+export const RARITY_EGG_PRICE: Partial<Record<Rarity, number>> = { common: 150, rare: 400, epic: 900, legendary: 2000, mythical: 4500, exotic: 8000, galaxial: 14000, celestial: 24000, divine: 40000 };
 
 /** A new egg's rarity: mostly common, sometimes something special. */
 export function rollEggRarity(rng: Rng): Rarity {
@@ -112,6 +117,8 @@ export function rollEggRarity(rng: Rng): Rarity {
       { item: 'mythical' as Rarity, weight: 0.4 },
       { item: 'exotic' as Rarity, weight: 0.08 },
       { item: 'galaxial' as Rarity, weight: 0.02 },
+      { item: 'celestial' as Rarity, weight: 0.008 },
+      { item: 'divine' as Rarity, weight: 0.002 },
     ],
     rng,
   );
@@ -124,7 +131,7 @@ export function hatchRarity(rarity: Rarity, rng: Rng): PetSpeciesId {
 }
 
 /** A duplicate pet isn't wasted: it powers up the one you already have, and you get snacks. */
-export const DUPLICATE_PET_XP: Record<Rarity, number> = { common: 20, rare: 40, epic: 80, legendary: 160, mythical: 320, exotic: 480, galaxial: 640, lumo: 800 };
+export const DUPLICATE_PET_XP: Record<Rarity, number> = { common: 20, rare: 40, epic: 80, legendary: 160, mythical: 320, exotic: 480, galaxial: 640, celestial: 800, divine: 1000, lumo: 1200 };
 export const DUPLICATE_PET_SNACKS = 5;
 
 // ---------------- chests ----------------
@@ -184,6 +191,10 @@ export interface PetState {
   fedAt: Millis;
   /** Its rarity now: it starts at its species' rarity and can be upgraded. */
   tier?: Rarity;
+  /** At level 50 a pet picks a big boost of its own (half its power; the full power at level 100). */
+  boost?: PetBuffKind;
+  /** A pet the learner designed: its own bonuses, instead of its species' one. */
+  custom?: Partial<Record<PetBuffKind, number>>;
 }
 
 /** A pet's rarity now (its species' rarity until it has been upgraded). */
@@ -197,8 +208,10 @@ export const PET_UPGRADES: Record<Rarity, { coins: number; level: number } | nul
   legendary: { coins: 2200, level: 22 },
   mythical: { coins: 4000, level: 30 },
   exotic: { coins: 7000, level: 40 },
-  // Galaxial is as high as upgrades go: Lumo pets are gifts from the creator.
-  galaxial: null,
+  galaxial: { coins: 12000, level: 55 },
+  celestial: { coins: 20000, level: 70 },
+  // Divine is as high as upgrades go: Lumo pets are gifts from the creator.
+  divine: null,
   lumo: null,
 };
 
@@ -233,10 +246,13 @@ export function feedPet(p: PetState, now: Millis): PetState {
   return addPetXp({ ...p, fullness, fedAt: now }, 10);
 }
 
+/** How far a pet can level. */
+export const PET_MAX_LEVEL = 100;
+
 export function addPetXp(p: PetState, xp: number): PetState {
   let { level, xp: cur } = p;
   cur += Math.max(0, Math.round(xp));
-  while (level < 50 && cur >= petXpForLevel(level)) {
+  while (level < PET_MAX_LEVEL && cur >= petXpForLevel(level)) {
     cur -= petXpForLevel(level);
     level++;
   }
@@ -254,7 +270,7 @@ export function petMood(p: PetState, now: Millis, streakStatus: 'none' | 'safe' 
   return 'content';
 }
 
-const PERK_BY_RARITY: Record<Rarity, number> = { common: 0.02, rare: 0.04, epic: 0.06, legendary: 0.08, mythical: 0.12, exotic: 0.14, galaxial: 0.16, lumo: 0.2 };
+const PERK_BY_RARITY: Record<Rarity, number> = { common: 0.02, rare: 0.04, epic: 0.06, legendary: 0.08, mythical: 0.12, exotic: 0.14, galaxial: 0.16, celestial: 0.17, divine: 0.18, lumo: 0.2 };
 
 /** XP bonus from the equipped pet: rarer and higher level = a little more (never pay-to-win). */
 export function petXpPerk(p: PetState, mood: PetMood): number {
@@ -278,6 +294,8 @@ export const PET_BUFF: Record<PetSpeciesId, PetBuffKind> = {
   lumo_firefly: 'xp',
   acorn_squirrel: 'coins',
   prism_axolotl: 'coins',
+  solar_lion: 'xp',
+  divine_griffin: 'coins',
   comet_fox: 'coins',
   bubble_octo: 'coins',
   aurora_peacock: 'coins',
@@ -295,10 +313,10 @@ export const PET_BUFF: Record<PetSpeciesId, PetBuffKind> = {
 
 /** The bonus at level 1 for each rarity: a share (0.05 = 5 %), or coins for `coins`. */
 const BUFF_BASE: Record<PetBuffKind, Record<Rarity, number>> = {
-  xp: { common: 0.04, rare: 0.06, epic: 0.08, legendary: 0.1, mythical: 0.14, exotic: 0.17, galaxial: 0.2, lumo: 0.25 },
-  heart: { common: 0.05, rare: 0.08, epic: 0.11, legendary: 0.14, mythical: 0.18, exotic: 0.22, galaxial: 0.26, lumo: 0.3 },
-  egg: { common: 0.1, rare: 0.15, epic: 0.2, legendary: 0.25, mythical: 0.35, exotic: 0.42, galaxial: 0.5, lumo: 0.6 },
-  coins: { common: 1, rare: 1, epic: 2, legendary: 2, mythical: 3, exotic: 3, galaxial: 4, lumo: 5 },
+  xp: { common: 0.04, rare: 0.06, epic: 0.08, legendary: 0.1, mythical: 0.14, exotic: 0.17, galaxial: 0.2, celestial: 0.23, divine: 0.26, lumo: 0.25 },
+  heart: { common: 0.05, rare: 0.08, epic: 0.11, legendary: 0.14, mythical: 0.18, exotic: 0.22, galaxial: 0.26, celestial: 0.29, divine: 0.32, lumo: 0.3 },
+  egg: { common: 0.1, rare: 0.15, epic: 0.2, legendary: 0.25, mythical: 0.35, exotic: 0.42, galaxial: 0.5, celestial: 0.56, divine: 0.62, lumo: 0.6 },
+  coins: { common: 1, rare: 1, epic: 2, legendary: 2, mythical: 3, exotic: 3, galaxial: 4, celestial: 4, divine: 5, lumo: 5 },
 };
 /** The whole team's bonus never goes past these. */
 export const BUFF_CAP: Record<PetBuffKind, number> = { xp: 0.4, heart: 0.5, egg: 0.75, coins: 8 };
@@ -310,15 +328,79 @@ export interface PetBuff {
   value: number;
 }
 
-/** This pet's bonus: set by what it is, growing with its rarity and level. */
-export function petBuff(p: Pick<PetState, 'species' | 'tier' | 'level'>): PetBuff {
-  const kind = PET_BUFF[p.species as PetSpeciesId] ?? 'xp';
-  const level = Math.max(1, p.level);
-  let value = BUFF_BASE[kind][petTier(p)];
+/** How a bonus grows with the pet's level (on top of its value at level 1). */
+function grow(kind: PetBuffKind, base: number, level: number): number {
+  let value = base;
   if (kind === 'coins') value += Math.floor(level / 10); // +1 coin at levels 10, 20, …
   else if (kind === 'xp') value += Math.floor((level - 1) / 2) * 0.01; // +1 % every 2 levels
   else value += Math.min(10, level - 1) * 0.01; // +1 % a level, up to +10 %
-  return { kind, value: kind === 'coins' ? value : Math.round(value * 100) / 100 };
+  return kind === 'coins' ? value : Math.round(value * 100) / 100;
+}
+
+/** This pet's bonus: set by what it is, growing with its rarity and level. */
+export function petBuff(p: Pick<PetState, 'species' | 'tier' | 'level'>): PetBuff {
+  const kind = PET_BUFF[p.species as PetSpeciesId] ?? 'xp';
+  return { kind, value: grow(kind, BUFF_BASE[kind][petTier(p)], Math.max(1, p.level)) };
+}
+
+/**
+ * Everything a pet adds by itself: its species' bonus, or the bonuses its designer chose. A Lumo pet
+ * has none of its own: its Lumo power (see lumoPower) is its bonus.
+ */
+export function petBuffs(p: Pick<PetState, 'species' | 'tier' | 'level' | 'custom'>): PetBuff[] {
+  if (petTier(p) === 'lumo') return [];
+  if (p.custom) {
+    return (Object.entries(p.custom) as [PetBuffKind, number][])
+      .filter(([, v]) => v > 0)
+      .map(([kind, v]) => ({ kind, value: grow(kind, v, Math.max(1, p.level)) }));
+  }
+  return [petBuff(p)];
+}
+
+// ---------------- level 50 and 100: a boost of its own ----------------
+
+/** The big boost a pet picks at level 100 (half of it from level 50): +1000 % XP, +100 coins an answer… */
+export const ASCENDED_BOOST: Record<PetBuffKind, number> = { xp: 10, coins: 100, heart: 1, egg: 10 };
+/** The level a pet unlocks its boost (half power) and its full power. */
+export const BOOST_LEVELS = { half: 50, full: 100 } as const;
+
+/** The boost this pet gives with its chosen kind, or null (below level 50, or none chosen yet). */
+export function ascendedBuff(p: Pick<PetState, 'level' | 'boost'>): PetBuff | null {
+  if (!p.boost || p.level < BOOST_LEVELS.half) return null;
+  const share = p.level >= BOOST_LEVELS.full ? 1 : 0.5;
+  return { kind: p.boost, value: ASCENDED_BOOST[p.boost] * share };
+}
+
+// ---------------- designing your own pet ----------------
+
+/** What designing a pet costs, by the rarity it is made at (Lumo can't be made). */
+export const CUSTOM_PET_PRICE: Partial<Record<Rarity, number>> = { common: 300, rare: 700, epic: 1500, legendary: 3000, mythical: 6000, exotic: 10000, galaxial: 16000, celestial: 25000, divine: 40000 };
+/** Points a designed pet's bonuses can use, by rarity. */
+export const CUSTOM_PET_POINTS: Partial<Record<Rarity, number>> = { common: 6, rare: 9, epic: 12, legendary: 15, mythical: 20, exotic: 24, galaxial: 28, celestial: 31, divine: 34 };
+/** What each bonus costs in points: 1 point per 1 % of XP or heart chance, per 2 % of egg speed, 4 points a coin. */
+export const CUSTOM_POINT_COST: Record<PetBuffKind, number> = { xp: 100, heart: 100, egg: 50, coins: 4 };
+/** At most this many different bonuses on one designed pet. */
+export const CUSTOM_MAX_KINDS = 2;
+
+export type CustomPetProblem = 'bad_rarity' | 'bad_body' | 'no_bonus' | 'too_many_kinds' | 'too_many_points' | 'bad_value';
+
+/** Points a set of bonuses uses (0.05 XP = 5 points). */
+export function customPoints(buffs: Partial<Record<PetBuffKind, number>>): number {
+  return Math.round((Object.entries(buffs) as [PetBuffKind, number][]).reduce((a, [k, v]) => a + v * CUSTOM_POINT_COST[k], 0) * 100) / 100;
+}
+
+/** The rules a designed pet must follow: Lumo checks them before making it. */
+export function checkCustomPet(d: { rarity: Rarity; body: string; buffs: Partial<Record<PetBuffKind, number>> }): CustomPetProblem | null {
+  const points = CUSTOM_PET_POINTS[d.rarity];
+  if (points === undefined) return 'bad_rarity';
+  const body = speciesOf(d.body);
+  if (!body || body.rarity === 'lumo') return 'bad_body';
+  const entries = (Object.entries(d.buffs) as [string, number][]).filter(([, v]) => v !== 0);
+  if (entries.some(([k, v]) => !(k in CUSTOM_POINT_COST) || typeof v !== 'number' || !Number.isFinite(v) || v < 0 || (k === 'coins' ? !Number.isInteger(v) : Math.round(v * 100) !== v * 100))) return 'bad_value';
+  if (entries.length === 0) return 'no_bonus';
+  if (entries.length > CUSTOM_MAX_KINDS) return 'too_many_kinds';
+  if (customPoints(Object.fromEntries(entries)) > points + 1e-9) return 'too_many_points';
+  return null;
 }
 
 export const petTooHungry = (p: PetState, now: Millis) => currentFullness(p, now) < HUNGRY_BUFF_LIMIT;
@@ -328,24 +410,37 @@ export type TeamBuffKind = PetBuffKind | 'gold';
 export type TeamBuffs = Record<TeamBuffKind, number>;
 
 /**
- * Lumo power: what a Lumo-rarity pet adds on top of its own bonus. Huge, but once per team (two Lumo
- * pets don't double it) and capped, so it never maxes everything out.
+ * Lumo power: what each Lumo-rarity pet adds (instead of a bonus of its own). Every Lumo pet on the team
+ * adds its own, and it grows with the pet's level: twice as strong at level 51, nearly three times at 100.
  */
 export const LUMO_POWER: TeamBuffs = { xp: 0.5, gold: 0.5, heart: 0.2, egg: 0.5, coins: 0 };
-/** With Lumo power, the team's bonuses go up to these (instead of BUFF_CAP). */
-export const LUMO_CAP: TeamBuffs = { xp: 0.75, gold: 0.5, heart: 0.6, egg: 1, coins: 8 };
 
-/** Everything the active pets add up to (hungry ones don't help; each kind is capped). */
+/** One Lumo pet's power at its level. */
+export function lumoPower(level: number): TeamBuffs {
+  const k = 1 + (Math.max(1, level) - 1) / 50;
+  return Object.fromEntries((Object.keys(LUMO_POWER) as TeamBuffKind[]).map((key) => [key, Math.round(LUMO_POWER[key] * k * 100) / 100])) as TeamBuffs;
+}
+
+/**
+ * Everything the active pets add up to (hungry ones don't help). Their own bonuses are capped per kind;
+ * Lumo power and level-50/100 boosts come on top, uncapped.
+ */
 export function teamBuffs(team: PetState[], now: Millis): TeamBuffs {
   const sum: TeamBuffs = { xp: 0, coins: 0, heart: 0, egg: 0, gold: 0 };
-  let lumo = false;
+  const extra: TeamBuffs = { xp: 0, coins: 0, heart: 0, egg: 0, gold: 0 };
   for (const p of team.slice(0, MAX_ACTIVE_PETS)) {
     if (!speciesOf(p.species) || petTooHungry(p, now)) continue;
-    const b = petBuff(p);
-    sum[b.kind] += b.value;
-    if (petTier(p) === 'lumo') lumo = true;
+    for (const b of petBuffs(p)) sum[b.kind] += b.value;
+    if (petTier(p) === 'lumo') {
+      const lp = lumoPower(p.level);
+      for (const k of Object.keys(extra) as TeamBuffKind[]) extra[k] += lp[k];
+    }
+    const a = ascendedBuff(p);
+    if (a) extra[a.kind] += a.value;
   }
-  for (const k of Object.keys(BUFF_CAP) as PetBuffKind[]) sum[k] = Math.min(BUFF_CAP[k], Math.round(sum[k] * 100) / 100);
-  if (lumo) for (const k of Object.keys(sum) as TeamBuffKind[]) sum[k] = Math.min(LUMO_CAP[k], Math.round((sum[k] + LUMO_POWER[k]) * 100) / 100);
+  for (const k of Object.keys(BUFF_CAP) as PetBuffKind[]) sum[k] = Math.min(BUFF_CAP[k], sum[k]);
+  for (const k of Object.keys(sum) as TeamBuffKind[]) sum[k] = Math.round((sum[k] + extra[k]) * 100) / 100;
+  // A heart can only be won back so often.
+  sum.heart = Math.min(1, sum.heart);
   return sum;
 }

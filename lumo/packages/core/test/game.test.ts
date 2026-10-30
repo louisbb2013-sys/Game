@@ -3,6 +3,11 @@ import {
   addPetXp, advanceQuest, applyStats, BADGES, currentFullness, emptyStats, feedPet, hatch, ITEMS, newBadges, PET_SPECIES, petMood, petXpPerk,
   questsFor, rollChest, seededRng, HOUR_MS, type GameEvent, petTier, upgradeBlocker, upgradePet, RARITIES, PET_UPGRADES,
   MAX_ACTIVE_PETS, petBuff, teamBuffs, type PetState, rollEggRarity, speciesOf,
+  lumoPower,
+  ascendedBuff,
+  checkCustomPet,
+  customPoints,
+  PET_MAX_LEVEL,
 } from '../src';
 
 describe('chests', () => {
@@ -84,7 +89,7 @@ describe('quests and badges', () => {
 });
 
 describe('pet tiers', () => {
-  it('pets climb common → rare → … → galaxial with level and coins; Lumo is only ever a gift', () => {
+  it('pets climb common → rare → … → divine with level and coins; Lumo is only ever a gift', () => {
     let p = { species: 'moss_turtle' as const, level: 1, xp: 0, fullness: 80, fedAt: 0 };
     expect(petTier(p)).toBe('common');
     expect(upgradeBlocker(p, 10_000)).toBe('level_too_low');
@@ -93,15 +98,18 @@ describe('pet tiers', () => {
     expect(upgradeBlocker(p, 200)).toBeNull();
     const up = upgradePet(p);
     expect(petTier(up)).toBe('rare');
-    // Mythical → Exotic → Galaxial by upgrades; nothing goes past Galaxial.
+    // Mythical → Exotic → Galaxial → Celestial → Divine by upgrades; nothing goes past Divine.
     expect(petTier(upgradePet({ ...up, tier: 'mythical' }))).toBe('exotic');
     expect(petTier(upgradePet({ ...up, tier: 'exotic' }))).toBe('galaxial');
-    const top = { ...up, level: 50, tier: 'galaxial' as const };
+    expect(petTier(upgradePet({ ...up, tier: 'galaxial' }))).toBe('celestial');
+    expect(petTier(upgradePet({ ...up, tier: 'celestial' }))).toBe('divine');
+    expect(upgradeBlocker({ ...up, level: 60, tier: 'celestial' }, 1e9)).toBe('level_too_low');
+    const top = { ...up, level: 50, tier: 'divine' as const };
     expect(upgradeBlocker(top, 1e9)).toBe('max_tier');
     expect(upgradeBlocker({ ...top, tier: 'lumo' }, 1e9)).toBe('max_tier');
     expect(petXpPerk(top, 'happy')).toBeGreaterThan(petXpPerk({ ...top, tier: 'common' }, 'happy'));
-    expect(RARITIES).toEqual(['common', 'rare', 'epic', 'legendary', 'mythical', 'exotic', 'galaxial', 'lumo']);
-    expect(PET_UPGRADES.galaxial).toBeNull();
+    expect(RARITIES).toEqual(['common', 'rare', 'epic', 'legendary', 'mythical', 'exotic', 'galaxial', 'celestial', 'divine', 'lumo']);
+    expect(PET_UPGRADES.divine).toBeNull();
     // No egg ever gives a Lumo pet.
     for (let s = 0; s < 3000; s++) expect(rollEggRarity(seededRng(s))).not.toBe('lumo');
     for (let s = 0; s < 3000; s++) expect(speciesOf(hatch('egg_rare', seededRng(s)))!.rarity).not.toBe('lumo');
@@ -133,17 +141,45 @@ describe('pet team bonuses (like Gizmo)', () => {
     expect(teamBuffs(xpTeam, 0).xp).toBe(0.4);
   });
 
-  it('a Lumo pet adds Lumo power: +50% XP, +50% coins, more hearts, faster eggs; once per team, capped', () => {
+  it('Lumo power: a Lumo pet has no bonus of its own; each one adds its power, which grows with its level', () => {
     const firefly = pet('lumo_firefly', 1, { tier: 'lumo' });
-    // Its own +25% XP, plus Lumo power.
-    expect(teamBuffs([firefly], 0)).toEqual({ xp: 0.75, gold: 0.5, heart: 0.2, egg: 0.5, coins: 0 });
-    // A second Lumo pet doesn't double it, and XP never goes past +75%.
-    const two = teamBuffs([firefly, pet('comet_fox', 1, { tier: 'lumo' }), pet('galaxy_dragon', 50)], 0);
-    expect(two).toMatchObject({ xp: 0.75, gold: 0.5, heart: 0.2, egg: 0.5 });
-    expect(two.coins).toBe(5); // the fox's own bonus still counts
+    expect(teamBuffs([firefly], 0)).toEqual({ xp: 0.5, gold: 0.5, heart: 0.2, egg: 0.5, coins: 0 });
+    // Two Lumo pets: twice the power (it adds up), and the fox's own bonus is gone (Lumo power instead).
+    const two = teamBuffs([firefly, pet('comet_fox', 1, { tier: 'lumo' })], 0);
+    expect(two).toEqual({ xp: 1, gold: 1, heart: 0.4, egg: 1, coins: 0 });
+    // Levelling up makes it stronger: twice at level 51, almost three times at 100.
+    expect(lumoPower(51)).toEqual({ xp: 1, gold: 1, heart: 0.4, egg: 1, coins: 0 });
+    expect(lumoPower(100).xp).toBeCloseTo(1.49, 2);
     // Too hungry: no help at all, Lumo power included.
     expect(teamBuffs([pet('lumo_firefly', 1, { tier: 'lumo', fullness: 0 })], 0)).toEqual({ xp: 0, gold: 0, heart: 0, egg: 0, coins: 0 });
     // Only Lumo rarity has it.
     expect(teamBuffs([pet('galaxy_dragon', 1, { tier: 'galaxial' })], 0).gold).toBe(0);
+  });
+
+  it('at level 50 a pet picks a big boost (half power), at level 100 the full +1000 % or +100 coins', () => {
+    expect(ascendedBuff({ level: 49, boost: 'xp' })).toBeNull();
+    expect(ascendedBuff({ level: 50, boost: 'xp' })).toEqual({ kind: 'xp', value: 5 });
+    expect(ascendedBuff({ level: 100, boost: 'xp' })).toEqual({ kind: 'xp', value: 10 });
+    expect(ascendedBuff({ level: 100, boost: 'coins' })).toEqual({ kind: 'coins', value: 100 });
+    expect(ascendedBuff({ level: 80 })).toBeNull(); // nothing picked yet
+    // It comes on top of the usual caps.
+    const t = teamBuffs([pet('ember_dragon', 100, { boost: 'xp' } as never), pet('comet_fox', 50, { boost: 'coins' } as never)], 0);
+    expect(t.xp).toBeGreaterThan(10);
+    expect(t.coins).toBeGreaterThanOrEqual(50);
+    // Pets now level up to 100.
+    expect(addPetXp(pet('moss_turtle', 99), 1e9).level).toBe(PET_MAX_LEVEL);
+  });
+
+  it('a designed pet follows the rules: its rarity sets the price and the points its bonuses can use', () => {
+    expect(checkCustomPet({ rarity: 'epic', body: 'comet_fox', buffs: { xp: 0.06, egg: 0.12 } })).toBeNull(); // 6 + 6 = 12 points
+    expect(checkCustomPet({ rarity: 'epic', body: 'comet_fox', buffs: { xp: 0.1, egg: 0.1 } })).toBe('too_many_points');
+    expect(checkCustomPet({ rarity: 'epic', body: 'comet_fox', buffs: { xp: 0.02, egg: 0.02, coins: 1 } })).toBe('too_many_kinds');
+    expect(checkCustomPet({ rarity: 'epic', body: 'comet_fox', buffs: {} })).toBe('no_bonus');
+    expect(checkCustomPet({ rarity: 'lumo', body: 'comet_fox', buffs: { xp: 0.01 } })).toBe('bad_rarity');
+    expect(checkCustomPet({ rarity: 'epic', body: 'lumo_firefly', buffs: { xp: 0.01 } })).toBe('bad_body');
+    expect(checkCustomPet({ rarity: 'epic', body: 'comet_fox', buffs: { coins: 1.5 } })).toBe('bad_value');
+    expect(customPoints({ coins: 3 })).toBe(12);
+    // Its bonuses count on the team like any pet's.
+    expect(teamBuffs([pet('comet_fox', 1, { custom: { xp: 0.06, egg: 0.12 } } as never)], 0)).toMatchObject({ xp: 0.06, egg: 0.12, coins: 0 });
   });
 });

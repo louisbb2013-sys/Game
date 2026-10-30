@@ -4,6 +4,7 @@ import { accountCode, loadSession } from '../netlify/cloud';
 import { Link } from 'react-router';
 import { GearIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
+import { GradeChip } from '../components/Grade';
 import { api, ApiError, LOCAL, NETLIFY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -55,6 +56,7 @@ export function Profile() {
         <p className="text-sm text-muted">
           {t('home.level', { level: user.level.level })} · {user.xp} XP · {t(`leagues.${user.leagueTier}`)}
         </p>
+        {user.grade && <GradeChip grade={user.grade} />}
         <p className="text-xs text-muted">{t('profile.joined', { date: joined })}</p>
       </section>
 

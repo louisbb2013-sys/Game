@@ -2,10 +2,11 @@ import type { KV } from './kv.ts';
 import { json, limiter, randomId, type Session } from './session.ts';
 
 /**
- * Gifts from the game's creator: Lumo-rarity pets nobody can hatch or upgrade to. Only a creator can
- * give one (by the receiver's Lumo name); the receiver's page picks it up and claims it once.
+ * Gifts from the game's creator: pets at any rarity (Lumo rarity included, which nobody can hatch or
+ * upgrade to) and any level. Only a creator can give one (by the receiver's Lumo name); the receiver's
+ * page picks it up and claims it once.
  *
- *   g/<uid>/<giftId>   { id, species, tier, from, at, claimed? }
+ *   g/<uid>/<giftId>   { id, species, tier, level, from, at, claimed? }
  *   c/<uid>            { at }   this learner unlocked creator mode with the creator code
  *
  * Creators: the learners listed in LUMO_CREATORS (comma-separated ids), and any account where the
@@ -16,13 +17,15 @@ import { json, limiter, randomId, type Session } from './session.ts';
 const CREATOR_CODE_HASH = '18ca0707ef32b0f8fd4588152e1de8363b61981a3422c0f0ca8b40a21e292793';
 const FIRST_GIFT = 'creator-lumo';
 const tries = limiter(10, 10 * 60_000);
-const GIFT_SPECIES = new Set(['lumo_firefly', 'moss_turtle', 'cloud_sheep', 'pixel_owl', 'comet_fox', 'crystal_cat', 'star_jelly', 'bubble_octo', 'ember_dragon', 'puddle_frog', 'acorn_squirrel', 'snow_penguin', 'lucky_bunny', 'rock_dino', 'mystic_unicorn', 'cosmic_whale', 'aurora_peacock', 'celestial_phoenix', 'galaxy_dragon', 'prism_axolotl', 'nebula_manta']);
+const GIFT_SPECIES = new Set(['lumo_firefly', 'moss_turtle', 'cloud_sheep', 'pixel_owl', 'comet_fox', 'crystal_cat', 'star_jelly', 'bubble_octo', 'ember_dragon', 'puddle_frog', 'acorn_squirrel', 'snow_penguin', 'lucky_bunny', 'rock_dino', 'mystic_unicorn', 'cosmic_whale', 'aurora_peacock', 'celestial_phoenix', 'galaxy_dragon', 'prism_axolotl', 'nebula_manta', 'solar_lion', 'divine_griffin']);
+const GIFT_TIERS = new Set(['common', 'rare', 'epic', 'legendary', 'mythical', 'exotic', 'galaxial', 'celestial', 'divine', 'lumo']);
 
 type Env = (k: string) => string | undefined;
 interface Gift {
   id: string;
   species: string;
-  tier: 'lumo';
+  tier: string;
+  level?: number;
   from: string;
   at: number;
   claimed?: number;
@@ -108,7 +111,10 @@ export async function gifts(kv: KV, env: Env, body: Record<string, unknown>, me:
     if (!GIFT_SPECIES.has(species)) return json(400, { error: 'bad_species' });
     const to = await uidForName(kv, String(body.username ?? ''));
     if (!to) return json(404, { error: 'no_such_learner' });
-    const gift: Gift = { id: `g${randomId(9)}`, species, tier: 'lumo', from: me.u, at: now };
+    const tier = String(body.tier ?? 'lumo');
+    if (!GIFT_TIERS.has(tier)) return json(400, { error: 'bad_tier' });
+    const level = Math.max(1, Math.min(100, Math.floor(Number(body.level) || 1)));
+    const gift: Gift = { id: `g${randomId(9)}`, species, tier, level, from: me.u, at: now };
     await kv.set(`g/${to}/${gift.id}`, JSON.stringify(gift));
     return json(200, { ok: true });
   }

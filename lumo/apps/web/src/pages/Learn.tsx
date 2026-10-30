@@ -54,6 +54,8 @@ export function Learn() {
         <span className="shrink-0 text-2xl text-white/60">›</span>
       </Link>
 
+      {LOCAL && <WhySwitch />}
+
       {decks === null ? (
         <p className="text-center font-bold text-muted">{t('common.loading')}</p>
       ) : decks.length === 0 ? (
@@ -99,5 +101,44 @@ export function Learn() {
 
       {LOCAL && <SharedDecks />}
     </div>
+  );
+}
+
+/** For learners coming from Gizmo or Quizlet: what Lumo does that they don't, and their cards in one paste. */
+function WhySwitch() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="panel space-y-3 p-4" data-testid="why-lumo">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex w-full items-center gap-3 text-left">
+        <span className="text-2xl" aria-hidden>
+          🔁
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-black">{t('importx.whyTitle')}</span>
+          <span className="block text-xs text-muted">{t('importx.whyBody')}</span>
+        </span>
+        <span className="text-muted" aria-hidden>
+          {open ? '▴' : '▾'}
+        </span>
+      </button>
+      {open && (
+        <>
+          <ul className="space-y-1.5 text-sm">
+            {(t('importx.reasons', { returnObjects: true }) as string[]).map((r) => (
+              <li key={r} className="flex gap-2">
+                <span className="text-good" aria-hidden>
+                  ✓
+                </span>
+                {r}
+              </li>
+            ))}
+          </ul>
+          <Link to="/chat?import=1" className="btn-gold block rounded-2xl py-3 text-center font-black">
+            🔁 {t('importx.title')}
+          </Link>
+        </>
+      )}
+    </section>
   );
 }

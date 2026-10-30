@@ -84,13 +84,17 @@ const LOOKS: Record<PetSpeciesId, Look> = {
   prism_axolotl: { forme: 'axolotl', base: '#3FD8F0', accent: '#FF7AD9', iris: 0.4 },
   nebula_manta: { forme: 'raie', base: '#4F46E5', accent: '#F0ABFC', etoiles: 1, nebuleuse: '#22D3EE' },
   lumo_firefly: { forme: 'luciole', base: '#4F46E5', accent: '#FBBF24' },
+  solar_lion: { forme: 'chat', base: '#F59E0B', accent: '#FFF1A8', iris: 0.2 },
+  divine_griffin: { forme: 'phenix', base: '#FDF2C4', accent: '#93C5FD', iris: 0.3 },
 };
 
 /** Rarer = more glow; the top tiers also change the fur (prism sheen, stars, gold). */
-const GLOW: Record<Rarity, number> = { common: 0.05, rare: 0.18, epic: 0.32, legendary: 0.5, mythical: 0.7, exotic: 0.8, galaxial: 0.9, lumo: 1.05 };
+const GLOW: Record<Rarity, number> = { common: 0.05, rare: 0.18, epic: 0.32, legendary: 0.5, mythical: 0.7, exotic: 0.8, galaxial: 0.9, celestial: 0.95, divine: 1, lumo: 1.05 };
 const SPARKLE: Partial<Record<Rarity, string[]>> = {
   exotic: ['#2DD4BF', '#A3E635', '#F0ABFC', '#FFFFFF'],
   galaxial: ['#FFFFFF', '#C7D2FE', '#A5F3FC', '#F0ABFC'],
+  celestial: ['#FFF1A8', '#FDBA3B', '#FFFFFF', '#FB923C'],
+  divine: ['#FFFFFF', '#FDF2C4', '#93C5FD', '#FDE68A'],
   lumo: ['#FFE08A', '#FACC15', '#FFF3C4', '#FFB21C'],
 };
 

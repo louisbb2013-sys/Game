@@ -63,6 +63,8 @@ export interface Profile {
   hearts: { current: number; nextRefillAt: number | null };
   streak: { days: number; lastDay: string | null; freezes: number; status: 'none' | 'safe' | 'at_risk' | 'broken' };
   leagueTier: string;
+  /** Grade 4 → Special Grade, from the level (website and Claude page). */
+  grade?: { id: string; emoji: string; index: number; next: { id: string; level: number } | null };
   theme: string;
   boostUntil: string | null;
   createdAt: string;

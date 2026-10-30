@@ -18,7 +18,7 @@ export interface SessionState {
   /** Which fact each queued question is about (same order as `queue`; -1 = the idea as a whole). */
   facts?: number[];
   history: { conceptId: string; format: Format; bloom: Bloom; score: number; variantKey: string; fact?: number }[];
-  endedReason?: 'done' | 'out_of_hearts' | 'time_up' | 'boss_defeated' | 'boss_escaped';
+  endedReason?: 'done' | 'out_of_hearts' | 'time_up' | 'boss_defeated' | 'boss_escaped' | 'quest_won' | 'quest_lost';
 }
 
 export const MAX_RETRIES_PER_CONCEPT = 2;
@@ -108,7 +108,7 @@ export function applyAnswer(s: SessionState, entry: SessionState['history'][numb
 
   // A missed concept comes back a little later in another form (not in a mock exam or a race against the clock).
   const retriesSoFar = Object.values(retries).reduce((a, b) => a + b, 0);
-  if (!correct && o.canRetry !== false && (retries[entry.conceptId] ?? 0) < MAX_RETRIES_PER_CONCEPT && retriesSoFar < (o.maxRetries ?? MAX_RETRIES_PER_ROUND) && s.mode !== 'exam' && s.mode !== 'speed') {
+  if (!correct && o.canRetry !== false && (retries[entry.conceptId] ?? 0) < MAX_RETRIES_PER_CONCEPT && retriesSoFar < (o.maxRetries ?? MAX_RETRIES_PER_ROUND) && s.mode !== 'exam' && s.mode !== 'speed' && s.mode !== 'quest') {
     retries[entry.conceptId] = (retries[entry.conceptId] ?? 0) + 1;
     const gap = Math.min(RETRY_GAP, queue.length);
     queue.splice(gap, 0, entry.conceptId);

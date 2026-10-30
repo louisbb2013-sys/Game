@@ -1,4 +1,5 @@
-import { LUMO_POWER, PET_BUFF, PET_SPECIES, petXpForLevel, RARITIES, STARTER_PETS, type PetBuffKind, type Rarity, type TeamBuffKind } from '@lumo/core';
+import { PET_BUFF, PET_SPECIES, petXpForLevel, RARITIES, STARTER_PETS, type PetBuffKind, type Rarity, type TeamBuffKind, type TeamBuffs } from '@lumo/core';
+import { BoostPicker, boostText, CustomPetMaker } from '../components/PetExtras';
 import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -30,10 +31,19 @@ export interface PetView {
   equipped: boolean;
   /** On the team (website and Claude page). */
   active?: boolean;
-  /** Its bonus (website and Claude page); `off` while it's too hungry to help. */
+  /** Its bonus (server version); `off` while it's too hungry to help. */
   buff?: { kind: PetBuffKind; value: number; off: boolean };
-  /** Lumo rarity: Lumo power on top of its own bonus (website and Claude page). */
-  lumoPower?: boolean;
+  /** Its own bonuses (website and Claude page; none for a Lumo pet), and whether it's too hungry to help. */
+  buffs?: { kind: PetBuffKind; value: number }[];
+  off?: boolean;
+  /** Lumo rarity: its Lumo power at its level (it adds up with other Lumo pets'). */
+  lumoPower?: TeamBuffs | null;
+  /** Level 50/100: its chosen boost and what it gives now; whether it can pick one. */
+  boost?: PetBuffKind | null;
+  boostNow?: { kind: PetBuffKind; value: number } | null;
+  canBoost?: boolean;
+  custom?: boolean;
+  maxLevel?: number;
   /** The next tier and what it takes, or null at the top (mythical). */
   upgrade?: { to: Rarity; coins: number; level: number } | null;
 }
@@ -88,6 +98,7 @@ export function Pets() {
   const [name, setName] = useState('');
   const [coins, setCoins] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
+  const [maker, setMaker] = useState(false);
   const showRewards = useRewards();
   const { creator, gifts } = useGifts();
 
@@ -161,6 +172,30 @@ export function Pets() {
       <header className="space-y-2">
         <h1 className="text-2xl font-black">{t('pets.collectionTitle')}</h1>
         <p className="text-sm font-bold text-muted">{t('pets.collection', { n: pets.length, total: PET_SPECIES.length })}</p>
+        {teamMode && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={food === 0}
+              onClick={() =>
+                void run(async () => {
+                  const r = await api<{ fed: number }>('/api/game/pets/feed-all', { method: 'POST' });
+                  if (r.fed) play('correct');
+                })
+              }
+              className="rounded-xl bg-good px-3 py-2 text-sm font-black text-white disabled:opacity-40"
+              data-testid="feed-all"
+            >
+              🍎 {t('petx.feedAll', { count: food })}
+            </button>
+            <button type="button" onClick={() => setMaker(true)} className="rounded-xl bg-surface px-3 py-2 text-sm font-black ring-1 ring-line" data-testid="design-pet">
+              🧪 {t('petx.design')}
+            </button>
+            <Link to="/shop" className="rounded-xl bg-surface px-3 py-2 text-sm font-black ring-1 ring-line">
+              🥚 {t('petx.buyEggs')}
+            </Link>
+          </div>
+        )}
         {buffs && (
           // What the whole team adds while you study.
           <ul className="flex flex-wrap gap-1.5" aria-label={t('pets.teamBonus')} data-testid="team-buffs">
@@ -256,6 +291,16 @@ export function Pets() {
         </section>
       )}
       {creator && <CreatorPanel />}
+      {maker && (
+        <CustomPetMaker
+          onClose={() => setMaker(false)}
+          onMade={(p) => {
+            setMaker(false);
+            void load();
+            showRewards({ xp: 0, levelUp: null, badges: [], questsCompleted: [], hatched: { species: p.species, emoji: p.emoji, rarity: p.rarity, duplicate: false } });
+          }}
+        />
+      )}
       {error && !shown && <p className="font-bold text-bad">{t(`pets.errors.${error}`, { defaultValue: t('signin.errors.network') })}</p>}
 
       {shown && (
@@ -278,11 +323,13 @@ export function Pets() {
   );
 }
 
-/** Only for the game's creator: give someone a Lumo-rarity pet by their Lumo name. */
+/** Only for the game's creator: give someone a pet, at any rarity and level, by their Lumo name. */
 function CreatorPanel() {
   const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [species, setSpecies] = useState('lumo_firefly');
+  const [tier, setTier] = useState<Rarity>('lumo');
+  const [level, setLevel] = useState(1);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const give = async (e: React.FormEvent) => {
@@ -292,7 +339,7 @@ function CreatorPanel() {
     setBusy(true);
     setMsg(null);
     try {
-      await api('/api/game/gifts/give', { method: 'POST', body: { username: who, species } });
+      await api('/api/game/gifts/give', { method: 'POST', body: { username: who, species, tier, level } });
       setMsg({ ok: true, text: t('gifts.sent', { name: who }) });
       setUsername('');
       play('finish');
@@ -307,7 +354,7 @@ function CreatorPanel() {
         👑 {t('gifts.creatorTitle')}
       </h2>
       <p className="text-sm text-muted">{t('gifts.creatorBody')}</p>
-      <form onSubmit={(e) => void give(e)} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+      <form onSubmit={(e) => void give(e)} className="grid gap-2 sm:grid-cols-2">
         <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t('gifts.username')} aria-label={t('gifts.username')} maxLength={40} className="rounded-xl border-2 border-line bg-bg px-3 py-2 font-bold" />
         <select value={species} onChange={(e) => setSpecies(e.target.value)} aria-label={t('gifts.which')} className="rounded-xl border-2 border-line bg-bg px-3 py-2 font-bold">
           {PET_SPECIES.map((sp) => (
@@ -316,7 +363,18 @@ function CreatorPanel() {
             </option>
           ))}
         </select>
-        <button type="submit" disabled={busy || !username.trim()} className="rarity-lumo rounded-xl px-4 py-2 font-black text-night disabled:opacity-50">
+        <select value={tier} onChange={(e) => setTier(e.target.value as Rarity)} aria-label={t('petx.giftRarity')} className="rounded-xl border-2 border-line bg-bg px-3 py-2 font-bold">
+          {RARITIES.map((r) => (
+            <option key={r} value={r}>
+              {t(`pets.rarity.${r}`)}
+            </option>
+          ))}
+        </select>
+        <label className="flex items-center gap-2 rounded-xl border-2 border-line bg-bg px-3 py-2 font-bold">
+          {t('petx.giftLevel')}
+          <input type="number" min={1} max={100} value={level} onChange={(e) => setLevel(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} className="w-16 bg-transparent font-black" />
+        </label>
+        <button type="submit" disabled={busy || !username.trim()} className="rarity-lumo rounded-xl px-4 py-2 font-black text-night disabled:opacity-50 sm:col-span-2">
           🎁 {t('gifts.give')}
         </button>
       </form>
@@ -331,7 +389,7 @@ function CreatorPanel() {
 
 const BUFF_ICON: Record<TeamBuffKind, string> = { xp: '⚡', gold: '💰', coins: '🪙', heart: '💖', egg: '🥚' };
 /** Lumo power's bonuses, biggest first. */
-const LUMO_KINDS = (['xp', 'gold', 'heart', 'egg'] as const).filter((k) => LUMO_POWER[k] > 0);
+const LUMO_KINDS = ['xp', 'gold', 'heart', 'egg'] as const;
 
 /** "+7% chance to win a heart on a right answer" (or the short form for the team summary). */
 function buffLine(t: TFunction, b: { kind: TeamBuffKind; value: number }, short = false) {
@@ -343,7 +401,8 @@ function buffLine(t: TFunction, b: { kind: TeamBuffKind; value: number }, short 
 function PetCard({ pet, active = false, onOpen }: { pet: PetView; active?: boolean; onOpen: () => void }) {
   const { t } = useTranslation();
   const name = pet.name || t(`pets.species.${pet.species}`);
-  const buff = pet.buff ?? (pet.perk ? { kind: 'xp' as const, value: pet.perk, off: pet.mood === 'sad' } : null);
+  const own = pet.buffs ? (pet.buffs[0] ? { ...pet.buffs[0], off: !!pet.off } : null) : null;
+  const buff = pet.buffs ? own : (pet.buff ?? (pet.perk ? { kind: 'xp' as const, value: pet.perk, off: pet.mood === 'sad' } : null));
   return (
     <button type="button" onClick={onOpen} className="pet-card" data-rarity={pet.rarity} data-active={active} data-testid="pet-card" aria-label={`${name}, ${t(`pets.rarity.${pet.rarity}`)}, ${t('pets.level', { level: pet.level })}`}>
       <span className="w-full truncate px-1 text-lg leading-tight font-black">{name}</span>
@@ -352,7 +411,13 @@ function PetCard({ pet, active = false, onOpen }: { pet: PetView; active?: boole
         <LevelShield level={pet.level} rarity={pet.rarity} className="absolute -right-2 bottom-1" />
       </span>
       {buff && <span className={`text-sm leading-snug font-bold ${buff.off ? 'text-bad' : ''}`}>{buff.off ? `😋 ${t('pets.tooHungry')}` : buffLine(t, buff)}</span>}
-      {pet.lumoPower && !buff?.off && <span className="rarity-lumo rounded-full px-2 py-0.5 text-xs font-black text-night">✨ {t('pets.lumoPower')}</span>}
+      {pet.lumoPower && !pet.off && (
+        <span className="rarity-lumo rounded-full px-2 py-0.5 text-xs font-black text-night">
+          ✨ {t('pets.lumoPower')} · {buffLine(t, { kind: 'xp', value: pet.lumoPower.xp }, true)}
+        </span>
+      )}
+      {pet.boostNow && !pet.off && <span className="rarity-divine rounded-full px-2 py-0.5 text-xs font-black text-night">🌟 {boostText(t, pet.boostNow.kind, pet.boostNow.value)}</span>}
+      {pet.custom && <span className="text-[0.65rem] font-black text-muted">🧪 {t('petx.designed')}</span>}
     </button>
   );
 }
@@ -420,7 +485,8 @@ function PetSheet({
   const [upgraded, setUpgraded] = useState<Rarity | null>(null);
   useConfetti(!!upgraded);
   const need = petXpForLevel(pet.level);
-  const buff = pet.buff;
+  const buffs = pet.buffs ?? (pet.buff ? [pet.buff] : []);
+  const off = pet.off ?? pet.buff?.off ?? false;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     addEventListener('keydown', onKey);
@@ -477,13 +543,18 @@ function PetSheet({
         <RarityLadder tier={pet.rarity} />
       </section>
       <section className="flex flex-col gap-3 text-center">
-        {buff ? (
-          <p className={`rounded-xl px-3 py-1.5 text-sm font-black ${buff.off ? 'bg-bad/10 text-bad' : 'bg-amber-glow/15'}`} data-testid="pet-buff">
-            {BUFF_ICON[buff.kind]} {buff.off ? t('pets.tooHungryLong') : buffLine(t, buff)}
+        {off ? (
+          <p className="rounded-xl bg-bad/10 px-3 py-1.5 text-sm font-black text-bad" data-testid="pet-buff">
+            😋 {t('pets.tooHungryLong')}
           </p>
         ) : (
-          <p className="rounded-xl bg-amber-glow/15 px-3 py-1.5 text-sm font-bold">✨ {t('pets.perk', { pct: Math.round(pet.perk * 100) })}</p>
+          buffs.map((b) => (
+            <p key={b.kind} className="rounded-xl bg-amber-glow/15 px-3 py-1.5 text-sm font-black" data-testid="pet-buff">
+              {BUFF_ICON[b.kind]} {buffLine(t, b)}
+            </p>
+          ))
         )}
+        {!pet.buffs && !pet.buff && <p className="rounded-xl bg-amber-glow/15 px-3 py-1.5 text-sm font-bold">✨ {t('pets.perk', { pct: Math.round(pet.perk * 100) })}</p>}
         {pet.lumoPower && (
           <div className="rounded-2xl p-[2px] rarity-lumo" data-testid="lumo-power">
             <div className="rounded-[14px] bg-surface px-3 py-2.5 text-left">
@@ -491,13 +562,24 @@ function PetSheet({
               <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-sm font-bold">
                 {LUMO_KINDS.map((k) => (
                   <li key={k}>
-                    {BUFF_ICON[k]} {buffLine(t, { kind: k, value: LUMO_POWER[k] }, true)}
+                    {BUFF_ICON[k]} {buffLine(t, { kind: k, value: pet.lumoPower![k] }, true)}
                   </li>
                 ))}
               </ul>
-              <p className="mt-1 text-xs text-muted">{t('pets.lumoPowerHint')}</p>
+              <p className="mt-1 text-xs text-muted">{t('petx.lumoPowerHint')}</p>
             </div>
           </div>
+        )}
+        {pet.canBoost !== undefined && (
+          <BoostPicker
+            pet={pet}
+            onPick={(kind) =>
+              void run(async () => {
+                await api(`/api/game/pets/${pet.id}/boost`, { method: 'POST', body: { kind } });
+                play('combo');
+              })
+            }
+          />
         )}
         {teamMode && (
           <div className="flex w-full gap-2">
@@ -535,7 +617,7 @@ function PetSheet({
           </button>
         )}
         <div className="w-full space-y-2 text-left">
-          <Meter label={t('pets.level', { level: pet.level })} value={pet.xp / need} detail={`${pet.xp} / ${need}`} color="bg-brand" />
+          <Meter label={`${t('pets.level', { level: pet.level })}${pet.maxLevel ? ` / ${pet.maxLevel}` : ''}`} value={pet.level >= (pet.maxLevel ?? 999) ? 1 : pet.xp / need} detail={pet.level >= (pet.maxLevel ?? 999) ? '★' : `${pet.xp} / ${need}`} color="bg-brand" />
           <Meter label={t('pets.fullness')} value={pet.fullness / 100} detail={`${pet.fullness}%`} color={pet.fullness < 35 ? 'bg-bad' : 'bg-good'} />
         </div>
         <UpgradeCard

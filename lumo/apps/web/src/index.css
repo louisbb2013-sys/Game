@@ -676,6 +676,15 @@ html[data-reduce-motion='true'] .flip-inner { transition: none; }
 /* Rarities past Mythical: Exotic (acid teal), Galaxial (deep space with stars), Lumo (radiant gold, creator-only). */
 .rarity-exotic { background: linear-gradient(90deg, #a3e635, #2dd4bf, #22d3ee, #a3e635); background-size: 300% 100%; animation: myth-flow 4s linear infinite; }
 .rarity-galaxial { background: radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 70% 60%, #fff 0 1px, transparent 1.5px), linear-gradient(90deg, #1e1b4b, #4338ca, #a21caf, #1e1b4b); background-size: 12px 12px, 17px 17px, 300% 100%; animation: myth-flow 6s linear infinite; }
+.rarity-celestial { background: linear-gradient(90deg, #fb923c, #fdba3b, #fff1a8, #fdba3b, #fb923c); background-size: 300% 100%; animation: myth-flow 4s linear infinite; }
+.rarity-divine { background: linear-gradient(90deg, #ffffff, #fdf2c4, #bfdbfe, #fdf2c4, #ffffff); background-size: 300% 100%; animation: myth-flow 5s linear infinite; box-shadow: 0 0 8px rgb(191 219 254 / 0.8); }
+.grade-chip { background: var(--color-surface-2, #2a2550); }
+.grade-1 { background: linear-gradient(90deg, #b45309, #d97706); color: #fff; }
+.grade-2 { background: linear-gradient(90deg, #94a3b8, #e2e8f0); color: #0f172a; }
+.grade-3 { background: linear-gradient(90deg, #ca8a04, #fde047); color: #1c1917; }
+.grade-4 { background: linear-gradient(90deg, #0369a1, #38bdf8); color: #fff; }
+.grade-5 { background: linear-gradient(90deg, #7c3aed, #22d3ee, #f0abfc); color: #fff; }
+.grade-6 { background: linear-gradient(90deg, #fde68a, #facc15, #fff7cc, #facc15); color: #1c1917; box-shadow: 0 0 10px rgb(250 204 21 / 0.6); }
 .rarity-lumo { background: linear-gradient(90deg, #fde68a, #facc15, #fff7cc, #facc15, #fde68a); background-size: 300% 100%; animation: myth-flow 3s linear infinite; box-shadow: 0 0 10px rgb(250 204 21 / 0.7); }
 .rarity-ring-exotic { box-shadow: 0 0 0 3px rgb(45 212 191), 0 0 0 6px rgb(163 230 53 / 0.6), 0 0 26px rgb(34 211 238 / 0.7); }
 .rarity-ring-galaxial { box-shadow: 0 0 0 3px rgb(99 102 241), 0 0 0 6px rgb(217 70 239 / 0.6), 0 0 30px rgb(67 56 202 / 0.8); }
@@ -689,7 +698,7 @@ html[data-reduce-motion='true'] .flip-inner { transition: none; }
 .level-shield[data-rarity='exotic'] .level-shield-bg { fill: rgb(13 148 136); }
 .level-shield[data-rarity='galaxial'] .level-shield-bg { fill: rgb(67 56 202); }
 .level-shield[data-rarity='lumo'] .level-shield-bg { fill: rgb(202 138 4); }
-@media (prefers-reduced-motion: reduce) { .rarity-exotic, .rarity-galaxial, .rarity-lumo, .pet-card[data-rarity='lumo'] { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .rarity-exotic, .rarity-galaxial, .rarity-celestial, .rarity-divine, .rarity-lumo, .pet-card[data-rarity='lumo'] { animation: none !important; } }
 
 /* The full-screen pet page: the pet on a stage tinted by its rarity. */
 .pet-screen { --rc: 16 185 129; }

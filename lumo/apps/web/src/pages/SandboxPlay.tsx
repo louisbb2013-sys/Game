@@ -32,7 +32,7 @@ export function SandboxPlay() {
   const { user, refresh } = useAuth();
   const [a, setA] = useState<Activity | null>(null);
   const [error, setError] = useState(false);
-  const [reward, setReward] = useState<{ score: number; xp: number; streak: { days: number; extended: boolean } } | null>(null);
+  const [reward, setReward] = useState<{ score: number; xp: number; daily?: boolean; streak: { days: number; extended: boolean } } | null>(null);
   const [again, setAgain] = useState(false);
   const showRewards = useRewards();
 
@@ -44,7 +44,7 @@ export function SandboxPlay() {
   }, [id]);
 
   const complete = async (score: number) => {
-    const r = await api<{ xp: number; streak: { days: number; extended: boolean }; rewards?: Rewards }>(`/api/sandbox/${id}/complete`, { method: 'POST', body: { score } }).catch(() => ({ xp: 0, streak: { days: 0, extended: false }, rewards: undefined }));
+    const r = await api<{ xp: number; daily?: boolean; streak: { days: number; extended: boolean }; rewards?: Rewards }>(`/api/sandbox/${id}/complete`, { method: 'POST', body: { score } }).catch(() => ({ xp: 0, streak: { days: 0, extended: false }, rewards: undefined }));
     showRewards(r.rewards);
     setReward({ score, ...r });
     play('finish');
@@ -88,6 +88,12 @@ export function SandboxPlay() {
         <div className="pop-in flex flex-col items-center gap-3 rounded-3xl bg-surface p-6 text-center ring-1 ring-line">
           <Lumo size={110} mood={reward.score >= 0.5 ? 'cheer' : 'happy'} glow={1} />
           <p className="text-3xl font-black">{Math.round(reward.score * 100)}%</p>
+          {/* Up to three stars, like a level in a game. */}
+          <p className="text-4xl text-amber-glow" aria-label={t('sandboxx.bestStars', { n: Math.round(reward.score * 3) })}>
+            {'★'.repeat(Math.round(reward.score * 3))}
+            <span className="text-surface-2">{'★'.repeat(3 - Math.round(reward.score * 3))}</span>
+          </p>
+          {reward.daily && <p className="rounded-full bg-gradient-to-r from-amber-300 to-pink-300 px-3 py-1 text-sm font-black text-night">🏆 {t('sandboxx.dailyWon')}</p>}
           <p className="font-bold text-muted">{reward.score >= 0.8 ? t('sandbox.great') : reward.score >= 0.5 ? t('sandbox.good') : t('sandbox.keepGoing')}</p>
           <div className="flex gap-2 text-sm font-black">
             {reward.xp > 0 && <span className="rounded-full bg-amber-glow/25 px-3 py-1">+{reward.xp} XP</span>}

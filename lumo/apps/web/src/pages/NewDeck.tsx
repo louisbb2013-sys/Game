@@ -45,9 +45,17 @@ export function NewDeck() {
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [options, setOptions] = useState<DeckOptions>(lastDeckOptions);
+  // Cards from Gizmo, Quizlet or Anki: paste them as they are.
+  const [cardsMode, setCardsMode] = useState(false);
   const [busy, setBusy] = useState<Source | null>(null);
   const [params] = useSearchParams();
   const addTo = params.get('add');
+  useEffect(() => {
+    if (params.get('import') === '1') {
+      setSource('notes');
+      setCardsMode(true);
+    }
+  }, [params]);
   const [target, setTarget] = useState<Target | null>(null);
   useEffect(() => {
     if (!addTo) return;
@@ -127,6 +135,7 @@ export function NewDeck() {
     const problem = claudeProblem();
     if (code === 'unavailable' && problem) setError(t(`create.ai.${problem}`));
     else if (code === 'nothing_new') setError(t('addNotes.nothingNew'));
+    else if (code === 'no_cards') setError(t('importx.noCards'));
     else if (code === 'nothing_found' && kind === 'notes') setError(t('local.nothingFound'));
     else if (kind === 'topic') setError(t(`local.topicErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
     else setError(t(`local.photoErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
@@ -149,6 +158,11 @@ export function NewDeck() {
         if (media.length) await finish(await readPhotos(media, language, text.slice(0, 1500), signal, opts, known));
         else if (text) await finish(await deckFromNotes(text, language, signal, opts, known));
         else throw new ReaderError('nothing_found');
+      } else if (cardsMode && !addTo) {
+        // Cards from another app: each one becomes an idea; Claude writes real questions for them.
+        const { id } = await api<{ id: string }>('/api/local/decks/cards', { method: 'POST', body: { title: title || t('importx.defaultTitle'), text: notes, language } });
+        if (ai) void writeQuestions(id);
+        navigate(`/decks/${id}`, { state: { fresh: true } });
       } else {
         // With Claude, notes are read properly (ideas, examples, typical mistakes); without, the built-in reader.
         const draft = ai
@@ -365,9 +379,20 @@ export function NewDeck() {
             }}
             className="space-y-3"
           >
+            {!addTo && (
+              <button type="button" onClick={() => setCardsMode(!cardsMode)} aria-pressed={cardsMode} className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left ring-2 ${cardsMode ? 'bg-brand/10 ring-brand' : 'bg-surface ring-line'}`} data-testid="import-cards">
+                <span className="text-2xl" aria-hidden>
+                  🔁
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-black">{t('importx.title')}</span>
+                  <span className="block text-xs text-muted">{t('importx.body')}</span>
+                </span>
+              </button>
+            )}
             <label className="block">
-              <span className="mb-1 block text-sm font-bold">{t('local.notes')}</span>
-              <textarea id="deck-notes" required rows={12} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={example} className="w-full rounded-3xl border-2 border-line bg-surface px-4 py-3 leading-relaxed outline-none focus:border-brand" />
+              <span className="mb-1 block text-sm font-bold">{cardsMode ? t('importx.label') : t('local.notes')}</span>
+              <textarea id="deck-notes" required rows={12} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={cardsMode ? t('importx.placeholder') : example} className="w-full rounded-3xl border-2 border-line bg-surface px-4 py-3 leading-relaxed outline-none focus:border-brand" />
             </label>
             <div className="flex flex-wrap items-center gap-3">
               <button type="button" onClick={() => setNotes(example)} className="text-sm font-black text-accent">
@@ -391,7 +416,7 @@ export function NewDeck() {
             </div>
             {!ai && <p className="rounded-2xl bg-surface-2 px-3 py-2 text-xs text-muted">{t('local.notesTip')}</p>}
             <button disabled={notes.trim().length < (ai ? 3 : 20)} className="btn-gold w-full rounded-2xl py-4 text-lg font-black disabled:opacity-60">
-              ✨ {addTo ? t('addNotes.go') : t('local.makeDeck')}
+              ✨ {addTo ? t('addNotes.go') : cardsMode ? t('importx.go') : t('local.makeDeck')}
             </button>
           </form>
         )}

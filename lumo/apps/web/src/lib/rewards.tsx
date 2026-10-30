@@ -20,6 +20,8 @@ export interface Rewards {
   chest?: string;
   /** Website: the study egg after this answer. */
   egg?: { rarity: Rarity; progress: number; target: number };
+  /** Promoted to a new grade (website and Claude page). */
+  gradeUp?: { grade: string; emoji: string; coins: number; chest?: string };
 }
 
 interface Toast {
@@ -51,6 +53,15 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
           title: t('rewards.levelUp', { level: r.levelUp.level }),
           body: t(r.levelUp.chest ? 'rewards.levelUpChest' : 'rewards.levelUpCoins', { coins: r.levelUp.coins, chest: t(`chests.${r.levelUp.chest}`) }),
           link: r.levelUp.chest ? '/shop?tab=mine' : undefined,
+        });
+      }
+      if (r.gradeUp) {
+        next.push({
+          id: Math.random(),
+          emoji: r.gradeUp.emoji,
+          title: t('grades.promoted', { grade: t(`grades.names.${r.gradeUp.grade}`) }),
+          body: t(r.gradeUp.chest ? 'grades.promotedChest' : 'grades.promotedCoins', { coins: r.gradeUp.coins, chest: t(`chests.${r.gradeUp.chest}`) }),
+          link: '/me',
         });
       }
       for (const b of r.badges) {

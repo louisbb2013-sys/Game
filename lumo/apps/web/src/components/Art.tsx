@@ -82,6 +82,8 @@ const EGG: Record<Rarity, { light: string; base: string; dark: string; accent: s
   mythical: { light: '#FFEAFB', base: '#FF92DA', dark: '#6D4BFF', accent: '#35E3FF' },
   exotic: { light: '#E9FFF9', base: '#5EEAD4', dark: '#0E7490', accent: '#A3E635' },
   galaxial: { light: '#E0E7FF', base: '#6366F1', dark: '#1E1B4B', accent: '#F0ABFC' },
+  celestial: { light: '#FFF7E0', base: '#FDBA3B', dark: '#B45309', accent: '#FFF1A8' },
+  divine: { light: '#FFFFFF', base: '#FDF2C4', dark: '#C9A227', accent: '#93C5FD' },
   lumo: { light: '#FFFBEA', base: '#FACC15', dark: '#A16207', accent: '#FFFFFF' },
 };
 const EGG_PATH = 'M50 6C74 6 88 44 88 70C88 96 71 110 50 110C29 110 12 96 12 70C12 44 26 6 50 6Z';
@@ -154,6 +156,8 @@ export const RARITY_TONE: Record<Rarity, string> = {
   mythical: 'rarity-mythical text-white',
   exotic: 'rarity-exotic text-night',
   galaxial: 'rarity-galaxial text-white',
+  celestial: 'rarity-celestial text-night',
+  divine: 'rarity-divine text-night',
   lumo: 'rarity-lumo text-night',
 };
 

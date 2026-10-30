@@ -21,6 +21,23 @@ import {
   petXpPerk,
   MAX_ACTIVE_PETS,
   petBuff,
+  petBuffs,
+  gradeFor,
+  GRADES,
+  SANDBOX_KINDS as ALL_SANDBOX_KINDS,
+  DAILY_GIFTS,
+  dailyGiftDay,
+  ascendedBuff,
+  lumoPower,
+  checkCustomPet,
+  customPoints,
+  CUSTOM_PET_PRICE,
+  CUSTOM_PET_POINTS,
+  RARITY_EGG_PRICE,
+  BOOST_LEVELS,
+  PET_MAX_LEVEL,
+  RARITIES,
+  type PetBuffKind,
   petTooHungry,
   teamBuffs,
   questDef,
@@ -132,6 +149,7 @@ import {
 import { gradeOpenWithClaude } from './bank';
 import { cleanOptions, judgeShort, withTimeout } from './reader';
 import { writingNow } from './writingNow';
+import { parseCards } from './cards';
 import { goOnline, plain, publishProfile, renameProfile, together } from './together';
 
 /**
@@ -242,6 +260,10 @@ interface DB {
     liveRewarded?: string[];
     /** Friends already rewarded with coins (once each). */
     friendRewarded?: string[];
+    /** The daily gift: the last day it was claimed, and how many days in a row. */
+    daily?: { last: string; streak: number };
+    /** The day the sandbox's daily challenge was last done (double XP once a day). */
+    sandboxDaily?: string;
   };
   decks: Deck[];
   states: Record<string, ConceptStateView>;
@@ -277,6 +299,10 @@ interface LocalPet {
   active?: boolean;
   /** Upgraded rarity (its species' rarity until then). */
   tier?: Rarity;
+  /** The big boost it picked at level 50 (see core ascendedBuff). */
+  boost?: PetBuffKind;
+  /** A pet the learner designed: its own bonuses (its species is only its look). */
+  custom?: Partial<Record<PetBuffKind, number>>;
 }
 interface GameData {
   inventory: Partial<Record<ItemId, number>>;
@@ -628,6 +654,8 @@ function profile() {
     settings: u.settings,
     xp: u.xp,
     level: levelProgress(u.xp),
+    /** Grade 4 → Special Grade, from the level. */
+    grade: gradeFor(levelFromXp(u.xp)),
     coins: u.coins,
     hearts: { current: hearts.hearts, nextRefillAt: hearts.nextRefillAt },
     streak: { ...u.streak, status: streakStatus(u.streak, dayKey(t, u.timezone)) },
@@ -647,6 +675,8 @@ type Rewards = {
   hatched?: Hatched;
   chest?: ChestKind;
   egg?: GameData['egg'];
+  /** Promoted to a new grade (Grade 3, Grade 2… Special Grade): its coins and, at the top, a chest. */
+  gradeUp?: { grade: string; emoji: string; coins: number; chest?: ChestKind };
 };
 const emptyRewards = (): Rewards => ({ xp: 0, levelUp: null, badges: [], questsCompleted: [] });
 
@@ -659,7 +689,7 @@ function game(): GameData {
   if (!d.game) d.game = { inventory: {}, chests: [], pets: [], quests: {}, boostUntil: null, theme: 'default', egg: { rarity: 'common', progress: 0, target: FIRST_EGG_TARGET }, hatched: 0 };
   return d.game;
 }
-const petState = (p: LocalPet): PetState => ({ species: p.species, level: p.level, xp: p.xp, fullness: p.fullness, fedAt: p.fedAt, ...(p.tier ? { tier: p.tier } : {}) });
+const petState = (p: LocalPet): PetState => ({ species: p.species, level: p.level, xp: p.xp, fullness: p.fullness, fedAt: p.fedAt, ...(p.tier ? { tier: p.tier } : {}), ...(p.boost ? { boost: p.boost } : {}), ...(p.custom ? { custom: p.custom } : {}) });
 const equipped = () => game().pets.find((p) => p.equipped);
 /** The active pets (up to 4). Before teams existed only the buddy helped: then the first 4 join, buddy first. */
 function team(): LocalPet[] {
@@ -690,15 +720,17 @@ function giveChest(kind: ChestKind, source: string) {
 /** The site's gifts endpoint (website only). */
 const giftsApi = () => (globalThis as { __LUMO_GIFTS__?: (body: Record<string, unknown>) => Promise<unknown> }).__LUMO_GIFTS__;
 
-/** A gift from the creator: the pet at Lumo rarity (or, if you have it already, yours becomes Lumo). */
-function giftPet(species: PetSpeciesId, tier: Rarity): LocalPet {
+/** A gift from the creator: the pet at the rarity and level chosen (or, if you have it already, yours becomes it). */
+function giftPet(species: PetSpeciesId, tier: Rarity, level = 1): LocalPet {
   const g = game();
-  const have = g.pets.find((p) => p.species === species);
+  const lv = Math.max(1, Math.min(PET_MAX_LEVEL, Math.floor(level) || 1));
+  const have = g.pets.find((p) => p.species === species && !p.custom);
   if (have) {
     have.tier = tier;
+    have.level = Math.max(have.level, lv);
     return have;
   }
-  const pet: LocalPet = { id: uid(), species, name: '', level: 1, xp: 0, fullness: 100, fedAt: now(), equipped: !g.pets.some((p) => p.equipped), active: team().length < MAX_ACTIVE_PETS, tier };
+  const pet: LocalPet = { id: uid(), species, name: '', level: lv, xp: 0, fullness: 100, fedAt: now(), equipped: !g.pets.some((p) => p.equipped), active: team().length < MAX_ACTIVE_PETS, tier };
   g.pets.push(pet);
   return pet;
 }
@@ -706,7 +738,7 @@ function giftPet(species: PetSpeciesId, tier: Rarity): LocalPet {
 /** A new pet joins (or, if you have it already, your existing one powers up). */
 function addPet(species: PetSpeciesId): { pet: LocalPet; duplicate: boolean } {
   const g = game();
-  const have = g.pets.find((p) => p.species === species);
+  const have = g.pets.find((p) => p.species === species && !p.custom);
   const rarity = speciesOf(species)!.rarity;
   if (have) {
     // Already have it: it powers up, and you get snacks for your other pets.
@@ -744,10 +776,17 @@ function petView(p: LocalPet) {
     perk: petXpPerk(st, mood),
     equipped: p.equipped,
     active: team().includes(p),
-    /** What it adds while on the team (nothing while it's too hungry). */
-    buff: { ...petBuff(st), off: petTooHungry(st, t) },
-    /** Lumo rarity: Lumo power on top (see LUMO_POWER). */
-    lumoPower: tier === 'lumo',
+    /** What it adds while on the team (nothing while it's too hungry): its own bonuses (none for a Lumo pet). */
+    buffs: petBuffs(st),
+    off: petTooHungry(st, t),
+    /** Lumo rarity: its Lumo power at its level (it adds up with other Lumo pets'). */
+    lumoPower: tier === 'lumo' ? lumoPower(p.level) : null,
+    /** Level 50/100: the boost it picked (and what it gives now), or whether it can pick one. */
+    boost: p.boost ?? null,
+    boostNow: ascendedBuff(st),
+    canBoost: p.level >= BOOST_LEVELS.half,
+    custom: !!p.custom,
+    maxLevel: PET_MAX_LEVEL,
     upgrade: cost && next ? { to: next, coins: cost.coins, level: cost.level } : null,
   };
 }
@@ -987,11 +1026,77 @@ const gameRoutes: [string, RegExp, Handler][] = [
     if (!def || def.price === null) throw new LocalError(404, 'not_for_sale');
     const u = load().user;
     if (def.kind === 'cosmetic' && game().inventory[id]) throw new LocalError(409, 'already_owned');
-    if (u.coins < def.price) throw new LocalError(402, 'not_enough_coins');
-    u.coins -= def.price;
-    if (def.kind === 'chest') giveChest('common', 'shop');
-    else addItem(id, 1);
-    return { coins: u.coins };
+    // Several at once ("max" = as many as the coins pay for); a cosmetic only once.
+    const most = Math.floor(u.coins / def.price);
+    const qty = def.kind === 'cosmetic' ? 1 : b.qty === 'max' ? Math.min(99, most) : Math.max(1, Math.min(99, Math.floor(Number(b.qty) || 1)));
+    if (qty < 1 || u.coins < def.price * qty) throw new LocalError(402, 'not_enough_coins');
+    u.coins -= def.price * qty;
+    for (let i = 0; i < qty; i++) {
+      if (def.kind === 'chest') giveChest('common', 'shop');
+      else addItem(id, 1);
+    }
+    return { coins: u.coins, qty };
+  }],
+  ['POST', /^\/api\/game\/shop\/egg$/, (_m, b) => {
+    // An egg of the rarity chosen: the pet inside is always that rarity.
+    const rarity = String(b.rarity) as Rarity;
+    const price = RARITY_EGG_PRICE[rarity];
+    if (!price) throw new LocalError(404, 'not_for_sale');
+    const u = load().user;
+    if (u.coins < price) throw new LocalError(402, 'not_enough_coins');
+    u.coins -= price;
+    const { pet, duplicate } = addPet(hatchRarity(rarity, lootRng()));
+    game().hatched++;
+    return { pet: petView(pet), duplicate, snacks: duplicate ? DUPLICATE_PET_SNACKS : 0, coins: u.coins };
+  }],
+  ['POST', /^\/api\/game\/pets\/custom$/, (_m, b) => {
+    // A pet the learner designs: its look, its rarity and its bonuses, within the rules (core checkCustomPet).
+    const rarity = String(b.rarity) as Rarity;
+    const body = String(b.body ?? '');
+    const buffs: Partial<Record<PetBuffKind, number>> = {};
+    for (const k of ['xp', 'coins', 'heart', 'egg'] as PetBuffKind[]) {
+      const v = Number((b.buffs as Record<string, unknown> | undefined)?.[k] ?? 0);
+      if (v) buffs[k] = v;
+    }
+    const problem = checkCustomPet({ rarity, body, buffs });
+    if (problem) throw new LocalError(422, problem);
+    const price = CUSTOM_PET_PRICE[rarity]!;
+    const u = load().user;
+    if (u.coins < price) throw new LocalError(402, 'not_enough_coins');
+    const name = checkPetName(String(b.name ?? ''));
+    u.coins -= price;
+    const g = game();
+    const pet: LocalPet = { id: uid(), species: body as PetSpeciesId, name, level: 1, xp: 0, fullness: 100, fedAt: now(), equipped: !g.pets.some((p) => p.equipped), active: team().length < MAX_ACTIVE_PETS, tier: rarity, custom: buffs };
+    g.pets.push(pet);
+    return { pet: petView(pet), coins: u.coins };
+  }],
+  ['GET', /^\/api\/game\/pets\/custom$/, () => ({ prices: CUSTOM_PET_PRICE, points: CUSTOM_PET_POINTS, eggs: RARITY_EGG_PRICE, coins: load().user.coins })],
+  ['POST', /^\/api\/game\/pets\/([\w-]+)\/boost$/, (m, b) => {
+    // From level 50 a pet picks its big boost (and can change it).
+    const pet = game().pets.find((p) => p.id === m[1]);
+    if (!pet) throw new LocalError(404, 'pet_not_found');
+    if (pet.level < BOOST_LEVELS.half) throw new LocalError(409, 'level_too_low');
+    const kind = String(b.kind) as PetBuffKind;
+    if (!['xp', 'coins', 'heart', 'egg'].includes(kind)) throw new LocalError(400, 'bad_boost');
+    pet.boost = kind;
+    return { pet: petView(pet) };
+  }],
+  ['POST', /^\/api\/game\/pets\/feed-all$/, () => {
+    // Snacks for every pet that isn't full, the hungriest first, while there are snacks.
+    const g = game();
+    let fed = 0;
+    const order = g.pets.slice().sort((a, b) => currentFullness(petState(a), now()) - currentFullness(petState(b), now()));
+    for (let round = 0; round < 3; round++) {
+      for (const pet of order) {
+        if ((g.inventory.pet_food ?? 0) <= 0) break;
+        if (currentFullness(petState(pet), now()) >= 95) continue;
+        takeItem('pet_food');
+        Object.assign(pet, feedPet(petState(pet), now()));
+        fed++;
+      }
+    }
+    if (fed) award(0, [{ type: 'pet_fed' }]);
+    return { fed, snacks: g.inventory.pet_food ?? 0 };
   }],
   ['POST', /^\/api\/game\/chests\/([\w-]+)\/open$/, (m) => {
     const g = game();
@@ -1043,9 +1148,10 @@ const gameRoutes: [string, RegExp, Handler][] = [
     const r = (await call({ op: 'list' })) as { creator: boolean; gifts: { id: string; species: string; tier: Rarity }[] };
     const got: ReturnType<typeof petView>[] = [];
     for (const g of r.gifts) {
-      const claimed = (await call({ op: 'claim', id: g.id }).catch(() => null)) as { gift?: { species: string; tier: Rarity } } | null;
+      const claimed = (await call({ op: 'claim', id: g.id }).catch(() => null)) as { gift?: { species: string; tier: Rarity; level?: number } } | null;
       if (!claimed?.gift || !speciesOf(claimed.gift.species)) continue;
-      got.push(petView(giftPet(claimed.gift.species as PetSpeciesId, claimed.gift.tier)));
+      const tier = RARITIES.includes(claimed.gift.tier) ? claimed.gift.tier : 'lumo';
+      got.push(petView(giftPet(claimed.gift.species as PetSpeciesId, tier, claimed.gift.level ?? 1)));
     }
     return { creator: r.creator, gifts: got };
   }],
@@ -1063,7 +1169,7 @@ const gameRoutes: [string, RegExp, Handler][] = [
     const call = giftsApi();
     if (!call) throw new LocalError(403, 'not_creator');
     try {
-      return await call({ op: 'give', username: String(b.username ?? ''), species: String(b.species ?? 'lumo_firefly') });
+      return await call({ op: 'give', username: String(b.username ?? ''), species: String(b.species ?? 'lumo_firefly'), tier: RARITIES.includes(b.tier as Rarity) ? b.tier : 'lumo', level: Math.max(1, Math.min(PET_MAX_LEVEL, Math.floor(Number(b.level) || 1))) });
     } catch (e) {
       throw new LocalError(400, (e as { code?: string }).code ?? 'network');
     }
@@ -1096,6 +1202,19 @@ const gameRoutes: [string, RegExp, Handler][] = [
     if (allDone) giveChest('rare', 'daily_all');
     return { ...def.reward, bonusChest: allDone };
   }],
+  ['GET', /^\/api\/game\/daily$/, () => dailyView()],
+  ['POST', /^\/api\/game\/daily\/claim$/, () => {
+    // Today's gift, better each day in a row (round a week).
+    const v = dailyView();
+    if (!v.available) throw new LocalError(409, 'already_claimed');
+    const u = load().user;
+    const gift = DAILY_GIFTS[v.day]!;
+    if ('coins' in gift) u.coins += withGold(gift.coins);
+    if ('item' in gift) addItem(gift.item as ItemId, gift.qty);
+    if ('chest' in gift) giveChest(gift.chest as ChestKind, 'daily_gift');
+    u.daily = { last: today(), streak: v.streak + 1 };
+    return { ...dailyView(), got: gift, coins: u.coins };
+  }],
   ['POST', /^\/api\/game\/streak\/repair$/, () => {
     const PRICE = 150;
     const u = load().user;
@@ -1107,6 +1226,15 @@ const gameRoutes: [string, RegExp, Handler][] = [
     return { days: u.streak.days };
   }],
 ];
+
+/** The daily gift: today's (and whether it can be claimed), and the days in a row so far. */
+function dailyView() {
+  const u = load().user;
+  const yesterday = dayKey(now() - 86_400_000, u.timezone);
+  const streak = u.daily && (u.daily.last === today() || u.daily.last === yesterday) ? u.daily.streak : 0;
+  const { day, available } = dailyGiftDay(u.daily?.last ?? null, streak, today(), yesterday);
+  return { day, available, streak, gifts: DAILY_GIFTS };
+}
 
 /** Same idea as the server's award(): XP, level-up coins, stats and badges in one place. */
 function award(xp: number, events: GameEvent[]): Rewards {
@@ -1126,6 +1254,16 @@ function award(xp: number, events: GameEvent[]): Rewards {
       if (lu.chest) giveChest(lu.chest, `level_${level}`);
       r.levelUp = { level, coins: lu.coins, chest: lu.chest };
       all.push({ type: 'level', level });
+    }
+    // A new grade: a promotion with its own reward.
+    const was = gradeFor(before);
+    const is = gradeFor(levelFromXp(d.user.xp));
+    if (is.index > was.index) {
+      const g = GRADES[is.index]!;
+      const chest: ChestKind | undefined = is.index >= GRADES.length - 2 ? 'epic' : undefined;
+      d.user.coins += g.coins;
+      if (chest) giveChest(chest, `grade_${g.id}`);
+      r.gradeUp = { grade: g.id, emoji: g.emoji, coins: g.coins, ...(chest ? { chest } : {}) };
     }
     // The pets on the team grow a little with every bit of study.
     for (const pet of team()) Object.assign(pet, addPetXp(petState(pet), xp * PET_GROWTH));
@@ -1347,8 +1485,16 @@ function makeQuestion(s: StoredSession, conceptId: string, concepts: Concept[], 
     const fit = s.mode === 'exam' ? { shift: 0, boost: {} } : adaptation();
     const target: ConceptProgress = fit.shift ? { ...base, bloom: BLOOM_LEVELS[Math.max(0, Math.min(BLOOM_LEVELS.length - 1, bloomIndex(base.bloom) + fit.shift))]! } : base;
     const opts = { allowed: modeFormats(s), usedThisSession: usedIn(s), lastSeen: d.seen ?? {}, now: now(), formatBoost: fit.boost, ...(fact >= 0 ? { fact } : {}) };
-    // A speed run that went round the whole deck may meet a question again; nothing else ever does.
-    const picked = pickFromBank(bank, conceptId, target, opts, rng) ?? (s.mode === 'speed' ? pickFromBank(bank, conceptId, target, { ...opts, usedThisSession: new Set(s.current ? [s.current.variantKey] : []) }, rng) : null);
+    let picked = pickFromBank(bank, conceptId, target, opts, rng);
+    if (!picked && s.mode === 'speed') {
+      // A speed run never stops before the clock: any one-tap question of the deck it hasn't asked yet,
+      // and once it has asked them all, they come round again (never the one just asked).
+      const pool = bank.filter((q) => modeFormats(s).includes(q.format));
+      const used = usedIn(s);
+      const fresh = pool.filter((q) => !used.has(q.variantKey));
+      const from = fresh.length ? fresh : pool.filter((q) => q.variantKey !== s.current?.variantKey && q.variantKey !== s.state.history.at(-1)?.variantKey);
+      picked = from[Math.floor(rng() * from.length)] ?? null;
+    }
     if (!picked) return null;
     d.seen = { ...(d.seen ?? {}), [picked.variantKey]: now() };
     const keys = Object.keys(d.seen);
@@ -1380,8 +1526,18 @@ function canAskAgain(s: StoredSession, q: Question, fact: number): boolean {
  * The next question. An item whose questions Claude hasn't written yet goes to the back of the round
  * (while it's writing) or is left out. Null with `waiting`: Claude is still writing what's left.
  */
+/** A speed run keeps going until the clock stops it: more ideas join its queue before it runs dry. */
+function refillSpeed(s: StoredSession) {
+  if (s.mode !== 'speed' || s.state.queue.length >= 3) return;
+  const dk = deck(s.deckId);
+  const more = pickConcepts(dk.concepts, statesMap(dk.concepts.map((c) => c.id)), 20, 'speed', now(), seededRng(hashString(`${s.id}:${s.state.answered}`)));
+  s.state.queue = [...s.state.queue, ...more];
+  s.state.total += more.length;
+}
+
 function serveNext(s: StoredSession): Question | null {
   const concepts = deck(s.deckId).concepts;
+  refillSpeed(s);
   s.state.waiting = false;
   const writing = writingNow.has(s.deckId);
   for (let tries = s.state.queue.length; s.state.queue.length && tries > 0; tries--) {
@@ -1749,7 +1905,7 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
       const h = gainHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, t, 1);
       u.hearts = h.hearts;
       u.heartsUpdatedAt = h.updatedAt;
-      const giver = team().find((p) => petBuff(petState(p)).kind === 'heart' && !petTooHungry(petState(p), t));
+      const giver = team().find((p) => (petBuffs(petState(p)).some((b) => b.kind === 'heart') || p.boost === 'heart' || p.tier === 'lumo') && !petTooHungry(petState(p), t));
       if (giver) petGift = { kind: 'heart', name: giver.name, species: giver.species };
     }
   }
@@ -1986,6 +2142,13 @@ function createActivity(deckId: string, kind: SandboxKind, focus: string[] = [])
   return pubActivity(a);
 }
 
+/** Today's sandbox challenge: one game a day that gives double XP (the same for everyone on a day). */
+function sandboxDaily(): SandboxKind {
+  const games = SANDBOX_GROUPS_PLAY;
+  return games[hashString(`sandbox:${today()}`) % games.length]!;
+}
+const SANDBOX_GROUPS_PLAY: SandboxKind[] = ['quiz_show', 'escape_room', 'crossword', 'word_search', 'memory', 'scramble', 'speed_round', 'two_truths'].filter((k) => (ALL_SANDBOX_KINDS as readonly string[]).includes(k)) as SandboxKind[];
+
 function completeActivity(id: string, score: number) {
   const a = load().sandbox.find((x) => x.id === id);
   if (!a) throw new LocalError(404, 'activity_not_found');
@@ -1993,8 +2156,15 @@ function completeActivity(id: string, score: number) {
   const u = load().user;
   let xp = 0;
   const first = !a.completedAt;
+  let daily = false;
   if (first) {
     xp = Math.round(SANDBOX_XP[a.kind] * s);
+    // The daily challenge, done well: double XP, once a day.
+    if (a.kind === sandboxDaily() && s >= 0.5 && u.sandboxDaily !== today()) {
+      xp *= 2;
+      u.sandboxDaily = today();
+      daily = true;
+    }
     a.score = s;
     a.xp = xp;
     a.completedAt = now();
@@ -2002,7 +2172,7 @@ function completeActivity(id: string, score: number) {
   const st = s >= 0.3 ? recordStudyDay(u.streak, today()) : { state: u.streak, extended: false };
   u.streak = st.state;
   const rewards = award(xp, [...(first ? [{ type: 'sandbox_done' as const, kind: a.kind, score: s }] : []), ...(st.extended ? [{ type: 'streak' as const, days: st.state.days }] : [])]);
-  return { xp, streak: { days: st.state.days, extended: st.extended }, rewards };
+  return { xp, daily, streak: { days: st.state.days, extended: st.extended }, rewards };
 }
 
 /** Friends see my stats: publish them a moment after a change (only when the page can share data). */
@@ -2308,7 +2478,17 @@ const routes: [string, RegExp, Handler][] = [
   [
     'GET',
     /^\/api\/sandbox$/,
-    () => ({ activities: load().sandbox.slice(0, 20).map((a) => ({ id: a.id, deckId: a.deckId, kind: a.kind, title: a.title, score: a.score, xp: a.xp, completedAt: a.completedAt ? new Date(a.completedAt).toISOString() : null, createdAt: new Date(a.createdAt).toISOString() })) }),
+    () => {
+      const done = load().sandbox.filter((a) => a.completedAt);
+      // Stars: up to 3 for each game played (by its score), and what you're best at.
+      const stars = done.reduce((n, a) => n + Math.round((a.score ?? 0) * 3), 0);
+      const best: Record<string, number> = {};
+      for (const a of done) best[a.kind] = Math.max(best[a.kind] ?? 0, a.score ?? 0);
+      return {
+        activities: load().sandbox.slice(0, 20).map((a) => ({ id: a.id, deckId: a.deckId, kind: a.kind, title: a.title, score: a.score, xp: a.xp, completedAt: a.completedAt ? new Date(a.completedAt).toISOString() : null, createdAt: new Date(a.createdAt).toISOString() })),
+        stats: { done: done.length, stars, best, daily: sandboxDaily(), dailyDone: load().user.sandboxDaily === today() },
+      };
+    },
   ],
   ['GET', /^\/api\/decks\/([\w-]+)\/sandbox$/, (m) => ({ formats: SANDBOX_KINDS.map((kind) => ({ kind, available: sandboxSupports(kind, deck(m[1]!).concepts) })) })],
   ['POST', /^\/api\/sandbox$/, (_m, b) => createActivity(String(b.deckId), b.kind as SandboxKind, (b.focus as string[]) ?? [])],
@@ -2393,6 +2573,17 @@ const routes: [string, RegExp, Handler][] = [
     else delete dk.options;
     dk.updatedAt = now();
     return { options: dk.options ?? {} };
+  }],
+  ['POST', /^\/api\/local\/decks\/cards$/, (_m, b) => {
+    // Cards from Gizmo, Quizlet, Anki…: each card is an idea, its definition its fact.
+    const cards = parseCards(String(b.text ?? ''));
+    if (cards.length < 2) throw new LocalError(422, 'no_cards');
+    const title = String(b.title || 'My cards').slice(0, 120);
+    return createDeck({
+      title,
+      language: b.language === 'fr' ? 'fr' : 'en',
+      concepts: cards.map((c) => ({ topic: title, kind: 'definition', term: c.term, summary: c.definition, keyPoints: [c.definition], misconceptions: [], examples: [], synonyms: [] })),
+    });
   }],
   ['POST', /^\/api\/local\/decks\/([\w-]+)\/ideas$/, (m, b) => addIdeas(m[1]!, Array.isArray(b.concepts) ? (b.concepts as Omit<Concept, 'id'>[]) : [])],
   ['POST', /^\/api\/local\/decks\/([\w-]+)\/ideas-from-notes$/, (m, b) => {

@@ -22,13 +22,20 @@ export function Sandbox() {
   const deckId = params.get('deck') ?? decks?.[0]?.id ?? '';
   const [available, setAvailable] = useState<Record<string, boolean>>({});
   const [recent, setRecent] = useState<Recent[]>([]);
+  const [stats, setStats] = useState<{ done: number; stars: number; best: Record<string, number>; daily: SandboxKind; dailyDone: boolean } | null>(null);
   const [ask, setAsk] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api<{ decks: DeckListItem[] }>('/api/decks').then((r) => setDecks(r.decks), () => setDecks([]));
-    api<{ activities: Recent[] }>('/api/sandbox').then((r) => setRecent(r.activities), () => {});
+    api<{ activities: Recent[]; stats?: NonNullable<typeof stats> }>('/api/sandbox').then(
+      (r) => {
+        setRecent(r.activities);
+        if (r.stats) setStats(r.stats);
+      },
+      () => {},
+    );
   }, []);
   useEffect(() => {
     if (!deckId) return;
@@ -77,13 +84,58 @@ export function Sandbox() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center gap-3">
+      <header className="lacquer lux-frame flex items-center gap-3 rounded-3xl p-4 text-white">
         <Lumo size={64} mood="cheer" />
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-black">{t('sandbox.title')}</h1>
-          <p className="text-sm text-muted">{t('sandbox.subtitle')}</p>
+          <p className="text-sm text-white/75">{t('sandbox.subtitle')}</p>
+          {stats && (
+            <p className="mt-1 flex flex-wrap gap-2 text-xs font-black" data-testid="sandbox-stats">
+              <span className="rounded-full bg-white/15 px-2 py-0.5">⭐ {t('sandboxx.stars', { count: stats.stars })}</span>
+              <span className="rounded-full bg-white/15 px-2 py-0.5">🎮 {t('sandboxx.played', { count: stats.done })}</span>
+              <span className="rounded-full bg-white/15 px-2 py-0.5">🏷️ {t(`sandboxx.rank.${stats.stars >= 120 ? 'legend' : stats.stars >= 60 ? 'master' : stats.stars >= 20 ? 'explorer' : 'rookie'}`)}</span>
+            </p>
+          )}
         </div>
       </header>
+
+      {stats && deckId && (
+        // One game a day gives double XP.
+        <div className="flex items-center gap-3 rounded-3xl bg-gradient-to-r from-amber-300 to-pink-300 p-3 text-night" data-testid="sandbox-daily">
+          <span className="text-4xl" aria-hidden>
+            {SANDBOX_EMOJI[stats.daily]}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-black tracking-wide uppercase">{t('sandboxx.dailyTitle')}</span>
+            <span className="block font-black">{t(`sandbox.kinds.${stats.daily}`)} · ×2 XP</span>
+            <span className="block text-xs font-bold">{stats.dailyDone ? t('sandboxx.dailyDone') : t('sandboxx.dailyBody')}</span>
+          </span>
+          {!stats.dailyDone && available[stats.daily] !== false && (
+            <button type="button" disabled={busy !== null} onClick={() => void make(stats.daily)} className="rounded-2xl bg-night px-4 py-2 font-black text-white">
+              ▶
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          disabled={busy !== null || !deckId}
+          onClick={() => {
+            // Surprise me: any game this deck can make.
+            const kinds = (Object.values(SANDBOX_GROUPS).flat() as SandboxKind[]).filter((k) => available[k] !== false);
+            if (kinds.length) void make(kinds[Math.floor(Math.random() * kinds.length)]!);
+          }}
+          className="rounded-2xl bg-brand py-3 font-black text-brand-ink disabled:opacity-40"
+          data-testid="sandbox-surprise"
+        >
+          🎲 {t('sandboxx.surprise')}
+        </button>
+        <Link to="/lumo" className="rounded-2xl bg-surface py-3 text-center font-black ring-1 ring-line">
+          💬 {t('sandboxx.askLumo')}
+        </Link>
+      </div>
 
       {decks && decks.length > 0 && (
         <label className="block">
@@ -128,12 +180,21 @@ export function Sandbox() {
                   type="button"
                   disabled={!ok || busy !== null || !deckId}
                   onClick={() => void make(kind)}
-                  className="flex flex-col items-start gap-1 rounded-3xl bg-surface p-3.5 text-left ring-1 ring-line transition hover:-translate-y-0.5 hover:ring-brand disabled:opacity-40 disabled:hover:translate-y-0"
+                  className={`flex flex-col items-start gap-1 rounded-3xl p-3.5 text-left ring-1 ring-line transition hover:-translate-y-0.5 hover:ring-brand disabled:opacity-40 disabled:hover:translate-y-0 ${g === 'play' ? 'bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/10' : g === 'watch' ? 'bg-gradient-to-br from-sky-500/15 to-emerald-500/10' : 'bg-gradient-to-br from-amber-500/15 to-rose-500/10'}`}
                 >
                   <span className="text-3xl" aria-hidden>
                     {busy === kind ? '⏳' : SANDBOX_EMOJI[kind]}
                   </span>
-                  <span className="font-black">{t(`sandbox.kinds.${kind}`)}</span>
+                  <span className="flex w-full items-center gap-1 font-black">
+                    {t(`sandbox.kinds.${kind}`)}
+                    {stats && stats.best[kind] === undefined && ok && <span className="ml-auto rounded-full bg-amber-glow px-1.5 text-[0.6rem] text-night">{t('sandboxx.new')}</span>}
+                    {stats?.best[kind] !== undefined && (
+                      <span className="ml-auto text-xs text-amber-glow" aria-label={t('sandboxx.bestStars', { n: Math.round(stats.best[kind]! * 3) })}>
+                        {'★'.repeat(Math.round(stats.best[kind]! * 3))}
+                        {'☆'.repeat(3 - Math.round(stats.best[kind]! * 3))}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-xs text-muted">{ok ? t(`sandbox.desc.${kind}`) : t('sandbox.notForDeck')}</span>
                 </button>
               );

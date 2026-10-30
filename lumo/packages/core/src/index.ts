@@ -29,6 +29,8 @@ export * from './sandbox/generate';
 export * from './sandbox/intent';
 export * from './game/items';
 export * from './game/progress';
+export * from './game/grades';
+export * from './game/quest';
 export * from './live/game';
 export * from './live/choices';
 export * from './study/exam';

@@ -43,6 +43,8 @@ const EGG_COLOR: Record<Rarity, string> = {
   mythical: '#FF92DA',
   exotic: '#2DD4BF',
   galaxial: '#4F46E5',
+  celestial: '#F59E0B',
+  divine: '#FDF2C4',
   lumo: '#FACC15',
 };
 /** Rare pets and eggs give off sparkles now and then: every `every` seconds, `count` of them (none below epic). */
@@ -54,6 +56,8 @@ const AURA: Record<Rarity, { every: number; count: number } | null> = {
   mythical: { every: 0.7, count: 8 },
   exotic: { every: 0.6, count: 8 },
   galaxial: { every: 0.5, count: 9 },
+  celestial: { every: 0.45, count: 10 },
+  divine: { every: 0.42, count: 10 },
   lumo: { every: 0.4, count: 10 },
 };
 const RICH = (r: Rarity) => AURA[r] !== null;
