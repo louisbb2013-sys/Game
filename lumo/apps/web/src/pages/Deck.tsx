@@ -288,6 +288,18 @@ export function Deck() {
           </span>
         </span>
       </button>
+      {LOCAL && !needsWriting && (
+        <Link to={`/decks/${id}/map`} className="flex w-full items-center gap-3 rounded-3xl bg-gradient-to-r from-sky-600 to-blue-900 px-4 py-3 text-left text-white ring-1 ring-sky-300/40" data-testid="world-map">
+          <span className="text-3xl" aria-hidden>
+            🗺️
+          </span>
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block font-black">{t('map.title')}</span>
+            <span className="block text-xs font-bold text-white/80">{t('map.tile')}</span>
+          </span>
+          <span aria-hidden>›</span>
+        </Link>
+      )}
       {/* A short round only where the whole deck is clearly longer. */}
       {LOCAL && (data.roundSize ?? 0) > QUICK + 5 && (
         <button type="button" onClick={() => void start('quick')} disabled={!!starting} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-3 font-black ring-1 ring-line hover:ring-brand disabled:opacity-60" data-testid="play-quick">

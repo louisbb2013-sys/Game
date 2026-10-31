@@ -11,6 +11,7 @@ import { ChestPick } from '../components/play/ChestPick';
 import { FeedbackSheet } from '../components/play/Feedback';
 import { PopUp, usePops } from '../components/play/PopUp';
 import { QuestArena } from '../components/play/Quest';
+import { BET_FORMATS, setThinkFirst, ThinkFirst, thinkFirstOn } from '../components/play/ThinkFirst';
 import { RoundEnd } from '../components/play/RoundEnd';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { api, ApiError, LOCAL } from '../lib/api';
@@ -83,6 +84,9 @@ export function Play() {
   const misses = useRef(0);
   const [leftMs, setLeftMs] = useState<number | null>(null);
   const [lightLeft, setLightLeft] = useState<number | null>(null);
+  // Think first: the choices stay hidden until a bet (or "show choices"); null = not decided yet.
+  const [bet, setBet] = useState<number | null>(null);
+  const [thinkFirst, setThinkFirstState] = useState(thinkFirstOn);
   const [endRewards, setEndRewards] = useState<Rewards | null>(null);
   // Teach-back (server version): Lumo asks a follow-up question before grading.
   const [followUp, setFollowUp] = useState<string | null>(null);
@@ -171,6 +175,7 @@ export function Play() {
 
   const mode: Mode = data?.session.mode ?? 'practice';
   const q = data?.question ?? null;
+  const hiding = !!q && thinkFirst && POP_MODES.has(mode) && BET_FORMATS.has(q.format) && phase === 'answering' && bet === null;
 
   // Soft lounge music while a round is on (darker for the boss, quicker for the speed run); none in the mock exam.
   const playing = !!data && phase !== 'intro' && phase !== 'summary' && mode !== 'exam';
@@ -190,6 +195,7 @@ export function Play() {
     startedAt.current = Date.now();
     setRemoved([]);
     setTypedHint(null);
+    setBet(null);
     window.scrollTo(0, 0); // each question starts at the top, even after a long explanation
     if (q && data?.session.lightning) {
       setLightLeft(data.session.lightning);
@@ -202,11 +208,11 @@ export function Play() {
 
   // Lightning question: a 10-second ring (no penalty when it runs out, just no bonus).
   useEffect(() => {
-    if (lightLeft === null || phase !== 'answering') return;
+    if (lightLeft === null || phase !== 'answering' || hiding) return;
     if (lightLeft <= 0) return;
     const id = setTimeout(() => setLightLeft((v) => (v === null ? null : Math.max(0, v - 100))), 100);
     return () => clearTimeout(id);
-  }, [lightLeft, phase]);
+  }, [lightLeft, phase, hiding]);
 
   const finishRun = useCallback(async () => {
     if (!data || ending.current) return;
@@ -343,6 +349,11 @@ export function Play() {
         if (r.shield === 'lost') setTimeout(() => play('shield'), 150);
         if (r.shield === 'mended') setTimeout(() => play('heal'), 250);
       }
+      if (r.bet) {
+        const won = r.bet.won;
+        setTimeout(() => floatText(`${won ? '+' : '-'}${r.bet!.amount} 🪙`, target, { color: won ? '#fde047' : '#fca5a5', size: 30 }), 250);
+        if (won && r.bet.amount >= 30) setTimeout(() => play('combo', 5), 300);
+      }
       if (mode === 'quest' && r.quest) {
         const qm = r.quest;
         if (qm.dealt) {
@@ -378,7 +389,7 @@ export function Play() {
       try {
         const res = await api<AnswerResponse & { rewards?: Rewards }>(`/api/sessions/${data.session.id}/answer`, {
           method: 'POST',
-          body: { questionId: data.question.id, answer: a, timeMs: Date.now() - startedAt.current, ...(mode === 'quest' ? { ability: spell } : {}) },
+          body: { questionId: data.question.id, answer: a, timeMs: Date.now() - startedAt.current, ...(mode === 'quest' ? { ability: spell } : {}), ...(bet ? { bet } : {}) },
         });
         if (ending.current) return; // the speed run's clock ran out while this answer was on its way
         if (res.summary && res.rewards && mode === 'exam') {
@@ -462,7 +473,7 @@ export function Play() {
         setPhase(followUp ? 'followup' : 'answering');
       }
     },
-    [answer, data, phase, mode, takeRewards, endWith, showRewards, navigate, effects, refresh, followUp, pushPop, t, spell],
+    [answer, data, phase, mode, takeRewards, endWith, showRewards, navigate, effects, refresh, followUp, pushPop, t, spell, bet],
   );
 
   // Speed run: no explanation panel, straight to the next question. Boss: a right answer moves on by itself.
@@ -686,7 +697,17 @@ export function Play() {
                 ✨ {t('play.gift.goldenChip')}
               </span>
             )}
-            {lightLeft !== null && lightLeft > 0 && phase === 'answering' && <Ring left={lightLeft} total={s.lightning ?? 10_000} />}
+            {s.islandBoss && (
+              <span className="rounded-full bg-rose-500 px-2.5 py-1 text-xs font-black text-white" data-testid="island-boss">
+                👹 {t('map.boss')}
+              </span>
+            )}
+            {lightLeft !== null && lightLeft > 0 && phase === 'answering' && !hiding && <Ring left={lightLeft} total={s.lightning ?? 10_000} />}
+            {!thinkFirst && POP_MODES.has(mode) && BET_FORMATS.has(q.format) && phase === 'answering' && (
+              <button type="button" onClick={() => (setThinkFirst(true), setThinkFirstState(true))} className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-black text-white/80" title={t('bet.on')}>
+                🤔 {t('bet.on')}
+              </button>
+            )}
             <span className="flex-1" />
             {hintable && (
               <button type="button" onClick={() => void askHint()} disabled={(s.coins ?? 0) < 5} className="rounded-full bg-amber-300/90 px-3 py-1 text-xs font-black text-night disabled:opacity-40" aria-label={t('play.hintCost', { n: 5 })}>
@@ -719,7 +740,21 @@ export function Play() {
           </div>
 
           <div data-answer-area className="pb-40">
-            {q.format === 'multiple_choice' || q.format === 'true_false' || q.format === 'cause_effect' ? (
+            {hiding ? (
+              <ThinkFirst
+                coins={s.coins ?? 0}
+                onReveal={(n) => {
+                  setBet(n);
+                  startedAt.current = Date.now(); // a lightning question's 10 seconds start now
+                  play('whoosh');
+                }}
+                onOff={() => {
+                  setThinkFirst(false);
+                  setThinkFirstState(false);
+                  setBet(0);
+                }}
+              />
+            ) : q.format === 'multiple_choice' || q.format === 'true_false' || q.format === 'cause_effect' ? (
               <ChoiceTiles
                 q={q}
                 chosen={answer?.kind === 'choice' ? answer.optionId : null}

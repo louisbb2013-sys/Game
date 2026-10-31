@@ -23,6 +23,9 @@ export interface PublicSession {
   boss?: { hp: number; max: number; shields: number };
   /** Monster Quest: your health, the monster's, and the spells resting. */
   quest?: QuestState;
+  /** World map: the island (topic) this round plays, and whether this is its boss question. */
+  island?: string;
+  islandBoss?: boolean;
   /** Chests waiting to be picked. */
   chests?: number;
   /** The current question is a lightning one: answer within this many ms for double XP. */
@@ -74,6 +77,9 @@ export interface AnswerResult {
   /** A missed idea, right on its second chance. */
   fixed?: boolean;
   /** Monster Quest: what the spell did and what the monster did back. */
+  /** The coins bet before seeing the choices, and whether the bet was won. */
+  bet?: { amount: number; won: boolean };
+  islandBoss?: boolean;
   quest?: { ability: QuestAbility; dealt: number; healed: number; taken: number; blocked: boolean; defeated: { monster: number; coins: number } | null; coins: number; finished: 'won' | 'lost' | null };
 }
 
@@ -93,6 +99,9 @@ export interface SessionSummary {
   newBest?: boolean;
   boss?: { hp: number; max: number; shields: number };
   quest?: QuestState;
+  /** World map: the island played, and whether it was conquered (first time: more coins; all: an epic chest). */
+  island?: { topic: string; conquered: boolean; first: boolean; all: boolean; coins: number };
+  bets?: { won: number; lost: number };
   chestsLeft?: number;
   missed?: MissedItem[];
   answered: number;

@@ -75,6 +75,16 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
         </div>
         <h1 className="mt-2 text-3xl font-black">{title}</h1>
         {summary.endedReason === 'out_of_hearts' && <p className="mt-1 max-w-sm text-sm font-bold text-white/80">{t('quiz.outOfHeartsBody')}</p>}
+        {summary.island && (
+          <Link to={`/decks/${deckId}/map`} className={`mt-3 block w-full max-w-sm rounded-2xl p-3 text-center font-black ring-1 ${summary.island.conquered ? 'bg-emerald-500/20 ring-emerald-300/50' : 'bg-white/10 ring-white/20'}`} data-testid="island-result">
+            <span className="block text-lg">
+              {summary.island.all ? `👑 ${t('map.allConquered')}` : summary.island.conquered ? `🏝️ ${t(summary.island.first ? 'map.conquered' : 'map.wonBack', { name: summary.island.topic || t('map.island') })}` : `🌊 ${t('map.notYet')}`}
+            </span>
+            <span className="block text-sm text-white/80">
+              {summary.island.coins ? `+${summary.island.coins} 🪙 · ` : ''}🗺️ {t('map.back')}
+            </span>
+          </Link>
+        )}
         {mode === 'speed' && (
           <p className="font-display text-gold mt-1 text-6xl font-black tabular-nums" aria-label={t('play.points', { n: summary.points ?? 0 })}>
             {points}
@@ -107,6 +117,11 @@ export function RoundEnd({ summary, rewards, deckId, onAgain, onMode, onChests }
           {summary.streak.extended && (
             <Chip>
               <FlameIcon size={18} /> {t('quiz.streakDays', { count: summary.streak.days })}
+            </Chip>
+          )}
+          {summary.bets && summary.bets.won + summary.bets.lost > 0 && (
+            <Chip>
+              🎲 {t('bet.net', { n: `${summary.bets.won - summary.bets.lost >= 0 ? '+' : ''}${summary.bets.won - summary.bets.lost}` })}
             </Chip>
           )}
           {!!summary.petCoins && (

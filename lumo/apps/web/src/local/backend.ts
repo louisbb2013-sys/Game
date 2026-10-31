@@ -107,6 +107,7 @@ import {
   dropHead,
   factCoverage,
   factKey,
+  factSlots,
   FULL_ROUND_MAX,
   nextFact,
   planFullRound,
@@ -204,6 +205,10 @@ interface StoredSession {
     boss?: { hp: number; max: number; shields: number };
     /** Monster Quest: the learner's health, the monster and the spells resting. */
     quest?: QuestState;
+    /** World map: this round plays one island (a topic of the deck). */
+    island?: string;
+    /** Coins bet before seeing the choices: won and lost this round. */
+    bets?: { won: number; lost: number };
     /** Chests earned (one per 3 right answers) and chests already opened. */
     picks?: number;
     picked?: number;
@@ -288,6 +293,8 @@ interface DB {
   memory?: Memory;
   /** Personal bests per deck. */
   bests?: Record<string, { speed?: number; bossWins?: number }>;
+  /** World map: the islands (topics) of each deck conquered, and when first. */
+  islands?: Record<string, Record<string, number>>;
   /** How the last question on each fact went (by `factKey`): rounds ask the facts that need it most. */
   factLog?: FactLog;
 }
@@ -1469,6 +1476,9 @@ const LIGHTNING_FORMATS: Format[] = ['multiple_choice', 'true_false'];
 /** Lightning questions come up in learning rounds (never in a speed run, a boss fight or a mock exam). */
 const LIGHTNING_MODES: SessionMode[] = ['practice', 'review', 'wrong_only', 'challenge'];
 const LIGHTNING_MS = 10_000;
+/** What a learner can bet on a question before seeing its choices (questions with choices only). */
+const BETS = [10, 20, 30];
+const BET_FORMATS: Format[] = ['multiple_choice', 'true_false', 'cause_effect'];
 
 /** Monster Quest: quick formats, so a fight keeps moving. */
 const QUEST_FORMATS: Format[] = ['multiple_choice', 'true_false', 'type_answer', 'cause_effect'];
@@ -1605,6 +1615,9 @@ function publicSession(s: StoredSession) {
     points: s.state.points,
     boss: s.state.boss,
     quest: s.state.quest,
+    island: s.state.island,
+    /** The last question of an island round: its boss (double XP). */
+    islandBoss: s.state.island !== undefined && s.state.queue.length === 1,
     chests: Math.max(0, (s.state.picks ?? 0) - (s.state.picked ?? 0)),
     lightning: s.current && s.state.lightning === s.current.id ? LIGHTNING_MS : undefined,
     best: s.mode === 'speed' ? (load().bests?.[s.deckId]?.speed ?? 0) : undefined,
@@ -1646,7 +1659,38 @@ function shaky(concepts: Concept[], states: Map<string, ConceptStateView>, log: 
  * otherwise `length` questions on the facts that need it most (or, for a speed run, a boss or a mock
  * exam, spread over the deck).
  */
-function startSession(deckId: string, mode: SessionMode, length: number, formats?: Format[], full = false) {
+/**
+ * The deck's world map: each topic is an island. How many of its facts are known, fading (due for
+ * review: the monsters are back), missed last time or never asked; conquered once a round of it went
+ * well. An island opens when the one before it is conquered.
+ */
+function islands(deckId: string) {
+  const dk = deck(deckId);
+  const d = load();
+  const log = d.factLog ?? {};
+  const won = d.islands?.[deckId] ?? {};
+  const t = now();
+  const order = [...new Set(dk.concepts.map((c) => c.topic || ''))];
+  return order.map((topic, i) => {
+    const cs = dk.concepts.filter((c) => (c.topic || '') === topic);
+    let known = 0;
+    let fading = 0;
+    let missed = 0;
+    let fresh = 0;
+    for (const sl of factSlots(cs)) {
+      const l = log[factKey(sl.conceptId, sl.fact)];
+      const srs = d.states[sl.conceptId]?.srs;
+      if (!l) fresh++;
+      else if (!l.ok) missed++;
+      else if (srs && srs.due <= t) fading++;
+      else known++;
+    }
+    const prev = order[i - 1];
+    return { topic, name: topic || dk.title, facts: known + fading + missed + fresh, known, fading, missed, fresh, conquered: !!won[topic], open: i === 0 || prev === undefined || !!won[prev] || !!won[topic] };
+  });
+}
+
+function startSession(deckId: string, mode: SessionMode, length: number, formats?: Format[], full = false, topic?: string) {
   const dk = deck(deckId);
   const u = load().user;
   if (mode === 'challenge' && currentHearts({ hearts: u.hearts, updatedAt: u.heartsUpdatedAt }, now()).hearts <= 0) throw new LocalError(403, 'no_hearts');
@@ -1656,7 +1700,9 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
   // With a bank, only ideas that already have questions (Claude may still be writing the rest), except in
   // a whole-deck round: there, ideas still being written come later in the round.
   const covered = dk.bank?.length && !(wholeDeck && writingNow.has(deckId)) ? new Set(dk.bank.filter((q) => allowed.includes(q.format)).map((q) => q.conceptId)) : null;
-  const pool = covered ? dk.concepts.filter((c) => covered.has(c.id)) : dk.concepts;
+  let pool = covered ? dk.concepts.filter((c) => covered.has(c.id)) : dk.concepts;
+  // One island of the world map: that topic's facts only.
+  if (topic !== undefined) pool = pool.filter((c) => (c.topic || '') === topic);
   if (pool.length === 0) throw new LocalError(422, 'no_questions');
   const count = mode === 'speed' || mode === 'quest' ? 40 : mode === 'boss' ? BOSS_LENGTH : length;
   const rng = seededRng(hashString(`${u.id}:${now()}`));
@@ -1692,6 +1738,7 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
       ...(mode === 'speed' ? { startedAt: now(), timeLimitMs: SPEED_MS, points: 0 } : {}),
       ...(mode === 'boss' ? { boss: { hp: BOSS_HP, max: BOSS_HP, shields: BOSS_SHIELDS } } : {}),
       ...(mode === 'quest' ? { quest: newQuest() } : {}),
+      ...(topic !== undefined && wholeDeck ? { island: topic } : {}),
       ...(wholeDeck ? { full: true } : {}),
       picks: 0,
       picked: 0,
@@ -1714,7 +1761,7 @@ function startSession(deckId: string, mode: SessionMode, length: number, formats
 /** A whole-deck round left halfway (in the last week), to pick up where it stopped. */
 function resumable(deckId: string) {
   const s = Object.values(load().sessions)
-    .filter((x) => x.deckId === deckId && x.status === 'active' && x.state.full && x.state.answered > 0 && now() - (x.attempts.at(-1)?.at ?? x.createdAt ?? 0) < 7 * 86_400_000)
+    .filter((x) => x.deckId === deckId && x.status === 'active' && x.state.full && x.state.island === undefined && x.state.answered > 0 && now() - (x.attempts.at(-1)?.at ?? x.createdAt ?? 0) < 7 * 86_400_000)
     .sort((a, b) => (b.attempts.at(-1)?.at ?? 0) - (a.attempts.at(-1)?.at ?? 0))[0];
   return s ? { id: s.id, answered: s.state.answered, total: s.state.total } : null;
 }
@@ -1799,6 +1846,19 @@ function finish(s: StoredSession) {
     mine.bossWins = (mine.bossWins ?? 0) + 1;
     coins += 15;
   }
+  // World map: an island played to the end with 70 % right is conquered (more coins the first time).
+  let island: { topic: string; conquered: boolean; first: boolean; all: boolean; coins: number } | undefined;
+  if (s.state.island !== undefined) {
+    const won = ((d.islands ??= {})[s.deckId] ??= {});
+    const conquered = s.state.queue.length === 0 && s.state.endedReason === undefined && s.state.answered > 0 && accuracy >= 0.7;
+    const first = conquered && !won[s.state.island];
+    if (first) won[s.state.island] = t;
+    const topics = new Set(deck(s.deckId).concepts.map((c) => c.topic || ''));
+    const all = first && [...topics].every((x) => won[x]);
+    const islandCoins = !conquered ? 0 : first ? 30 : 10;
+    coins += islandCoins;
+    island = { topic: s.state.island, conquered, first, all, coins: islandCoins };
+  }
   // Monster Quest: each beaten monster already paid; the whole run beaten pays a little more.
   const questWon = s.mode === 'quest' && s.state.endedReason === 'quest_won';
   if (questWon) coins += 20;
@@ -1816,6 +1876,7 @@ function finish(s: StoredSession) {
   if (bossWon) chest = (s.state.boss?.shields ?? 0) >= BOSS_SHIELDS ? 'epic' : 'rare';
   else if (questWon) chest = 'epic';
   else if (s.mode === 'quest') chest = (s.state.quest?.defeated ?? 0) >= 3 ? 'rare' : (s.state.quest?.defeated ?? 0) >= 1 ? 'common' : null;
+  else if (island?.all) chest = 'epic';
   else if (newBest && previousBest > 0) chest = 'common';
   else if (s.mode !== 'speed' && s.mode !== 'boss' && s.state.answered >= 5) chest = accuracy === 1 ? 'rare' : 'common';
   if (chest) {
@@ -1842,6 +1903,8 @@ function finish(s: StoredSession) {
     newBest,
     boss: s.state.boss,
     quest: s.state.quest,
+    island,
+    bets: s.state.bets,
     chestsLeft: Math.max(0, (s.state.picks ?? 0) - (s.state.picked ?? 0)),
     missed: (s.state.missed ?? []).slice(0, 12),
     rewards,
@@ -1852,7 +1915,7 @@ function finish(s: StoredSession) {
   };
 }
 
-async function answer(sessionId: string, questionId: string, a: Answer, timeMs?: number, ability?: QuestAbility) {
+async function answer(sessionId: string, questionId: string, a: Answer, timeMs?: number, ability?: QuestAbility, bet = 0) {
   const t = now();
   const s = getSession(sessionId);
   if (s.status !== 'active') throw new LocalError(409, 'session_done');
@@ -1883,7 +1946,18 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   const lightning = s.state.lightning === q.id && g.correct && typeof timeMs === 'number' && timeMs <= LIGHTNING_MS + 500;
   const golden = !!s.state.golden && g.correct;
   if (golden) s.state.golden = false;
-  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() }) * (lightning ? 2 : 1) * (golden ? 2 : 1);
+  // The island's last question is its boss: double XP.
+  const islandBoss = s.state.island !== undefined && s.state.queue.length === 1 && g.correct;
+  const xp = xpForAnswer({ format: q.format, bloom: q.bloom, score: g.score, firstTry, combo: comboAfter, boost: boostNow() }) * (lightning ? 2 : 1) * (golden ? 2 : 1) * (islandBoss ? 2 : 1);
+  // Bet before seeing the choices (learning rounds, one-tap questions): right wins the bet, wrong loses it.
+  let betResult: { amount: number; won: boolean } | undefined;
+  if (BETS.includes(bet) && LIGHTNING_MODES.includes(s.mode) && BET_FORMATS.includes(q.format) && u.coins >= bet) {
+    u.coins += g.correct ? bet : -bet;
+    const b = (s.state.bets ??= { won: 0, lost: 0 });
+    if (g.correct) b.won += bet;
+    else b.lost += bet;
+    betResult = { amount: bet, won: g.correct };
+  }
   const fact = s.state.slotFact ?? -1;
   // A miss comes back later only with another question (a round never asks the same one twice).
   const canRetry = !g.correct && canAskAgain(s, q, fact);
@@ -1999,7 +2073,7 @@ async function answer(sessionId: string, questionId: string, a: Answer, timeMs?:
   const { gradedBy: _g, ...result } = g;
   return {
     rewards,
-    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, masteredTerm: masteredNow ? concepts.find((c) => c.id === q.conceptId)?.term : undefined, points, damage, shield, chest, lightning, quest: questMove, petCoins, petGift, gift, golden, topicDone, fixed },
+    result: { ...result, xp, combo: outcome.combo, multiplier: outcome.multiplier, retryScheduled: outcome.retryScheduled, mastered: masteredNow, masteredTerm: masteredNow ? concepts.find((c) => c.id === q.conceptId)?.term : undefined, points, damage, shield, chest, lightning, quest: questMove, bet: betResult, islandBoss, petCoins, petGift, gift, golden, topicDone, fixed },
     session: publicSession(s),
     next: next ? publicQuestion(next) : null,
     summary,
@@ -2435,7 +2509,8 @@ const routes: [string, RegExp, Handler][] = [
       return { ok: true };
     },
   ],
-  ['POST', /^\/api\/decks\/([\w-]+)\/sessions$/, (m, b) => startSession(m[1]!, (b.mode as SessionMode) ?? 'practice', Math.min(60, Math.max(3, Number(b.length) || 10)), b.formats as Format[] | undefined, b.full === true)],
+  ['POST', /^\/api\/decks\/([\w-]+)\/sessions$/, (m, b) => startSession(m[1]!, (b.mode as SessionMode) ?? 'practice', Math.min(60, Math.max(3, Number(b.length) || 10)), b.formats as Format[] | undefined, b.full === true, typeof b.topic === 'string' ? b.topic : undefined)],
+  ['GET', /^\/api\/decks\/([\w-]+)\/map$/, (m) => ({ title: deck(m[1]!).title, islands: islands(m[1]!) })],
   [
     'GET',
     /^\/api\/decks\/([\w-]+)\/offline$/,
@@ -2494,7 +2569,7 @@ const routes: [string, RegExp, Handler][] = [
       return { session: publicSession(s), question: s.current ? publicQuestion(s.current) : null };
     },
   ],
-  ['POST', /^\/api\/sessions\/([\w-]+)\/answer$/, (m, b) => answer(m[1]!, String(b.questionId), b.answer as Answer, Number(b.timeMs), typeof b.ability === 'string' ? (b.ability as QuestAbility) : undefined)],
+  ['POST', /^\/api\/sessions\/([\w-]+)\/answer$/, (m, b) => answer(m[1]!, String(b.questionId), b.answer as Answer, Number(b.timeMs), typeof b.ability === 'string' ? (b.ability as QuestAbility) : undefined, Number(b.bet) || 0)],
   ['POST', /^\/api\/sessions\/([\w-]+)\/end$/, (m) => endRun(getSession(m[1]!), 'time_up')],
   ['POST', /^\/api\/sessions\/([\w-]+)\/go$/, (m) => goNow(m[1]!)],
   ['POST', /^\/api\/sessions\/([\w-]+)\/hint$/, (m) => hint(m[1]!)],

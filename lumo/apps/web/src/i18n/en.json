@@ -2077,5 +2077,39 @@
       "refused": "Lumo can't help with that one. Try something else.",
       "upstream_error": "Something went wrong. Try again."
     }
+  },
+  "bet": {
+    "think": "Think of the answer first",
+    "body": "The choices are hidden. Sure you know it? Bet coins: right doubles your bet, wrong loses it.",
+    "betLabel": "Bet {{n}} coins",
+    "show": "Show the choices (no bet)",
+    "off": "Turn off think first",
+    "on": "Think first",
+    "net": "Bets: {{n}}"
+  },
+  "map": {
+    "title": "World map",
+    "tile": "Each topic is an island: conquer them all",
+    "intro": "Each topic is an island. Get 70% right on an island to conquer it and open the next one. Facts you start to forget bring the monsters back.",
+    "fogNow_one": "{{count}} fact is fading: the monsters are back on your islands!",
+    "fogNow_other": "{{count}} facts are fading: the monsters are back on your islands!",
+    "locked": "Conquer the island before",
+    "fog_one": "Foggy: {{count}} fact to win back",
+    "fog_other": "Foggy: {{count}} facts to win back",
+    "safe": "Conquered · {{known}}/{{facts}} known",
+    "toConquer": "{{known}}/{{facts}} facts known",
+    "state": {
+      "locked": "locked",
+      "fog": "foggy, monsters are back",
+      "won": "conquered",
+      "new": "to conquer"
+    },
+    "boss": "Island boss · double XP",
+    "conquered": "{{name}} conquered!",
+    "wonBack": "{{name}} won back!",
+    "island": "Island",
+    "allConquered": "Whole map conquered! Epic chest!",
+    "notYet": "Not conquered yet: get 70% right to take it",
+    "back": "Back to the map"
   }
 }

@@ -2074,5 +2074,39 @@
       "refused": "Lumo ne peut pas aider avec ça. Essaie autre chose.",
       "upstream_error": "Quelque chose n'a pas marché. Réessaie."
     }
+  },
+  "bet": {
+    "think": "Pense à la réponse d'abord",
+    "body": "Les choix sont cachés. Sûr de la connaître? Mise des pièces : bonne réponse, ta mise double; mauvaise, tu la perds.",
+    "betLabel": "Miser {{n}} pièces",
+    "show": "Voir les choix (sans miser)",
+    "off": "Désactiver « pense d'abord »",
+    "on": "Pense d'abord",
+    "net": "Mises : {{n}}"
+  },
+  "map": {
+    "title": "Carte du monde",
+    "tile": "Chaque thème est une île : conquiers-les toutes",
+    "intro": "Chaque thème est une île. Réussis 70 % d'une île pour la conquérir et ouvrir la suivante. Les faits que tu commences à oublier ramènent les monstres.",
+    "fogNow_one": "{{count}} fait s'efface : les monstres sont revenus sur tes îles!",
+    "fogNow_other": "{{count}} faits s'effacent : les monstres sont revenus sur tes îles!",
+    "locked": "Conquiers l'île d'avant",
+    "fog_one": "Brouillard : {{count}} fait à reprendre",
+    "fog_other": "Brouillard : {{count}} faits à reprendre",
+    "safe": "Conquise · {{known}}/{{facts}} sus",
+    "toConquer": "{{known}}/{{facts}} faits sus",
+    "state": {
+      "locked": "verrouillée",
+      "fog": "dans le brouillard, les monstres sont revenus",
+      "won": "conquise",
+      "new": "à conquérir"
+    },
+    "boss": "Boss de l'île · XP double",
+    "conquered": "{{name}} conquise!",
+    "wonBack": "{{name}} reprise!",
+    "island": "Île",
+    "allConquered": "Toute la carte conquise! Coffre épique!",
+    "notYet": "Pas encore conquise : réussis 70 % pour la prendre",
+    "back": "Retour à la carte"
   }
 }
