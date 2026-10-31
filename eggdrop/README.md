@@ -35,24 +35,31 @@ A bare egg on concrete takes thousands of g. The "worst" cases change hole flow 
 | 5 | `5_pin.stl` | Square pin (joins bar and piston) |
 | 6 | `6_lid.stl` | Screw-on lid with grip knob |
 
-The source code is in `tools/`: `parts.py` (CAD), `simfast.py` + `optimize.py` (drop simulation).
+The source code is in `tools/`: `parts.py` (CAD), `simfast.py` + `optimize.py` (drop simulation), `make_3mf.py` (project file).
+
+**Creality Print project file: `AIR_STRUT_K1Max.3mf`.** Open it with File > Open Project. It already has:
+- the K1 Max 0.4 nozzle printer, the 0.20 mm Standard process and Hyper PLA,
+- 2 plates: Plate A holds the body, Plate B holds the other 5 parts,
+- every setting in the table below, set per part.
+
+If Creality Print asks how to load it, choose to load it as a project. If it won't open, use the 6 STL files and the table below.
 
 ## 3. Print settings (PLA, 0.4 mm nozzle, no supports on any part)
 
-Load each file as it is, without rotating it.
+Load each STL file as it is, without rotating it.
 
 | Part | Position on plate | Layer | Walls | Infill | Extra | Time | Grams |
 |---|---|---|---|---|---|---|---|
-| Body | open rim down (as in file) | 0.24 | 5 | 10% gyroid | **8 mm brim** (tall part) | 2 h 37 | 202 |
-| Base cap | flat disc down | 0.20 | 4 | 25% gyroid | | 0 h 47 | 38 |
+| Body | open rim down (as in file) | 0.24 | 5 | 10% gyroid | **8 mm brim** (tall part) | 3 h 08 | 202 |
+| Base cap | flat disc down | 0.20 | 4 | 25% gyroid | | 0 h 48 | 38 |
 | Piston head | flat face down | 0.20 | 4 | 15% gyroid | | 0 h 33 | 28 |
-| Foot bar | lying flat | 0.20 | 4 | 15% gyroid | lying flat makes it 2-3x stronger | 0 h 49 | 37.5 |
-| Pin | lying flat | 0.20 | 3 | 100% | | 0 h 04 | 3 |
-| Lid | open rim down | 0.20 | 4 | 15% gyroid | | 0 h 31 | 35 |
+| Foot bar | lying flat | 0.20 | 4 | 15% gyroid | lying flat makes it 2-3x stronger | 0 h 50 | 37.5 |
+| Pin | lying flat | 0.20 | 3 | 100% | | 0 h 05 | 3 |
+| Lid | open rim down | 0.20 | 4 | 15% gyroid | | 0 h 45 | 35 |
 
 Top layers 5, bottom layers 4. Plate A holds the body only. Plate B holds the other five parts.
 
-**Estimate: about 5 h 20 min and about 343 g.** This comes from a slicer set up with K1 Max speeds and accelerations. If Creality Print shows more than 9 h, tell me.
+**Estimate: about 6 h 10 min and about 343 g with Hyper PLA. With Generic PLA it's about 7 h, because Creality limits that filament to a lower flow.** These times come from a different slicer using Creality's own K1 Max speed limits. If Creality Print shows more than 9 h, tell me.
 
 ## 4. Assembly (no glue, tape or screws)
 
