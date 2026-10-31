@@ -9,6 +9,9 @@ export const ONE_TAP = ['multiple_choice', 'true_false', 'cause_effect'];
  * `checkCurrent` afterwards.
  */
 export async function answerCurrent(page: Page, format: string) {
+  // Think first: the choices stay hidden until "show the choices" (or a bet).
+  const think = page.getByTestId('show-choices');
+  if (await think.isVisible().catch(() => false)) await think.click();
   switch (format) {
     case 'multiple_choice':
     case 'true_false':

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { answerAndCheck } from './helpers';
+import { answerAndCheck, closeHatch, continueRound, openChests } from './helpers';
 
 // The newer extras on the Claude page build (with the viewer stand-in and a stand-in Claude): Ask Lumo
 // (chat that builds a game, played in a sandbox), Monster Quest, grades, the daily gift, rarity eggs.
@@ -50,7 +50,8 @@ test('Monster Quest: pick a spell, answer to cast it', async ({ page }) => {
   const arena = page.getByTestId('quest-arena');
   await expect(arena).toContainText('Slime');
   await page.getByTestId('quest-spells').getByRole('radio', { name: /Fireball/ }).click();
-  for (let i = 0; i < 4; i++) {
+  const monsterHp = page.getByRole('progressbar', { name: 'Monster health' });
+  for (let i = 0; i < 15 && (await monsterHp.getAttribute('aria-valuenow')) === '60'; i++) {
     const section = page.locator('section[data-format]');
     await expect(section).toBeVisible();
     await answerAndCheck(page, (await section.getAttribute('data-format'))!);
@@ -69,4 +70,54 @@ test('Monster Quest: pick a spell, answer to cast it', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Ask Lumo' })).toBeVisible();
   await expect(page.getByTestId('ask-messages')).toContainText('Teach me chess with a game');
   await expect(page.getByTestId('ask-open-game')).toBeVisible();
+});
+
+test('think first: bet coins before the choices show; the world map: conquer an island', async ({ page }) => {
+  test.setTimeout(150_000);
+  await fresh(page, 'u_ex3');
+  await page.getByTestId('daily-claim').click(); // 20 coins to bet with
+  await page.getByRole('link', { name: 'Learn', exact: true }).click();
+  await page.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await page.getByRole('tab', { name: 'Topic' }).click();
+  await page.getByLabel('Just type a topic').fill('récit psychologique');
+  await page.getByLabel('Just type a topic').press('Enter');
+  await expect(page.getByText(/\d+ test questions/)).toBeVisible({ timeout: 30_000 });
+
+  await page.getByTestId('world-map').click();
+  await expect(page.getByTestId('island')).toHaveCount(1);
+  await expect(page.getByTestId('island')).toHaveAttribute('data-state', 'new');
+  await page.getByTestId('island').getByRole('button').click();
+
+  let betDone = false;
+  let boss = false;
+  for (let i = 0; i < 25; i++) {
+    const section = page.locator('section[data-format]');
+    await expect(section).toBeVisible();
+    boss ||= await page.getByTestId('island-boss').isVisible().catch(() => false);
+    if (!betDone && (await page.getByTestId('think-first').isVisible().catch(() => false))) {
+      // The choices are hidden while you think.
+      await expect(section.locator('.tile')).toHaveCount(0);
+      await page.getByRole('button', { name: 'Bet 10 coins' }).click();
+      await expect(section.locator('.tile').first()).toBeVisible();
+      betDone = true;
+    }
+    const format = (await section.getAttribute('data-format'))!;
+    if (format === 'explain' || format === 'apply') {
+      await section.locator('textarea').fill('It names the idea because it matters.');
+      await page.getByRole('button', { name: 'Check' }).click();
+    } else await answerAndCheck(page, format);
+    // Wait for the answer panel (an egg can hatch just then), then move on.
+    await expect(page.getByRole('status').getByRole('button', { name: /Continue|See results/ })).toBeVisible();
+    await closeHatch(page);
+    if (await continueRound(page)) break;
+  }
+  expect(betDone).toBe(true);
+  expect(boss).toBe(true);
+  await expect(page.getByText(/Bets: [+-]?\d+/)).toBeVisible({ timeout: 10_000 });
+  const result = page.getByTestId('island-result');
+  await expect(result).toContainText('Back to the map');
+  await openChests(page);
+  await result.click();
+  await expect(page.getByRole('heading', { name: /World map/ })).toBeVisible();
+  await expect(page.getByTestId('island')).toHaveAttribute('data-state', /won|new/);
 });

@@ -139,6 +139,7 @@ test('Challenge: hearts show while you play, and a miss breaks one', async ({ pa
       await page.getByLabel('Your answer').fill('qqqq');
       await page.getByRole('button', { name: 'Check' }).click();
     } else if (ONE_TAP.includes(f)) {
+      if (await page.getByTestId('show-choices').isVisible().catch(() => false)) await page.getByTestId('show-choices').click();
       const tiles = section.locator('.tile');
       await tiles.nth(i % (await tiles.count())).click();
     } else await answerAndCheck(page, f);
