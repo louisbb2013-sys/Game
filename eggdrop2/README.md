@@ -24,8 +24,10 @@ GRIP BRAKE works like the emergency brake that stops a falling elevator: brake s
 | 4 | `stl/4_brake_ring.stl` | Brake ring: **print 2** (a 3rd only if the test says so) |
 
 **Creality Print projects** (File > Open Project). Both are set up for the K1 Max 0.4 nozzle with Hyper PLA, with every setting below already set per part:
-- `GRIP_BRAKE_FULL_K1Max.3mf`: **everything on 1 plate** (tube, pod, lid, 3 rings) as a single print job. About 3 h 15 min, 208 g.
-- `GRIP_BRAKE_K1Max.3mf`: 2 plates with 2 rings. About 3 h 05 min, 185 g.
+- `GRIP_BRAKE_FULL_K1Max.3mf`: **everything on 1 plate** (tube, pod, lid, 2 rings) as a single print job. **About 2 h 50 min, 181 g.**
+- `GRIP_BRAKE_K1Max.3mf`: the same parts on 2 plates.
+
+The 3rd ring isn't in the projects. Print `4_brake_ring.stl` on its own (about 20 min) only if the 4 ft test asks for it.
 
 `GRIP_BRAKE_all_files.zip` holds all of the above in one download.
 
@@ -34,13 +36,15 @@ GRIP BRAKE works like the emergency brake that stops a falling elevator: brake s
 | Part | Position | Layer | Walls | Infill |
 |---|---|---|---|---|
 | Tube | base down, 5 mm brim | 0.28 | 4 | 15% gyroid |
-| Egg pod | floor down | 0.24 | 4 | 15% gyroid |
-| Lid | flat top down (as in file) | 0.24 | 4 | 15% gyroid |
-| Brake ring ×2 | flat | 0.24 | 7 | **100% (solid)** |
+| Egg pod | floor down | 0.28 | 4 | 15% gyroid |
+| Lid | flat top down (as in file) | 0.28 | 4 | 15% gyroid |
+| Brake ring ×2 | flat | 0.28 | 7 | **100% (solid)** |
 
 The rings must be solid, because their stiffness sets the braking force.
 
-**Estimate: about 3 h 05 min and 185 g** (Plate A, the tube: 1 h 32. Plate B, pod + lid + 2 rings: about 1 h 35). A 3rd ring adds about 20 min. These times come from another slicer using Creality's K1 Max speed limits.
+**Filament cooling: minimum layer time 4 s** instead of Hyper PLA's 8 s. Without this, the tall tube printing alone on its upper layers slows every layer to 8 s. A 76 mm tube cools fine in 4 s with the K1 Max fan. The project files already have it set.
+
+**Estimate: about 2 h 50 min and 181 g** for the one-plate file. That's another slicer's 2 h 28, scaled up by how much slower Creality Print measured on the previous version.
 
 ## 4. Assembly
 

@@ -23,28 +23,27 @@ SOLID = dict(wall_loops='7', sparse_infill_density='100%', sparse_infill_pattern
 PARTS = [
     ('1_tube.stl', 'Tube', 1, 150, 150, dict(layer_height='0.28', wall_loops='4', sparse_infill_density='15%',
                                               brim_type='outer_only', brim_width='5'), False),
-    ('2_egg_pod.stl', 'Egg pod', 2, 75, 80, dict(layer_height='0.24', wall_loops='4', sparse_infill_density='15%', brim_type='no_brim'), False),
-    ('3_pod_lid.stl', 'Pod lid', 2, 225, 80, dict(layer_height='0.24', wall_loops='4', sparse_infill_density='15%', brim_type='no_brim'), False),
-    ('4_brake_ring.stl', 'Brake ring 1', 2, 75, 205, dict(layer_height='0.24', brim_type='no_brim', **SOLID), False),
-    ('4_brake_ring.stl', 'Brake ring 2', 2, 225, 205, dict(layer_height='0.24', brim_type='no_brim', **SOLID), False),
+    ('2_egg_pod.stl', 'Egg pod', 2, 75, 80, dict(layer_height='0.28', wall_loops='4', sparse_infill_density='15%', brim_type='no_brim'), False),
+    ('3_pod_lid.stl', 'Pod lid', 2, 225, 80, dict(layer_height='0.28', wall_loops='4', sparse_infill_density='15%', brim_type='no_brim'), False),
+    ('4_brake_ring.stl', 'Brake ring 1', 2, 75, 205, dict(layer_height='0.28', brim_type='no_brim', **SOLID), False),
+    ('4_brake_ring.stl', 'Brake ring 2', 2, 225, 205, dict(layer_height='0.28', brim_type='no_brim', **SOLID), False),
 ]
 PLATE_NAMES = {1: 'Plate A - Tube', 2: 'Plate B - Pod, lid, 2 brake rings'}
 
 # --full: everything (incl. the 3rd ring) on ONE plate = one print job
 TUBE_S = dict(layer_height='0.28', wall_loops='4', sparse_infill_density='15%', brim_type='outer_only', brim_width='5')
-STD_S = dict(layer_height='0.24', wall_loops='4', sparse_infill_density='15%', brim_type='no_brim')
-RING_S = dict(layer_height='0.24', brim_type='no_brim', **SOLID)
+STD_S = dict(layer_height='0.28', wall_loops='4', sparse_infill_density='15%', brim_type='no_brim')
+RING_S = dict(layer_height='0.28', brim_type='no_brim', **SOLID)
 PARTS_FULL = [
     ('1_tube.stl', 'Tube', 1, 62, 62, TUBE_S, False),
     ('2_egg_pod.stl', 'Egg pod', 1, 160, 62, STD_S, False),
     ('3_pod_lid.stl', 'Pod lid', 1, 248, 62, STD_S, False),
     ('4_brake_ring.stl', 'Brake ring 1', 1, 60, 170, RING_S, False),
     ('4_brake_ring.stl', 'Brake ring 2', 1, 150, 170, RING_S, False),
-    ('4_brake_ring.stl', 'Brake ring 3 (spare slot)', 1, 240, 170, RING_S, False),
 ]
 if '--full' in sys.argv:
     PARTS = PARTS_FULL
-    PLATE_NAMES = {1: 'GRIP BRAKE - all parts', 2: ''}
+    PLATE_NAMES = {1: 'GRIP BRAKE - all parts (2 rings)', 2: ''}
     OUT = os.path.join(HERE, '..', 'GRIP_BRAKE_FULL_K1Max.3mf')
 META_DROP = {'name', 'type', 'from', 'instantiation', 'inherits', 'setting_id', 'filament_id', 'compatible_printers',
              'compatible_printers_condition', 'compatible_prints', 'compatible_prints_condition', 'is_custom_defined',
@@ -64,6 +63,9 @@ def project_settings(flat):
         'different_settings_to_system': ['', '', ''],
         'inherits_group': ['', '', ''],
     })
+    # faster cooling rule: min layer time 8 s -> 4 s (tall 76 mm tube cools fine), keeps the print under 3 h
+    v = cfg.get('slow_down_layer_time', '8')
+    cfg['slow_down_layer_time'] = ['4'] if isinstance(v, list) else '4'
     return cfg
 
 

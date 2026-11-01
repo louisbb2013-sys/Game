@@ -14,7 +14,7 @@ R_BORE = 35.0            # 70 mm bore: brake surface
 WALL = 1.6
 R_OUT = R_BORE + WALL
 BASE_T = 3.2
-R_HOLE = 21.0            # 42 mm hole in the base (reset push + air vent)
+R_HOLE = 26.5            # 53 mm hole in the base (reset push + air vent)
 STROKE = 90.0
 # ---- brake ring ----
 RING_T = 6.0             # radial thickness
@@ -27,7 +27,7 @@ R_CAV = 27.0             # 54 mm egg cavity
 R_GROOVE = R_BORE - RING_T - CL     # groove floor (28.7)
 R_FLANGE = 31.6
 FLANGE_H = 1.6
-POD_FLOOR = 2.0
+POD_FLOOR = 1.6
 P_TH, D_TH = 3.0, 1.4
 POD_TH_ROOT = R_GROOVE
 POD_TH_H = 12.0
@@ -91,19 +91,19 @@ def pod():
     return b, z_top
 
 
-LID_R = POD_TH_ROOT + D_TH + CL + 2.2   # must stay inside the bore
+LID_R = POD_TH_ROOT + D_TH + CL + 1.8   # must stay inside the bore
 
 
 def lid():
     """Screw cap for the pod. z=0 is the top face (printed top-down)."""
-    H = POD_TH_H + 2.2
+    H = POD_TH_H + 1.6
     outer = revolve([(0, 0), (LID_R - 1.0, 0), (LID_R, 1.0), (LID_R, H), (0, H)])
-    nut = thread_solid(P_TH, POD_TH_ROOT, D_TH, POD_TH_H + 1.0, z0=2.2, clearance=CL)
+    nut = thread_solid(P_TH, POD_TH_ROOT, D_TH, POD_TH_H + 1.0, z0=1.6, clearance=CL)
     lead = revolve([(POD_TH_ROOT - 1, H + 0.01), (POD_TH_ROOT + D_TH + 1.5, H + 0.01), (POD_TH_ROOT - 1, H - 2.5)])
-    l = outer - nut - lead - cyl(POD_TH_ROOT + CL, POD_TH_H + 2, 2.2)
+    l = outer - nut - lead - cyl(POD_TH_ROOT + CL, POD_TH_H + 2, 1.6)
     # two finger grips (shallow slots across the top)
     for a in (0, 90):
-        s = m3.Manifold.cube((2 * LID_R + 2, 6, 0.8)).translate((-LID_R - 1, -3, -0.01)).rotate((0, 0, a))
+        s = m3.Manifold.cube((2 * LID_R + 2, 6, 0.6)).translate((-LID_R - 1, -3, -0.01)).rotate((0, 0, a))
         l = l - s
     return l, H
 
