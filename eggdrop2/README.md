@@ -23,7 +23,11 @@ GRIP BRAKE works like the emergency brake that stops a falling elevator: brake s
 | 3 | `stl/3_pod_lid.stl` | Screw lid for the pod |
 | 4 | `stl/4_brake_ring.stl` | Brake ring: **print 2** (a 3rd only if the test says so) |
 
-**Creality Print project:** `GRIP_BRAKE_K1Max.3mf` (File > Open Project). It's set up for the K1 Max 0.4 nozzle with Hyper PLA, on 2 plates, with every setting below already set per part.
+**Creality Print projects** (File > Open Project). Both are set up for the K1 Max 0.4 nozzle with Hyper PLA, with every setting below already set per part:
+- `GRIP_BRAKE_FULL_K1Max.3mf`: **everything on 1 plate** (tube, pod, lid, 3 rings) as a single print job. About 3 h 15 min, 208 g.
+- `GRIP_BRAKE_K1Max.3mf`: 2 plates with 2 rings. About 3 h 05 min, 185 g.
+
+`GRIP_BRAKE_all_files.zip` holds all of the above in one download.
 
 ## 3. Print settings (PLA, no supports)
 
