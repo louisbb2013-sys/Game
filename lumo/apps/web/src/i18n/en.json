@@ -2130,19 +2130,19 @@
     "you": "you"
   },
   "picker": {
-    "title": "Choose what goes in your deck",
-    "body": "Lumo found {{topics}} topics and {{facts}} facts. Untick what isn't on your test.",
-    "all": "All",
-    "none": "None",
-    "general": "General",
-    "count_one": "{{count}} fact",
-    "count_other": "{{count}} facts",
-    "stressed_one": "{{count}} highlighted",
-    "stressed_other": "{{count}} highlighted",
-    "go_one": "Make my deck · {{count}} fact",
-    "go_other": "Make my deck · {{count}} facts",
     "testTitle": "What's on your test? (optional)",
     "testBody": "Paste the review sheet or what your teacher said. Lumo builds the deck and the questions around it, and what's highlighted or underlined in your notes counts most.",
     "testPlaceholder": "e.g. Chapter 3: the causes of WW1, the key dates and the alliances"
+  },
+  "ask": {
+    "title": "Do you want this in your deck?",
+    "yes": "Yes",
+    "no": "No",
+    "keepRest_one": "Keep everything else ({{count}} answered)",
+    "keepRest_other": "Keep everything else ({{count}} answered)",
+    "almost": "Almost ready!",
+    "left_one": "{{count}} more to choose",
+    "left_other": "{{count}} more to choose",
+    "none": "You said no to everything. Try again and keep at least one part."
   }
 }

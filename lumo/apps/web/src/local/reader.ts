@@ -322,10 +322,31 @@ export function readingPrompt(source: Source, language: Locale, o: { options?: D
 
 type TextSample = (input: string, o: object) => Promise<{ text: string; truncated?: boolean }>;
 
+/** Who wants each part of the notes as soon as it's read (the deck maker asks "do you want this?"). */
+let ideaListener: ((c: ConceptInput) => void) | null = null;
+export function listenForIdeas(fn: (c: ConceptInput) => void) {
+  ideaListener = fn;
+  return () => {
+    if (ideaListener === fn) ideaListener = null;
+  };
+}
+/** The same part of the notes, however it's split ("Rome", "Rome (2)") or written. */
+export const ideaKey = (c: { term: string }) => norm(c.term.replace(PART, ''));
+
 /** One reading call: its finished lines, even when the reply was cut short or failed midway. */
 async function readOnce(s: Sample, prompt: string, o: object): Promise<{ meta: Meta; concepts: ConceptInput[] }> {
+  // Each part of the notes is passed on as soon as its line is finished.
+  const told = new Set<string>();
+  const onText = ({ text }: { text: string }) => {
+    if (!ideaListener) return;
+    for (const c of readDeckLines(text.slice(0, text.lastIndexOf('\n') + 1)).concepts) {
+      if (told.has(ideaKey(c))) continue;
+      told.add(ideaKey(c));
+      ideaListener(c);
+    }
+  };
   try {
-    const r = await (s as unknown as TextSample)(prompt, { modelTier: 'default', cache: false, ...o });
+    const r = await (s as unknown as TextSample)(prompt, { modelTier: 'default', cache: false, onText, ...o });
     return readDeckLines(r.text);
   } catch (e) {
     const partial = (e as { text?: unknown })?.text;

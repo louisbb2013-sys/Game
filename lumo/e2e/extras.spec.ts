@@ -124,7 +124,7 @@ test('think first: bet coins before the choices show; the world map: conquer an 
   await expect(page.getByTestId('island')).toHaveAttribute('data-state', /won|new/);
 });
 
-test('making a deck: tell Lumo what is on the test, then choose the topics that go in the deck', async ({ page }) => {
+test('making a deck: tell Lumo what is on the test, then say yes or no to each part it finds', async ({ page }) => {
   test.setTimeout(90_000);
   await fresh(page, 'u_ex4');
   await page.getByRole('link', { name: 'Learn', exact: true }).click();
@@ -133,15 +133,17 @@ test('making a deck: tell Lumo what is on the test, then choose the topics that 
   await page.getByRole('tab', { name: 'Paste notes' }).click();
   await page.locator('#deck-notes').fill('Mes notes de français, deux thèmes : le récit et la poésie. La strophe est surlignée.');
   await page.getByRole('button', { name: /Make my deck/ }).first().click();
-  const picker = page.getByTestId('topic-picker');
-  await expect(picker).toBeVisible({ timeout: 20_000 });
-  await expect(picker.getByTestId('picker-topic')).toHaveCount(2);
-  await expect(picker).toContainText('1 highlighted');
-  // Only the poetry: untick the narrative topic.
-  await picker.getByRole('checkbox', { name: 'Récit' }).uncheck();
-  await expect(page.getByTestId('picker-done')).toContainText('2 facts');
-  await page.getByTestId('picker-done').click();
+  // Each part pops up: "Do you want this in your deck?"
+  const ask = page.getByTestId('idea-ask');
+  await expect(ask).toBeVisible({ timeout: 20_000 });
+  const first = (await page.getByTestId('idea-term').textContent())!.trim();
+  await page.getByTestId('idea-no').click();
+  await expect(page.getByTestId('idea-term')).not.toHaveText(first);
+  await page.getByTestId('idea-yes').click();
+  await page.getByTestId('idea-keep-rest').click();
   await expect(page.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });
+  // The part the student said no to isn't in the deck.
+  await expect(page.getByText(first, { exact: true })).toHaveCount(0);
   // The test the student described reached Claude.
   const prompts = await page.evaluate(() => (window as unknown as { __prompts: string[] }).__prompts);
   expect(prompts.find((p) => p.includes('Break it into the precise sub-aspects'))).toContain('Seulement la poésie');

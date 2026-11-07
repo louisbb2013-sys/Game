@@ -8,9 +8,9 @@ import { shrinkPhoto } from '../lib/files';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError, NETLIFY } from '../lib/api';
 import { claudeProblem, loadSession } from '../netlify/cloud';
-import { TopicPicker } from '../components/TopicPicker';
-import { canAskClaude, deckFromNotes, deckFromTopic, photoLimits, readPhotos, ReaderError, type DeckDraft, type DeckOptions, type KnownIdea } from '../local/reader';
-import type { Concept } from '@lumo/core';
+import { IdeaAsk } from '../components/IdeaAsk';
+import { canAskClaude, deckFromNotes, ideaKey, listenForIdeas, deckFromTopic, photoLimits, readPhotos, ReaderError, type DeckDraft, type DeckOptions, type KnownIdea } from '../local/reader';
+import type { Concept, ConceptInput } from '@lumo/core';
 import { writeQuestions } from '../local/writer';
 
 type Source = 'topic' | 'upload' | 'notes';
@@ -113,15 +113,30 @@ export function NewDeck() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ai]);
 
-  // After reading: choose what goes in the deck (when Lumo found several topics or many parts).
-  const [picking, setPicking] = useState<Draft | null>(null);
+  // While Lumo reads, each part of the notes pops up: "do you want this in your deck?" Yes or no.
+  const [asks, setAsks] = useState<ConceptInput[]>([]);
+  const [answers, setAnswers] = useState<Record<string, boolean>>({});
+  const [keepRest, setKeepRest] = useState(false);
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  const keepRestRef = useRef(keepRest);
+  keepRestRef.current = keepRest;
+  // Reading is done but some parts aren't answered yet: the deck waits for the answers.
+  const [waiting, setWaiting] = useState<Draft | null>(null);
+  const addAsks = (more: ConceptInput[]) => setAsks((a) => [...a, ...more.filter((c) => !a.some((x) => ideaKey(x) === ideaKey(c)))]);
+  const current = keepRest ? undefined : asks.find((c) => answers[ideaKey(c)] === undefined);
   /** Save the draft as a deck (or add what's new to the deck), start Claude on the questions, and open it. */
-  const finish = async (draft: Draft, picked = false) => {
-    if (!picked && (new Set(draft.concepts.map((c) => c.topic)).size >= 2 || draft.concepts.length >= 8)) {
-      setPicking(draft);
+  const finish = async (read: Draft, answered = false) => {
+    // A deck with several parts waits until each one got a yes or a no (or "keep everything else").
+    const big = new Set(read.concepts.map((c) => c.topic)).size >= 2 || read.concepts.length >= 8;
+    if (!answered && big && !keepRestRef.current && read.concepts.some((c) => answersRef.current[ideaKey(c)] === undefined)) {
+      addAsks(read.concepts);
+      setWaiting(read);
       setBusy(null);
       return;
     }
+    const draft = { ...read, concepts: read.concepts.filter((c) => answersRef.current[ideaKey(c)] !== false) };
+    if (draft.concepts.length === 0) throw new ReaderError('nothing_kept');
     if (addTo) {
       const r = await api<{ ideas: number; facts: number }>(`/api/local/decks/${addTo}/ideas`, { method: 'POST', body: { concepts: draft.concepts } });
       void writeQuestions(addTo);
@@ -144,6 +159,7 @@ export function NewDeck() {
     if (code === 'unavailable' && problem) setError(t(`create.ai.${problem}`));
     else if (code === 'nothing_new') setError(t('addNotes.nothingNew'));
     else if (code === 'no_cards') setError(t('importx.noCards'));
+    else if (code === 'nothing_kept') setError(t('ask.none'));
     else if (code === 'nothing_found' && kind === 'notes') setError(t('local.nothingFound'));
     else if (kind === 'topic') setError(t(`local.topicErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
     else setError(t(`local.photoErrors.${code}`, { defaultValue: t('local.photoErrors.upstream_error') }));
@@ -153,8 +169,14 @@ export function NewDeck() {
     if (busy) return;
     setError(null);
     setBusy(kind);
+    setAsks([]);
+    setAnswers({});
+    setKeepRest(false);
+    answersRef.current = {};
+    keepRestRef.current = false;
     ctl.current = new AbortController();
     const signal = ctl.current.signal;
+    const stopListening = listenForIdeas((c) => addAsks([c]));
     try {
       if (kind === 'topic') {
         if (topicText.trim().length < 3) throw new ReaderError('nothing_found');
@@ -193,8 +215,19 @@ export function NewDeck() {
     } catch (e) {
       fail(kind, e);
       setBusy(null);
+    } finally {
+      stopListening();
     }
   };
+  // The last answer given after the reading finished: make the deck.
+  useEffect(() => {
+    if (!waiting || current) return;
+    const d = waiting;
+    setWaiting(null);
+    void finish(d, true).catch((e) => fail('notes', e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiting, current]);
+  const ask = current ? <IdeaAsk idea={current} asked={Object.keys(answers).length} onAnswer={(yes) => setAnswers((x) => ({ ...x, [ideaKey(current)]: yes }))} onKeepRest={() => setKeepRest(true)} /> : null;
 
   const accept = [...(caps?.mediaTypes ?? []), '.txt', '.md', 'text/plain'].join(',');
   /** Add photos / files (photos are shrunk first); returns the new list. */
@@ -235,7 +268,16 @@ export function NewDeck() {
     { id: 'notes', icon: <TextIcon size={18} />, label: t('create.tabs.notes') },
   ];
 
-  if (busy) return <Generating kind={busy} onStop={() => ctl.current?.abort()} />;
+  if (busy) return <Generating kind={busy} onStop={() => ctl.current?.abort()} ask={ask} />;
+  if (waiting && ask)
+    return (
+      <div className="mx-auto flex max-w-lg flex-col items-center gap-4 pt-10 text-center" data-testid="asks-left">
+        <Lumo size={90} mood="happy" />
+        <h1 className="text-2xl font-black">{t('ask.almost')}</h1>
+        <p className="text-sm text-muted">{t('ask.left', { count: asks.filter((c) => answers[ideaKey(c)] === undefined).length })}</p>
+        {ask}
+      </div>
+    );
 
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-10">
@@ -444,17 +486,7 @@ export function NewDeck() {
           </label>
         )}
         {!addTo && ai && <DeckOptionsPanel value={options} onChange={setOptions} />}
-        {picking && (
-          <TopicPicker
-            concepts={picking.concepts}
-            onCancel={() => setPicking(null)}
-            onDone={(kept) => {
-              const d = { ...picking, concepts: kept };
-              setPicking(null);
-              void finish(d, true).catch((e) => setError(String((e as { code?: string })?.code ?? 'network')));
-            }}
-          />
-        )}
+
 
         {error && (
           <p role="alert" className="rounded-2xl bg-bad/10 px-4 py-3 text-sm font-bold text-bad">
@@ -514,7 +546,7 @@ export function NewDeck() {
 }
 
 /** While Claude reads: what it's doing, with a way out. */
-function Generating({ kind, onStop }: { kind: Source; onStop: () => void }) {
+function Generating({ kind, onStop, ask }: { kind: Source; onStop: () => void; ask?: ReactNode }) {
   const { t } = useTranslation();
   const steps = t(`create.steps.${kind}`, { returnObjects: true }) as string[];
   const [step, setStep] = useState(0);
@@ -532,6 +564,7 @@ function Generating({ kind, onStop }: { kind: Source; onStop: () => void }) {
         <h1 className="text-3xl font-black">{t('create.generating')}</h1>
         <p className="mt-1 text-muted">{t(kind === 'topic' ? 'local.researching' : 'local.reading')}</p>
       </div>
+      {ask}
       <ol className="panel w-full space-y-3 p-5 text-left">
         {steps.map((s, i) => (
           <li key={s} className={`flex items-center gap-3 text-sm font-bold transition ${i > step ? 'text-muted/60' : ''}`}>

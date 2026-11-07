@@ -135,7 +135,14 @@
     }
     if (String(p).includes('Break it into the precise sub-aspects')) {
       await new Promise((r) => setTimeout(r, sMode === 'slow' ? 1500 : 300));
-      return { text: deckLines(p), truncated: false };
+      // Line by line, like the real thing (the deck maker asks about each part as it comes).
+      const text = deckLines(p);
+      const lines = text.split('\n');
+      for (let i = 1; i <= lines.length && o.onText; i++) {
+        o.onText({ text: lines.slice(0, i).join('\n') + '\n', delta: lines[i - 1] + '\n' });
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      return { text, truncated: false };
     }
     const text = bankLines(p).join('\n') + '\n';
     const cut = Math.max(1, Math.floor(text.length / 3));
