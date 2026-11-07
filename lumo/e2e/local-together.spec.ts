@@ -151,8 +151,7 @@ test('on a phone every study button answers a tap, and a slow Claude never block
     const section = p.locator('section[data-format]');
     await expect(section).toBeVisible();
     const f = (await section.getAttribute('data-format'))!;
-    await answerCurrent(p, f);
-    if (!ONE_TAP.includes(f)) await p.getByRole('button', { name: 'Check' }).tap();
+    await answerAndCheck(p, f); // a first miss gets another try
     const btn = p.getByRole('status').getByRole('button', { name: /Continue|See results/ });
     await expect(btn).toBeVisible({ timeout: 15_000 });
     await closeHatch(p);

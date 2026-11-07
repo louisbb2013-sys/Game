@@ -45,7 +45,7 @@ test('a deck made your way: the whole deck in one round, every question on its o
   const prompts = await a.evaluate(() => (window as unknown as { __prompts: string[] }).__prompts);
   const reading = prompts.find((p) => p.includes('Break it into the precise sub-aspects'))!;
   expect(reading).toContain("The student's level: Secondaire 2");
-  const writing = prompts.find((p) => p.includes('Write exactly the number of questions asked for each fact'))!;
+  const writing = prompts.find((p) => p.includes('SPECIFIC questions'))!;
   expect(writing).toContain('level: Secondaire 2');
   expect(writing).toContain('Level: challenging');
   expect(writing).toContain('quick checks');

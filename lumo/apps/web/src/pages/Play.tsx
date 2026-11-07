@@ -64,6 +64,7 @@ export function Play() {
   const [removed, setRemoved] = useState<string[]>([]);
   // A first miss: no answer shown yet, think again and have another go (active recall).
   const [retryNote, setRetryNote] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [typedHint, setTypedHint] = useState<{ firstLetter: string; letters: number } | null>(null);
   const [chests, setChests] = useState(0);
   const [chestKey, setChestKey] = useState(0);
@@ -401,10 +402,10 @@ export function Play() {
           haptic([30, 50, 30]);
           flash('bad');
           shake(document.querySelector('[data-answer-area]'));
-          if (a.kind === 'choice') {
-            setRemoved((r) => [...r, a.optionId]);
-            setAnswer(null);
-          }
+          if (a.kind === 'choice') setRemoved((r) => [...r, a.optionId]);
+          // A typed answer stays to fix; everything else starts again (the answer area is rebuilt).
+          if (a.kind !== 'text') setAnswer(null);
+          setAttempt((n) => n + 1);
           if (res.result.bet) floatText(`-${res.result.bet.amount} 🪙`, document.querySelector('[data-answer-area]'), { color: '#fca5a5', size: 28 });
           setRetryNote(true);
           setData((d) => (d ? { ...d, session: res.session } : d));
@@ -765,7 +766,7 @@ export function Play() {
               🤔 {t('play.retry.note')}
             </p>
           )}
-          <div data-answer-area className="pb-40">
+          <div data-answer-area className="pb-40" key={attempt}>
             {hiding ? (
               <ThinkFirst
                 coins={s.coins ?? 0}
