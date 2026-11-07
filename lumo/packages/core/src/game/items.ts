@@ -68,7 +68,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   streak_freeze: { id: 'streak_freeze', emoji: '🧊', price: 60, kind: 'consumable' },
   heart_refill: { id: 'heart_refill', emoji: '💗', price: 40, kind: 'consumable' },
   xp_boost: { id: 'xp_boost', emoji: '⚡', price: 80, kind: 'consumable' },
-  pet_food: { id: 'pet_food', emoji: '🍎', price: 10, kind: 'consumable' },
+  pet_food: { id: 'pet_food', emoji: '🍎', price: 20, kind: 'consumable' },
   egg_common: { id: 'egg_common', emoji: '🥚', price: 150, kind: 'egg' },
   egg_rare: { id: 'egg_rare', emoji: '🪺', price: 400, kind: 'egg' },
   chest_common: { id: 'chest_common', emoji: '🎁', price: 90, kind: 'chest' },
@@ -202,14 +202,15 @@ export const petTier = (p: Pick<PetState, 'species' | 'tier'>): Rarity => p.tier
 
 /** What it takes to upgrade a pet FROM each tier to the next: coins, and the level it must have reached. */
 export const PET_UPGRADES: Record<Rarity, { coins: number; level: number } | null> = {
-  common: { coins: 200, level: 4 },
-  rare: { coins: 450, level: 8 },
-  epic: { coins: 1000, level: 14 },
-  legendary: { coins: 2200, level: 22 },
-  mythical: { coins: 4000, level: 30 },
-  exotic: { coins: 7000, level: 40 },
-  galaxial: { coins: 12000, level: 55 },
-  celestial: { coins: 20000, level: 70 },
+  // Each step up is a real goal: weeks of study, not an afternoon.
+  common: { coins: 500, level: 6 },
+  rare: { coins: 1200, level: 12 },
+  epic: { coins: 2800, level: 20 },
+  legendary: { coins: 6000, level: 30 },
+  mythical: { coins: 11000, level: 40 },
+  exotic: { coins: 18000, level: 52 },
+  galaxial: { coins: 30000, level: 65 },
+  celestial: { coins: 50000, level: 80 },
   // Divine is as high as upgrades go: Lumo pets are gifts from the creator.
   divine: null,
   lumo: null,
@@ -234,16 +235,19 @@ export const PET_FULL = 100;
 const HUNGER_PER_HOUR = 1;
 
 export function petXpForLevel(level: number) {
-  return 60 + level * 45;
+  return 80 + level * 65;
 }
 
 export function currentFullness(p: PetState, now: Millis): number {
   return Math.max(0, Math.round(p.fullness - ((now - p.fedAt) / HOUR_MS) * HUNGER_PER_HOUR));
 }
 
+/** Pet XP a snack gives (snacks help, but studying is how pets really grow). */
+export const FOOD_XP = 6;
+
 export function feedPet(p: PetState, now: Millis): PetState {
   const fullness = Math.min(PET_FULL, currentFullness(p, now) + 35);
-  return addPetXp({ ...p, fullness, fedAt: now }, 10);
+  return addPetXp({ ...p, fullness, fedAt: now }, FOOD_XP);
 }
 
 /** How far a pet can level. */

@@ -128,7 +128,9 @@ function plan(d: DeckForWriting, opts: { more?: boolean; refresh?: boolean }, se
     const facts = concept.keyPoints.length ? concept.keyPoints.map((_, i) => i) : [-1];
     const needs = facts.flatMap((fact) => {
       const x = cover.get(`${concept.id}:${fact}`)!;
-      const n = opts.more ? 1 : opts.refresh ? (x.unseen === 0 ? 1 : 0) : Math.max(0, PER_FACT - x.have);
+      // A fact the notes stress (★) gets one question more.
+      const want = PER_FACT + (concept.stars?.includes(fact) ? 1 : 0);
+      const n = opts.more ? 1 : opts.refresh ? (x.unseen === 0 ? 1 : 0) : Math.max(0, want - x.have);
       return n > 0 ? [{ fact, n, already: x.prompts.slice(-4) }] : [];
     });
     return needs.length ? [{ concept, needs }] : [];
@@ -327,7 +329,7 @@ export function writingPrompt(deck: { title: string; subject: string; language: 
       const bits = [`${i + 1}. ${c.term} — ${c.summary}`];
       if (c.keyPoints.length) {
         const wanted = new Map(t.needs.map((x) => [x.fact, x.n]));
-        bits.push(...c.keyPoints.map((k, f) => `   [${f + 1}] ${k}${wanted.has(f) ? ` → write ${wanted.get(f)}` : ' (no question needed now)'}`));
+        bits.push(...c.keyPoints.map((k, f) => `   [${f + 1}] ${c.stars?.includes(f) ? '★ ' : ''}${k}${wanted.has(f) ? ` → write ${wanted.get(f)}` : ' (no question needed now)'}`));
       } else bits.push(`   (the idea as a whole) → write ${t.needs[0]?.n ?? PER_FACT}`);
       if (c.examples.length) bits.push(`   Examples from the notes: ${c.examples.slice(0, 2).join('; ')}`);
       if (c.misconceptions.length) bits.push(`   Mistakes students make: ${c.misconceptions.slice(0, 3).join('; ')}`);
@@ -345,18 +347,20 @@ export function writingPrompt(deck: { title: string; subject: string; language: 
   return `You are an expert ${deck.subject || 'school'} teacher writing a real test for students aged 12-18 (${o?.level ? `level: ${o.level}` : 'Québec secondaire or a similar level: match the level the deck suggests'}).
 Deck: "${deck.title}"${deck.subject ? ` · Subject: ${deck.subject}` : ''}
 Write everything in ${fr ? 'French, with the vocabulary Québec schools use (PFEQ)' : 'English'}.
-${o?.focus ? `The student says: """${o.focus}"""\n` : ''}
-What the student studied: each idea has numbered facts, and next to each fact how many questions to write on it.
+${o?.focus ? `The student says: """${o.focus}"""\n` : ''}${o?.test ? `What is on the student's test: """${o.test.slice(0, 1200)}"""\nAsk the way this test will ask.\n` : ''}
+What the student studied: each idea has numbered facts, and next to each fact how many questions to write on it. ★ marks a fact the notes stress (highlighted, underlined, in colour) or the test covers: it is the most likely to be on the test.
 ${list}
 ${others.length ? `\nOther ideas in this deck (use them for tempting wrong answers, and to make the student tell similar ideas apart): ${others.map((c) => `${c.term} (${short(c.summary, 80)})`).join('; ')}\n` : ''}${about}
-Write exactly the number of questions asked for each fact (${total} lines in all). Each question tests that fact and gives its number in "f" (a question that needs two facts of the same idea lists both). They must feel like a good teacher's test or a ministry exam at this level: they check that the student KNOWS and UNDERSTANDS each fact and can USE it, never that they remember the notes' wording.
+Two kinds of questions, like the best study apps and a real class test:
+- SPECIFIC questions (most of them): exactly the number asked for each fact (${total} lines). Each one tests that fact and gives its number in "f". Ask it the way the teacher's test will: clear, direct and close to the notes (the student should recognize what they studied), never a riddle.
+- GENERAL questions: about one more for every 4 specific ones (${Math.max(1, Math.round(total / 4))} lines), each linking 2-4 facts of the list, from one idea or several of the same topic: the big picture (which items belong together, the order of events or steps, what two ideas share or how they differ, which cause leads to which effect, the main point of the topic). Give it "g": true, "c" = the main idea's number and, in "f", the facts of that idea it uses.
 
 When a fact gets two or more questions, each one takes a DIFFERENT angle, for example:
 - ask for it directly (who, what, when, where, how many), as a "typed" short answer or an "mcq";
 - the other way round: describe it and ask for the name, term, date or place;
 - why or how it is so, or what it causes ("mcq" or "written");
-- use it in a new situation, example or short document the student has never seen ("mcq" with a "context", or "written"), the way ministry exams do ("D'après le document…", "Which best explains…");
 - tell it apart from a similar idea of this deck ("mcq" or "tf");
+- at most 1 question in 5: use it in a new example or short document ("mcq" with a "context");
 - a "tf" statement that is true, or false because of a mistake real students make (never a silly word swap); about half true, half false;
 - an "order" (only for a real sequence: steps, events, stages) or a "match" (3-5 pairs) when the facts are steps or pairs.
 ${mixLine(o)}
@@ -368,7 +372,7 @@ Wrong options (they make or break a test):
 - "typed": the answer is 1-3 words (a term, name, date or number); "accepted" lists every acceptable form (synonyms, with/without article, singular/plural, common spellings, a name with and without the first name, a date or number with and without its unit or era, e.g. "27 av. J.-C.", "-27", "27 avant Jésus-Christ"); "wrong" gives 3 tempting wrong answers of the same kind.
 
 Rules (strict):
-- Never copy the notes: no 5 or more words in a row from them. Invent new examples, names, numbers and excerpts.
+- Don't copy whole sentences from the notes (a "tf" statement must never be a copied sentence), but DO use the notes' own key words, names, terms and dates: the test will.
 - The question states the whole problem: it can be answered with the options covered. Never give the answer away (don't name the concept in a question whose answer is that concept; don't repeat a question word only in the right option).
 - No "all/none of the above", no "always/never" giveaways, no trick wording, no double negatives; avoid "NOT"/"SAUF" questions.
 - The right answer, and every rubric point of a "written" one, is something the facts above say or directly imply: a student who learned these notes can answer every question. (Wrong options, documents and new situations can bring in other things.)
@@ -387,7 +391,8 @@ Reply with one JSON object per line and nothing else (no list, no code fence, no
 {"c":2,"f":1,"type":"typed","level":"remember","q":"…","accepted":["…","…"],"wrong":["…","…","…"],"why":"…"}
 {"c":2,"f":[1,2],"type":"written","level":"apply","context":"(optional)","q":"…","points":["…","…","…"],"model":"…","why":"…"}
 {"c":3,"f":[1,2,3],"type":"order","level":"understand","q":"…","steps":["first","second","third","fourth"],"why":"…"}
-{"c":3,"f":1,"type":"match","level":"understand","q":"…","pairs":[["…","…"],["…","…"],["…","…"]],"why":"…"}`;
+{"c":3,"f":1,"type":"match","level":"understand","q":"…","pairs":[["…","…"],["…","…"],["…","…"]],"why":"…"}
+{"c":2,"f":[1,2],"g":true,"type":"mcq","level":"understand","q":"<a big-picture question linking several facts>","options":["…","…","…","…"],"answer":0,"why":"…","wrong":["","…","…","…"]}`;
 }
 
 /**

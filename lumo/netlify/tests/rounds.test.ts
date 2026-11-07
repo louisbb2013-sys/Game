@@ -101,7 +101,15 @@ describe('whole-deck rounds', () => {
       // Miss the very first question once; everything else right.
       const a = !missedOnce ? wrongAnswer(q) : perfectAnswer(q);
       missedOnce = true;
-      r = await api('POST', `/api/sessions/${r.session.id}/answer`, { questionId: r.question.id, answer: a, timeMs: 3000 });
+      const qid = r.question.id;
+      r = await api('POST', `/api/sessions/${r.session.id}/answer`, { questionId: qid, answer: a, timeMs: 3000 });
+      if (r.result.tryAgain) {
+        // A first miss keeps the answer hidden (active recall); missing again shows it.
+        expect(r.result.correctAnswer).toBeUndefined();
+        expect(r.next).toBeNull();
+        r = await api('POST', `/api/sessions/${r.session.id}/answer`, { questionId: qid, answer: a, timeMs: 3000 });
+        expect(r.result.correctAnswer).toBeTruthy();
+      }
       if (r.result.topicDone) topicDone = [...topicDone, r.result.topicDone];
       if (r.result.fixed) fixed = true;
       r = { ...r, question: r.next };

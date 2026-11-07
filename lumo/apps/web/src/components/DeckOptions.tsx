@@ -13,7 +13,7 @@ export function lastDeckOptions(): DeckOptions {
   try {
     const o = JSON.parse(localStorage.getItem(KEY) ?? '{}') as DeckOptions;
     // The focus is about one deck: never carried over.
-    return { ...o, focus: undefined };
+    return { ...o, focus: undefined, test: undefined };
   } catch {
     return {};
   }
@@ -21,7 +21,7 @@ export function lastDeckOptions(): DeckOptions {
 
 export function rememberDeckOptions(o: DeckOptions) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...o, focus: undefined }));
+    localStorage.setItem(KEY, JSON.stringify({ ...o, focus: undefined, test: undefined }));
   } catch {
     /* fine: nothing remembered */
   }

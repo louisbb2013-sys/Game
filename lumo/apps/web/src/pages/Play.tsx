@@ -11,7 +11,7 @@ import { ChestPick } from '../components/play/ChestPick';
 import { FeedbackSheet } from '../components/play/Feedback';
 import { PopUp, usePops } from '../components/play/PopUp';
 import { QuestArena } from '../components/play/Quest';
-import { BET_FORMATS, setThinkFirst, ThinkFirst, thinkFirstOn } from '../components/play/ThinkFirst';
+import { BET_FORMATS, setThinkFirst, ThinkFirst, thinkFirstOn, thinkThisOne } from '../components/play/ThinkFirst';
 import { RoundEnd } from '../components/play/RoundEnd';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { api, ApiError, LOCAL } from '../lib/api';
@@ -62,6 +62,8 @@ export function Play() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
+  // A first miss: no answer shown yet, think again and have another go (active recall).
+  const [retryNote, setRetryNote] = useState(false);
   const [typedHint, setTypedHint] = useState<{ firstLetter: string; letters: number } | null>(null);
   const [chests, setChests] = useState(0);
   const [chestKey, setChestKey] = useState(0);
@@ -175,7 +177,7 @@ export function Play() {
 
   const mode: Mode = data?.session.mode ?? 'practice';
   const q = data?.question ?? null;
-  const hiding = !!q && thinkFirst && POP_MODES.has(mode) && BET_FORMATS.has(q.format) && phase === 'answering' && bet === null;
+  const hiding = !!q && thinkFirst && POP_MODES.has(mode) && thinkThisOne(q) && phase === 'answering' && bet === null;
 
   // Soft lounge music while a round is on (darker for the boss, quicker for the speed run); none in the mock exam.
   const playing = !!data && phase !== 'intro' && phase !== 'summary' && mode !== 'exam';
@@ -194,6 +196,7 @@ export function Play() {
   useEffect(() => {
     startedAt.current = Date.now();
     setRemoved([]);
+    setRetryNote(false);
     setTypedHint(null);
     setBet(null);
     window.scrollTo(0, 0); // each question starts at the top, even after a long explanation
@@ -392,6 +395,23 @@ export function Play() {
           body: { questionId: data.question.id, answer: a, timeMs: Date.now() - startedAt.current, ...(mode === 'quest' ? { ability: spell } : {}), ...(bet ? { bet } : {}) },
         });
         if (ending.current) return; // the speed run's clock ran out while this answer was on its way
+        if (res.result?.tryAgain) {
+          // Not quite: the missed choice is crossed out, the answer stays hidden, and they try again.
+          play('wrong');
+          haptic([30, 50, 30]);
+          flash('bad');
+          shake(document.querySelector('[data-answer-area]'));
+          if (a.kind === 'choice') {
+            setRemoved((r) => [...r, a.optionId]);
+            setAnswer(null);
+          }
+          if (res.result.bet) floatText(`-${res.result.bet.amount} 🪙`, document.querySelector('[data-answer-area]'), { color: '#fca5a5', size: 28 });
+          setRetryNote(true);
+          setData((d) => (d ? { ...d, session: res.session } : d));
+          setPhase('answering');
+          return;
+        }
+        setRetryNote(false);
         if (res.summary && res.rewards && mode === 'exam') {
           // The paper is handed in: its report has no results screen, so everything celebrates there.
           showRewards(mergeRewards(held.current, res.rewards));
@@ -438,6 +458,7 @@ export function Play() {
             });
           }
           if (r.fixed) pushPop({ icon: '💪', title: t('play.pop.fixed'), body: t('play.pop.fixedBody'), tone: 'good' });
+          else if (r.secondTry && r.correct) pushPop({ icon: '🧠', title: t('play.retry.gotIt'), body: t('play.retry.gotItBody'), tone: 'good' });
           if (r.mastered) pushPop({ icon: '⭐', title: t('play.pop.mastered', { term: r.masteredTerm ?? '' }), body: t('play.pop.masteredBody'), tone: 'gold' });
           // Long rounds: a quarter, halfway, three quarters, the last five.
           if (after.total >= 20 && after.answered < after.total) {
@@ -739,6 +760,11 @@ export function Play() {
             )}
           </div>
 
+          {retryNote && phase === 'answering' && (
+            <p role="status" className="pop-in mb-3 rounded-2xl bg-amber-300/90 px-3 py-2 text-center font-black text-night" data-testid="try-again">
+              🤔 {t('play.retry.note')}
+            </p>
+          )}
           <div data-answer-area className="pb-40">
             {hiding ? (
               <ThinkFirst

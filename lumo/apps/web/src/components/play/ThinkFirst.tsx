@@ -17,6 +17,24 @@ export function thinkFirstOn(): boolean {
     return true;
   }
 }
+
+/**
+ * Not every question: about one in three multiple-choice questions hides its choices (never a
+ * true/false, where there's nothing to work out first), so rounds keep changing pace.
+ */
+export function thinkThisOne(q: { id: string; format: string }): boolean {
+  if (q.format !== 'multiple_choice' && q.format !== 'cause_effect') return false;
+  let always = false;
+  try {
+    always = localStorage.getItem(KEY) === 'all';
+  } catch {
+    /* no storage: some questions, as usual */
+  }
+  if (always) return true;
+  let h = 7;
+  for (const c of q.id) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return Math.abs(h) % 3 === 0;
+}
 export function setThinkFirst(on: boolean) {
   try {
     localStorage.setItem(KEY, on ? '1' : '0');

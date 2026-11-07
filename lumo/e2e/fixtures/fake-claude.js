@@ -115,6 +115,11 @@
       lines.push({ topic: 'Récit', kind: 'definition', term: 'Narrateur', summary: 'Celui qui raconte l’histoire.', facts: ['Le narrateur peut être un personnage de l’histoire.'] });
       lines.push({ topic: 'Récit', kind: 'definition', term: 'Chute', summary: 'Fin surprenante d’une nouvelle.', facts: ['La chute surprend le lecteur à la toute fin.'] });
     } else for (const [term, summary] of RECIT) lines.push({ topic: 'Récit', kind: 'definition', term, summary, facts: [summary] });
+    // Notes with two topics (and a highlighted fact): the deck maker lets the student choose.
+    if (String(p).includes('deux thèmes')) {
+      lines.push({ topic: 'Poésie', kind: 'definition', term: 'Strophe', summary: 'Groupe de vers.', facts: ['★ Une strophe est un groupe de vers.'] });
+      lines.push({ topic: 'Poésie', kind: 'definition', term: 'Rime', summary: 'Son répété.', facts: ['La rime est la répétition d’un son en fin de vers.'] });
+    }
     return lines.map((o) => JSON.stringify(o)).join('\n') + '\n';
   };
   const writeBank = async (p, o = {}) => {

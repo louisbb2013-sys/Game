@@ -42,10 +42,10 @@ describe('pets', () => {
     expect(currentFullness(pet, T + 50 * HOUR_MS)).toBe(50);
     const fed = feedPet({ ...pet, fullness: 10 }, T);
     expect(fed.fullness).toBe(45);
-    expect(fed.xp).toBe(10);
+    expect(fed.xp).toBe(6);
   });
   it('level up and react to streak and hunger', () => {
-    const p = addPetXp(pet, 1000);
+    const p = addPetXp(pet, 2000);
     expect(p.level).toBeGreaterThan(5);
     expect(petMood(pet, T, 'safe')).toBe('happy');
     expect(petMood(pet, T, 'broken')).toBe('sad');
@@ -93,9 +93,9 @@ describe('pet tiers', () => {
     let p = { species: 'moss_turtle' as const, level: 1, xp: 0, fullness: 80, fedAt: 0 };
     expect(petTier(p)).toBe('common');
     expect(upgradeBlocker(p, 10_000)).toBe('level_too_low');
-    p = { ...p, level: 4 };
-    expect(upgradeBlocker(p, 150)).toBe('not_enough_coins');
-    expect(upgradeBlocker(p, 200)).toBeNull();
+    p = { ...p, level: 6 };
+    expect(upgradeBlocker(p, 450)).toBe('not_enough_coins');
+    expect(upgradeBlocker(p, 500)).toBeNull();
     const up = upgradePet(p);
     expect(petTier(up)).toBe('rare');
     // Mythical → Exotic → Galaxial → Celestial → Divine by upgrades; nothing goes past Divine.

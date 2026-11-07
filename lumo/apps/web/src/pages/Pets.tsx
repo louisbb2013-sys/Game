@@ -637,20 +637,26 @@ function PetSheet({
             🎉 {t('pets.upgraded', { rarity: t(`pets.rarity.${upgraded}`) })}
           </p>
         )}
-        <button
-          disabled={food === 0}
-          onClick={() =>
-            void run(async () => {
-              await api('/api/game/items/use', { method: 'POST', body: { itemId: 'pet_food', petId: pet.id } });
-              play('correct');
-              setHearts(true);
-              setTimeout(() => setHearts(false), 900);
-            })
-          }
-          className="w-full rounded-2xl bg-good py-3 text-lg font-black text-white disabled:opacity-40"
-        >
-          🍎 {t('pets.feed', { count: food })}
-        </button>
+        {/* One snack, five, or all of them at once (each snack: fullness and pet XP). */}
+        <div className="grid w-full grid-cols-3 gap-2" data-testid="pet-feed">
+          {([1, 5, 'all'] as const).map((qty) => (
+            <button
+              key={qty}
+              disabled={food === 0 || (qty === 5 && food < 2)}
+              onClick={() =>
+                void run(async () => {
+                  await api('/api/game/items/use', { method: 'POST', body: { itemId: 'pet_food', petId: pet.id, qty } });
+                  play('correct');
+                  setHearts(true);
+                  setTimeout(() => setHearts(false), 900);
+                })
+              }
+              className={`rounded-2xl py-3 font-black text-white disabled:opacity-40 ${qty === 1 ? 'bg-good text-lg' : 'bg-good/80'}`}
+            >
+              🍎 {qty === 1 ? t('pets.feed', { count: food }) : qty === 5 ? t('petx.feedN', { n: Math.min(5, food) }) : t('petx.feedAllOne', { n: food })}
+            </button>
+          ))}
+        </div>
         {food === 0 && (
           <Link to="/shop" className="text-sm font-bold text-brand">
             {t('pets.getFood')}

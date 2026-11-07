@@ -30,11 +30,13 @@ export function factSlots(concepts: readonly Concept[]): FactSlot[] {
 }
 
 /** How much a fact needs asking: missed last time > never asked > asked long ago > just got right. */
-function need(slot: FactSlot, log: FactLog, states: ReadonlyMap<string, ConceptStateView>, now: Millis, rng: Rng): number {
+function need(slot: FactSlot, log: FactLog, states: ReadonlyMap<string, ConceptStateView>, now: Millis, rng: Rng, stressed = false): number {
   const l = log[factKey(slot.conceptId, slot.fact)];
   const srs = states.get(slot.conceptId)?.srs;
   let n = !l ? 3 : !l.ok ? 4 : Math.min(2.5, (now - l.at) / (7 * 86_400_000));
   if (srs && srs.due <= now) n += 1.5;
+  // What the notes stress (highlighted, underlined…) is the likeliest to be on the test.
+  if (stressed) n += 1;
   return n + rng() * 0.4;
 }
 
@@ -86,8 +88,9 @@ export function planFullRound(concepts: readonly Concept[], states: ReadonlyMap<
  * idea comes back with another fact only once every idea has had one), mixed across topics.
  */
 export function planQuickRound(concepts: readonly Concept[], states: ReadonlyMap<string, ConceptStateView>, log: FactLog, count: number, now: Millis, rng: Rng): FactSlot[] {
+  const starred = new Set(concepts.flatMap((c) => (c.stars ?? []).map((f) => factKey(c.id, f))));
   const ranked = factSlots(concepts)
-    .map((s) => ({ s, n: need(s, log, states, now, rng) }))
+    .map((s) => ({ s, n: need(s, log, states, now, rng, starred.has(factKey(s.conceptId, s.fact))) }))
     .sort((a, b) => b.n - a.n)
     .map((x) => x.s);
   const picked: FactSlot[] = [];

@@ -31,8 +31,10 @@ function shareableBank(concepts: Concept[], bank: Question[]): Question[] {
 type Shared = PublicDeck & { ownerId: string; fromFriend: boolean };
 
 /** Copy a shared deck into my decks (its questions come along, so it plays right away). */
-async function copyDeck(d: PublicDeck): Promise<string> {
-  const { id } = await api<{ id: string }>('/api/local/decks/import', { method: 'POST', body: { title: d.title, subject: d.subject, language: d.language, concepts: d.concepts, bank: d.bank ?? [] } });
+async function copyDeck(d: PublicDeck & { ownerId?: string }): Promise<string> {
+  // The copy counts toward the original deck's ranking.
+  const origin = d.ownerId ? `${d.ownerId}-${d.id}` : undefined;
+  const { id } = await api<{ id: string }>('/api/local/decks/import', { method: 'POST', body: { title: d.title, subject: d.subject, language: d.language, concepts: d.concepts, bank: d.bank ?? [], origin } });
   return id;
 }
 
@@ -186,7 +188,7 @@ export function SharedDeckPage() {
   const add = async (live: boolean) => {
     setBusy(true);
     try {
-      const id = await copyDeck(d);
+      const id = await copyDeck({ ...d, ownerId: owner });
       navigate(live ? `/live?deck=${id}` : `/decks/${id}`);
     } finally {
       setBusy(false);

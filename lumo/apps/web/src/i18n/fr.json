@@ -958,7 +958,10 @@
       "nobody": "Personne ne l’a eue!",
       "nobodyBody": "Lis le pourquoi : elle va revenir",
       "fastest": "{{name}} a été le plus rapide!"
-    }
+    },
+    "leaveHandOver": "Quitter (quelqu'un prend le relais)",
+    "newHost": "{{name}} dirige la partie maintenant",
+    "youHost": "L'hôte est parti : c'est toi qui diriges la partie!"
   },
   "friends": {
     "title": "Amis",
@@ -1528,7 +1531,12 @@
     },
     "waiting": "Lumo écrit tes prochaines questions…",
     "waitingBody": "Elles arrivent : le reste de tes notes est presque prêt.",
-    "waitingStop": "Arrêter ici et voir mes résultats"
+    "waitingStop": "Arrêter ici et voir mes résultats",
+    "retry": {
+      "note": "Pas tout à fait! Réfléchis encore et essaie une autre réponse.",
+      "gotIt": "Trouvé au deuxième essai!",
+      "gotItBody": "Elle reviendra plus tard dans la ronde, pour bien la retenir."
+    }
   },
   "write": {
     "title": "Lumo écrit ton examen",
@@ -1923,7 +1931,9 @@
     "design": "Créer un pet",
     "buyEggs": "Acheter des œufs",
     "giftRarity": "Rareté",
-    "giftLevel": "Niveau"
+    "giftLevel": "Niveau",
+    "feedN": "Nourrir {{n}}",
+    "feedAllOne": "Tout ({{n}})"
   },
   "shopx": {
     "eggsTitle": "Œufs par rareté",
@@ -2108,5 +2118,28 @@
     "allConquered": "Toute la carte conquise! Coffre épique!",
     "notYet": "Pas encore conquise : réussis 70 % pour la prendre",
     "back": "Retour à la carte"
+  },
+  "rank": {
+    "title": "Classement du deck",
+    "empty": "Réponds à des questions sur ce deck pour entrer au classement.",
+    "share": "Partage ce deck : les amis qui le jouent entrent dans ce classement.",
+    "xp": "{{n}} XP",
+    "you": "toi"
+  },
+  "picker": {
+    "title": "Choisis ce qui va dans ton deck",
+    "body": "Lumo a trouvé {{topics}} thèmes et {{facts}} faits. Décoche ce qui n'est pas dans ton examen.",
+    "all": "Tout",
+    "none": "Rien",
+    "general": "Général",
+    "count_one": "{{count}} fait",
+    "count_other": "{{count}} faits",
+    "stressed_one": "{{count}} surligné",
+    "stressed_other": "{{count}} surlignés",
+    "go_one": "Créer mon deck · {{count}} fait",
+    "go_other": "Créer mon deck · {{count}} faits",
+    "testTitle": "Qu'est-ce qu'il y a dans ton examen? (facultatif)",
+    "testBody": "Colle la feuille de révision ou ce que ton prof a dit. Lumo bâtit le deck et les questions autour, et ce qui est surligné ou souligné dans tes notes compte le plus.",
+    "testPlaceholder": "ex. Chapitre 3 : les causes de la 1re Guerre mondiale, les dates clés et les alliances"
   }
 }

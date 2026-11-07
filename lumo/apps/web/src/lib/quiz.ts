@@ -77,6 +77,10 @@ export interface AnswerResult {
   /** A missed idea, right on its second chance. */
   fixed?: boolean;
   /** Monster Quest: what the spell did and what the monster did back. */
+  /** A first miss: the answer stays hidden, try again. */
+  tryAgain?: boolean;
+  /** Right, but on the second try (it comes back later in the round). */
+  secondTry?: boolean;
   /** The coins bet before seeing the choices, and whether the bet was won. */
   bet?: { amount: number; won: boolean };
   islandBoss?: boolean;

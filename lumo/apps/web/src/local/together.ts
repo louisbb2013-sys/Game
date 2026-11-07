@@ -128,13 +128,30 @@ export interface PublicProfile {
   streak: number;
   lastDay: string | null;
   decks: number;
+  /** XP earned on each deck, by its ranking key (the same for every copy of a shared deck). */
+  deckXp?: Record<string, number>;
   updatedAt: number;
 }
 
-let pendingProfile: Omit<PublicProfile, 'id' | 'updatedAt'> | null = null;
+/** XP on one of my decks, as the app keeps it (its own id, and where a copied deck came from). */
+export interface DeckXp {
+  id: string;
+  xp: number;
+  origin?: string;
+}
+/** A deck's ranking key: a copy of a shared deck counts toward the original's ranking. */
+export const deckRankKey = (me: string, deckId: string, origin?: string) => origin || `${me}-${deckId}`;
+type ProfileIn = Omit<PublicProfile, 'id' | 'updatedAt' | 'deckXp'> & { deckXpList?: DeckXp[] };
+const profileDoc = ({ deckXpList, ...p }: ProfileIn, me: string) => ({
+  ...p,
+  ...(deckXpList?.length ? { deckXp: Object.fromEntries(deckXpList.map((d) => [deckRankKey(me, d.id, d.origin), d.xp])) } : {}),
+  updatedAt: Date.now(),
+});
+
+let pendingProfile: ProfileIn | null = null;
 let writing = false;
 /** Publish my study stats (coalesced: one write at a time, the latest wins). */
-export async function publishProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>) {
+export async function publishProfile(p: ProfileIn) {
   pendingProfile = p;
   if (writing) return;
   const t = await together();
@@ -144,7 +161,7 @@ export async function publishProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>)
     while (pendingProfile) {
       const next = pendingProfile;
       pendingProfile = null;
-      await t.db.doc(`profiles/${t.me}`).set({ ...next, updatedAt: Date.now() });
+      await t.db.doc(`profiles/${t.me}`).set(profileDoc(next, t.me));
     }
   } catch (e) {
     refused(e); // read-only viewer (or quota): stats stay local
@@ -157,13 +174,13 @@ export async function publishProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>)
  * Publish my profile under a new username right away. On the site, nobody else may already have the
  * name: false when it's taken (true where names aren't checked, or there is no one to tell).
  */
-export async function renameProfile(p: Omit<PublicProfile, 'id' | 'updatedAt'>): Promise<boolean> {
+export async function renameProfile(p: ProfileIn): Promise<boolean> {
   const t = await together();
   if (!t?.canWrite) return true;
   while (writing) await new Promise((r) => setTimeout(r, 50)); // let a write with the old name finish first
   pendingProfile = null;
   try {
-    await t.db.doc(`profiles/${t.me}`).set({ ...p, updatedAt: Date.now() });
+    await t.db.doc(`profiles/${t.me}`).set(profileDoc(p, t.me));
     return true;
   } catch (e) {
     if ((e as { code?: string } | null)?.code === 'username_taken') return false;

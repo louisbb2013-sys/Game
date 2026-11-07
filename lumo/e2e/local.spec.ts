@@ -93,16 +93,16 @@ test('pets climb the rarities: Common → Rare with enough level and coins; the 
   expect(Math.round(box.height)).toBe(view.height);
   await expect(page.getByTestId('pet-rarity')).toHaveText('Common');
   await expect(page.getByRole('list', { name: 'Rarity' }).getByRole('listitem')).toHaveText(['Common', 'Rare', 'Epic', 'Legendary', 'Mythical', 'Exotic', 'Galaxial', 'Celestial', 'Divine', 'Lumo']);
-  // Not yet: the pet needs level 4 and 200 coins.
+  // Not yet: the pet needs level 6 and 500 coins.
   await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Rare');
   await expect(page.getByTestId('pet-upgrade').getByRole('button', { name: 'Upgrade' })).toBeDisabled();
 
-  // After some studying (level 3) and saving up coins, it can go up a rarity.
+  // After some studying (level 6) and saving up coins, it can go up a rarity.
   await page.evaluate(() => {
     const k = 'lumo_local_v1';
     const d = JSON.parse(localStorage.getItem(k)!);
-    d.user.coins = 500;
-    d.game.pets[0].level = 4;
+    d.user.coins = 600;
+    d.game.pets[0].level = 6;
     localStorage.setItem(k, JSON.stringify(d));
   });
   await page.reload();
@@ -112,9 +112,9 @@ test('pets climb the rarities: Common → Rare with enough level and coins; the 
   await expect(page.getByText('Your pet is Rare now!')).toBeVisible();
   await expect(page.getByTestId('pet-rarity')).toHaveText('Rare');
   await expect(page.getByTestId('pet-upgrade')).toContainText('Upgrade to Epic');
-  // Rarer and higher level: a bigger bonus (Rare base 8% + 3 levels).
-  await expect(page.getByTestId('pet-buff')).toContainText('+11% chance to win a heart on a right answer');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.coins)).toBe(300);
+  // Rarer and higher level: a bigger bonus (Rare base 8% + 5 levels).
+  await expect(page.getByTestId('pet-buff')).toContainText('+13% chance to win a heart on a right answer');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lumo_local_v1')!).user.coins)).toBe(100);
   await page.screenshot({ path: 'e2e/screens/local-pet-upgrade.png' });
 });
 

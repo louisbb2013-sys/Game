@@ -2,6 +2,7 @@ import { MAX_HEARTS, type Rarity } from '@lumo/core';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { DeckRanking } from '../components/DeckRanking';
 import { HeartIcon } from '../components/icons';
 import { Lumo } from '../components/Lumo';
 import { Creature3D } from '../components/Pet3D';
@@ -339,6 +340,8 @@ export function Deck() {
           <ModeTile tone="from-rose-800 to-fuchsia-950" icon="🎯" title={t('deck.fix')} body={t('deck.fixBody', { count: wrong })} onClick={() => void start('wrong_only')} busy={starting === 'wrong_only'} />
         </section>
       )}
+
+      {LOCAL && <DeckRanking deckId={data.deck.id} origin={(data.deck as { origin?: string | null }).origin} />}
 
       <section className="grid grid-cols-2 gap-3">
         <button type="button" onClick={() => void start('exam')} disabled={!!starting} className="rounded-2xl bg-surface p-3 text-left ring-1 ring-line hover:ring-brand">

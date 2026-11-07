@@ -68,6 +68,8 @@ export interface DeckOptions {
   styles?: QuestionStyle[];
   /** What to focus on, what to skip, what the test is about. */
   focus?: string;
+  /** What's on the test (from the teacher's review sheet or what they said): the deck is built around it. */
+  test?: string;
 }
 export const QUESTION_STYLES = ['quick', 'understand', 'apply', 'written'] as const;
 export type QuestionStyle = (typeof QUESTION_STYLES)[number];
@@ -84,6 +86,7 @@ export function cleanOptions(o: unknown): DeckOptions {
     if (styles.length && styles.length < QUESTION_STYLES.length) out.styles = styles;
   }
   if (typeof x.focus === 'string' && x.focus.trim()) out.focus = x.focus.trim().slice(0, 600);
+  if (typeof x.test === 'string' && x.test.trim()) out.test = x.test.trim().slice(0, 1200);
   return out;
 }
 
@@ -113,8 +116,18 @@ function clean(raw: unknown): ConceptInput[] {
   return raw.slice(0, 200).flatMap((c: Record<string, unknown>) => {
     const term = str(c?.term, 160);
     const summary = str(c?.summary, 600);
-    // Every fact the notes give about it (older replies called them keyPoints).
-    const facts = [...new Map(list(c?.facts ?? c?.keyPoints, MAX_FACTS * 2).map((f) => [norm(f), f])).values()];
+    // Every fact the notes give about it (older replies called them keyPoints). A fact the notes stress
+    // comes marked with ★: the mark is taken off and remembered.
+    const marked = new Map<string, { text: string; star: boolean }>();
+    for (const f of list(c?.facts ?? c?.keyPoints, MAX_FACTS * 2)) {
+      const star = STAR.test(f);
+      const text = f.replace(STAR, '').trim();
+      if (!text) continue;
+      const had = marked.get(norm(text));
+      marked.set(norm(text), { text: had?.text ?? text, star: star || !!had?.star });
+    }
+    const facts = [...marked.values()].map((x) => x.text);
+    const stars = [...marked.values()].flatMap((x, i) => (x.star ? [i] : []));
     if (!term || (!summary && facts.length === 0)) return [];
     const kind = (CONCEPT_KINDS as readonly string[]).includes(String(c.kind)) && c.kind !== 'formula' ? (c.kind as ConceptKind) : 'definition';
     const steps = list(c.steps, 10);
@@ -132,11 +145,13 @@ function clean(raw: unknown): ConceptInput[] {
       ...(steps.length >= 2 ? { steps } : {}),
       ...(causeEffects.length ? { causeEffects } : {}),
     };
-    return [{ ...base, keyPoints: facts }];
+    return [{ ...base, keyPoints: facts, ...(stars.length ? { stars } : {}) }];
   });
 }
 
 const PART = /\s\((\d+)\)$/;
+/** How Claude marks a fact the notes stress. */
+const STAR = /^\s*[★⭐*]+\s*/u;
 
 /** Words that carry a fact's meaning (not "the", "le", "est"…). */
 const SMALL = new Set('the a an of in on at to is are was were and or for by with from that this it its le la les un une des de du au aux et ou en est sont était dans par pour sur avec qui que ce cette ces se sa son ses leur leurs'.split(' '));
@@ -155,6 +170,13 @@ function similar(a: Set<string>, b: Set<string>): boolean {
  * facts; one with too many facts is split in parts ("Rome", "Rome (2)"), each fact still its own question.
  */
 export function mergeIdeas(lists: ConceptInput[][]): ConceptInput[] {
+  // Stressed facts, by their words: the marks follow the facts through merging and splitting.
+  const starred = new Set(lists.flat().flatMap((c) => (c.stars ?? []).map((i) => norm(c.keyPoints[i] ?? '')).filter(Boolean)));
+  const withStars = (c: ConceptInput): ConceptInput => {
+    const { stars: _old, ...rest } = c;
+    const stars = c.keyPoints.flatMap((f, i) => (starred.has(norm(f)) ? [i] : []));
+    return stars.length ? { ...rest, stars } : rest;
+  };
   const byKey = new Map<string, ConceptInput>();
   for (const c of lists.flat()) {
     const term = c.term.replace(PART, '');
@@ -189,9 +211,9 @@ export function mergeIdeas(lists: ConceptInput[][]): ConceptInput[] {
   return [...byKey.values()]
     .filter((c) => !emptied.has(c))
     .flatMap((c) => {
-      if (c.keyPoints.length <= MAX_FACTS) return [c];
+      if (c.keyPoints.length <= MAX_FACTS) return [withStars(c)];
       const parts: ConceptInput[] = [];
-      for (let i = 0; i < c.keyPoints.length; i += MAX_FACTS) parts.push({ ...c, term: i ? `${c.term} (${i / MAX_FACTS + 1})` : c.term, keyPoints: c.keyPoints.slice(i, i + MAX_FACTS) });
+      for (let i = 0; i < c.keyPoints.length; i += MAX_FACTS) parts.push(withStars({ ...c, term: i ? `${c.term} (${i / MAX_FACTS + 1})` : c.term, keyPoints: c.keyPoints.slice(i, i + MAX_FACTS) }));
       return parts;
     })
     .slice(0, MAX_CONCEPTS);
@@ -263,6 +285,7 @@ export function readingPrompt(source: Source, language: Locale, o: { options?: D
     `Break it into the precise sub-aspects ("sous-aspects") a student must know for a test, and list every fact about each one. Write everything in ${lang}.`,
     opt.level ? `The student's level: ${opt.level.slice(0, 60)}. Match its vocabulary and depth.` : '',
     o.extra || opt.focus ? `The student says: """${[opt.focus, o.extra].filter(Boolean).join('\n').slice(0, 2000)}"""` : '',
+    opt.test ? `What is on the student's test (their words, from the teacher or a review sheet): """${opt.test.slice(0, 1200)}"""\nBuild the deck around this test: everything it covers, in detail; leave out what it clearly does not cover.` : '',
     o.notes !== undefined ? `Notes:\n"""${o.notes.slice(0, 24_000)}"""` : '',
     '',
     'How to break it down:',
@@ -270,6 +293,9 @@ export function readingPrompt(source: Source, language: Locale, o: { options?: D
     '- One line = ONE sub-aspect: a single term, person, place, event, date, rule, process, part, cause or category. Something with several sides (a war: its causes, its main battles, its results) is split into one sub-aspect per side.',
     `- "facts": ${detail === 'key' ? '1-3' : '1-5'} facts about that sub-aspect, each one short, complete sentence that stands alone and that a test could ask about (who, what, when, where, how many, why, how, what it causes, what it is made of). One piece of information per fact (don't pack a date, a person and a cause into one sentence), but a short list that answers one question stays one fact (e.g. "On the forum, Romans did business, politics and religion"). More facts than that: split the sub-aspect in two.`,
     '- Each fact appears ONCE in the whole deck: never repeat a fact, a date or an event under another sub-aspect (put it under the one it fits best).',
+    source === 'topic'
+      ? '- Start a fact with ★ when it is something a test on this almost always asks' + (opt.test ? ' or something the test described above covers.' : '.')
+      : '- Start a fact with ★ when the material stresses it: highlighted, underlined, circled, boxed, starred, in colour or in bold' + (opt.test ? ', or when the test described above covers it' : '') + '. Never ★ anything else.',
     '- Everything a test could ask goes in "facts"; "synonyms", "examples", "steps" and "causeEffects" only add to the facts, never replace them.',
     `- ${amount}`,
     `- ${fromWhere}`,
@@ -287,7 +313,7 @@ export function readingPrompt(source: Source, language: Locale, o: { options?: D
     'Reply with one JSON object per line and nothing else (no list around them, no code fence, no blank lines). The first line:',
     '{"title": "short title", "subject": "school subject", "summary": "one sentence"}',
     'then one line per sub-aspect, leaving out keys that would be empty:',
-    `{"topic": "…", "kind": "${CONCEPT_KINDS.filter((k) => k !== 'formula').join(' | ')}", "term": "the sub-aspect, short", "summary": "…", "facts": ["…", "…"], "examples": ["…"], "misconceptions": ["…"], "synonyms": ["…"], "steps": ["only for a process, in order"], "causeEffects": [{"cause": "…", "effect": "…"}]}`,
+    `{"topic": "…", "kind": "${CONCEPT_KINDS.filter((k) => k !== 'formula').join(' | ')}", "term": "the sub-aspect, short", "summary": "…", "facts": ["★ a fact the notes stress", "…"], "examples": ["…"], "misconceptions": ["…"], "synonyms": ["…"], "steps": ["only for a process, in order"], "causeEffects": [{"cause": "…", "effect": "…"}]}`,
     source === 'topic' ? 'If the request is not a school topic, reply only {"title": ""}.' : 'If there is no study material, reply only {"title": ""}.',
   ]
     .filter((x) => x !== '')

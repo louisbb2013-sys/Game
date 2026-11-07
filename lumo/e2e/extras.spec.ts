@@ -75,6 +75,8 @@ test('Monster Quest: pick a spell, answer to cast it', async ({ page }) => {
 test('think first: bet coins before the choices show; the world map: conquer an island', async ({ page }) => {
   test.setTimeout(150_000);
   await fresh(page, 'u_ex3');
+  // Think first comes on about one question in three; here, on every one that has choices.
+  await page.evaluate(() => localStorage.setItem('lumo.thinkFirst', 'all'));
   await page.getByTestId('daily-claim').click(); // 20 coins to bet with
   await page.getByRole('link', { name: 'Learn', exact: true }).click();
   await page.getByRole('link', { name: /Make a deck with Lumo/ }).click();
@@ -120,4 +122,27 @@ test('think first: bet coins before the choices show; the world map: conquer an 
   await result.click();
   await expect(page.getByRole('heading', { name: /World map/ })).toBeVisible();
   await expect(page.getByTestId('island')).toHaveAttribute('data-state', /won|new/);
+});
+
+test('making a deck: tell Lumo what is on the test, then choose the topics that go in the deck', async ({ page }) => {
+  test.setTimeout(90_000);
+  await fresh(page, 'u_ex4');
+  await page.getByRole('link', { name: 'Learn', exact: true }).click();
+  await page.getByRole('link', { name: /Make a deck with Lumo/ }).click();
+  await page.getByTestId('test-box').locator('textarea').fill('Seulement la poésie');
+  await page.getByRole('tab', { name: 'Paste notes' }).click();
+  await page.locator('#deck-notes').fill('Mes notes de français, deux thèmes : le récit et la poésie. La strophe est surlignée.');
+  await page.getByRole('button', { name: /Make my deck/ }).first().click();
+  const picker = page.getByTestId('topic-picker');
+  await expect(picker).toBeVisible({ timeout: 20_000 });
+  await expect(picker.getByTestId('picker-topic')).toHaveCount(2);
+  await expect(picker).toContainText('1 highlighted');
+  // Only the poetry: untick the narrative topic.
+  await picker.getByRole('checkbox', { name: 'Récit' }).uncheck();
+  await expect(page.getByTestId('picker-done')).toContainText('2 facts');
+  await page.getByTestId('picker-done').click();
+  await expect(page.getByRole('heading', { name: 'Le récit psychologique', level: 1 })).toBeVisible({ timeout: 10_000 });
+  // The test the student described reached Claude.
+  const prompts = await page.evaluate(() => (window as unknown as { __prompts: string[] }).__prompts);
+  expect(prompts.find((p) => p.includes('Break it into the precise sub-aspects'))).toContain('Seulement la poésie');
 });

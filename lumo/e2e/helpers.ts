@@ -17,7 +17,7 @@ export async function answerCurrent(page: Page, format: string) {
     case 'true_false':
     case 'cause_effect': {
       // The game screen's colour tiles, or the plain list elsewhere (offline review).
-      const tile = page.locator('section[data-format] .tile');
+      const tile = page.locator('section[data-format] .tile:not([disabled])'); // a crossed-out choice can't be picked
       if (await tile.count()) await tile.first().click();
       else await page.getByRole('radio').first().click();
       break;
@@ -122,8 +122,15 @@ export async function checkCurrent(page: Page, format: string) {
 
 /** Answer the question on screen and send it. */
 export async function answerAndCheck(page: Page, format: string) {
-  await answerCurrent(page, format);
-  await checkCurrent(page, format);
+  for (let i = 0; i < 3; i++) {
+    await answerCurrent(page, format);
+    await checkCurrent(page, format);
+    // A first miss keeps the answer hidden: think again and have another go.
+    const again = page.getByTestId('try-again');
+    const done = page.getByRole('status').getByRole('button', { name: /Continue|See results/ });
+    await Promise.race([again.waitFor({ timeout: 1500 }), done.waitFor({ timeout: 1500 })]).catch(() => {});
+    if (!(await again.isVisible().catch(() => false))) return;
+  }
 }
 
 /** After the feedback panel: Continue (or See results). Returns true when the round is over. Opens any chest on the way. */

@@ -81,7 +81,7 @@ describe('Claude writes the deck’s questions', () => {
     const p = writingPrompt({ title: 'Gravité', subject: 'Science', language: 'fr' }, concepts);
     expect(p).toContain('1. Masse — Quantité de matière');
     expect(p).toContain('Mistakes students make: la masse change sur la Lune');
-    expect(p).toContain('Never copy the notes');
+    expect(p).toContain("Don't copy whole sentences from the notes");
     expect(p).toContain('the right one must NOT be the longest');
     expect(p).toContain('élément déclencheur'); // French examples for a French deck
     expect(p).toContain('one JSON object per line');

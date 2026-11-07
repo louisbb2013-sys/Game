@@ -958,7 +958,10 @@
       "nobody": "Nobody got that one!",
       "nobodyBody": "Read the why: it'll come back",
       "fastest": "{{name}} was fastest!"
-    }
+    },
+    "leaveHandOver": "Leave (someone takes over)",
+    "newHost": "{{name}} runs the game now",
+    "youHost": "The host left: you run the game now!"
   },
   "friends": {
     "title": "Friends",
@@ -1528,7 +1531,12 @@
     },
     "waiting": "Lumo is writing your next questions…",
     "waitingBody": "They're on the way: the rest of your notes is almost ready.",
-    "waitingStop": "Stop here and see my results"
+    "waitingStop": "Stop here and see my results",
+    "retry": {
+      "note": "Not quite! Think again and try another answer.",
+      "gotIt": "Got it on the second try!",
+      "gotItBody": "It comes back later in the round, to make sure it sticks."
+    }
   },
   "write": {
     "title": "Lumo is writing your test",
@@ -1926,7 +1934,9 @@
     "design": "Design a pet",
     "buyEggs": "Buy eggs",
     "giftRarity": "Rarity",
-    "giftLevel": "Level"
+    "giftLevel": "Level",
+    "feedN": "Feed {{n}}",
+    "feedAllOne": "All ({{n}})"
   },
   "shopx": {
     "eggsTitle": "Rarity eggs",
@@ -2111,5 +2121,28 @@
     "allConquered": "Whole map conquered! Epic chest!",
     "notYet": "Not conquered yet: get 70% right to take it",
     "back": "Back to the map"
+  },
+  "rank": {
+    "title": "Deck ranking",
+    "empty": "Answer questions on this deck to get on the board.",
+    "share": "Share this deck: friends who play it join this ranking.",
+    "xp": "{{n}} XP",
+    "you": "you"
+  },
+  "picker": {
+    "title": "Choose what goes in your deck",
+    "body": "Lumo found {{topics}} topics and {{facts}} facts. Untick what isn't on your test.",
+    "all": "All",
+    "none": "None",
+    "general": "General",
+    "count_one": "{{count}} fact",
+    "count_other": "{{count}} facts",
+    "stressed_one": "{{count}} highlighted",
+    "stressed_other": "{{count}} highlighted",
+    "go_one": "Make my deck · {{count}} fact",
+    "go_other": "Make my deck · {{count}} facts",
+    "testTitle": "What's on your test? (optional)",
+    "testBody": "Paste the review sheet or what your teacher said. Lumo builds the deck and the questions around it, and what's highlighted or underlined in your notes counts most.",
+    "testPlaceholder": "e.g. Chapter 3: the causes of WW1, the key dates and the alliances"
   }
 }

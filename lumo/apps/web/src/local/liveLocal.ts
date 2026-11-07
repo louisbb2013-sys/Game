@@ -41,7 +41,11 @@ import { FRIENDS_ONLY, namesFor, plain, setLiveInvite, together, useFriends } fr
 /**
  * Live games in the browser-only build. The HOST's page runs the game (the same core state machine the
  * server uses) and publishes what players may see to `games/<hostId>`; players send their answers
- * through presence in the game's named room. Answer keys never leave the host's page until the reveal.
+ * through presence in the game's named room. Answer keys stay off players' screens until the reveal.
+ *
+ * When the host leaves, the game goes on: the host's doc also carries the whole game (encoded, so it
+ * isn't shown anywhere), and the player with the smallest id still in the room picks it up and becomes
+ * the host, with their own `games/<id>` doc. Players always follow the freshest doc with the game's code.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -83,7 +87,26 @@ interface GameDoc {
   correct: Record<string, number>;
   kicked: string[];
   updatedAt: number;
+  /** The whole game, for a player to pick up if the host leaves (absent once it's over). */
+  backup?: string;
+  /** The host left on purpose: take over now. */
+  hostLeft?: boolean;
 }
+
+/** The host leaving for this long (not in the room, no update) hands the game to a player. */
+const HOST_GONE_MS = 10_000;
+/** Bigger than this, a game isn't backed up (the doc must stay small). */
+const MAX_BACKUP = 400_000;
+const encodeGame = (s: LiveState) => btoa(unescape(encodeURIComponent(JSON.stringify(s))));
+function decodeGame(b: string | undefined): LiveState | null {
+  try {
+    return b ? (JSON.parse(decodeURIComponent(escape(atob(b)))) as LiveState) : null;
+  } catch {
+    return null;
+  }
+}
+/** The freshest doc with the game's code (a host that left keeps an old one). */
+const freshest = (docs: GameDoc[]) => docs.slice().sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
 
 // ------------------------------------------------------------------ host
 
@@ -106,8 +129,10 @@ class HostGame {
     private t: NonNullable<Awaited<ReturnType<typeof together>>>,
     private named: Any,
     private deck: { deckId: string; target: number } | null = null,
+    kicked: string[] = [],
   ) {
     this.state = state;
+    this.kicked = new Set(kicked);
     this.unsubPeers = named.onPeers((change: Any) => void this.onPeers(change.peers));
     // While waiting for players, check in every 30 s: games whose host left drop off the list.
     this.heartbeat = setInterval(() => {
@@ -117,9 +142,42 @@ class HostGame {
   }
 
   private heartbeat: ReturnType<typeof setInterval>;
+  /** Mid-game with others still playing: leaving hands the game over instead of ending it. */
+  get others() {
+    return (this.state.phase === 'question' || this.state.phase === 'reveal') && this.state.players.some((p) => p.id !== this.t.me && p.connected !== false);
+  }
+
   private onLeave = () => {
-    if (this.state.phase === 'lobby') void this.t.db.doc(`games/${this.t.me}`).delete().catch(() => {});
+    if (this.others) void this.handOver();
+    else if (this.state.phase === 'lobby') void this.t.db.doc(`games/${this.t.me}`).delete().catch(() => {});
   };
+
+  /** Leaving with players still here: say so, so one of them takes over right away. */
+  private async handOver() {
+    const doc = this.doc();
+    await this.t.db.doc(`games/${this.t.me}`).set({ ...doc, hostLeft: true } as Any).catch(() => {});
+  }
+
+  /** A player who picked up the game starts running it. */
+  resume() {
+    this.changed();
+  }
+
+  private doc(): GameDoc {
+    const correct = Object.fromEntries(this.state.players.map((p) => [p.id, p.correctCount]));
+    const backup = this.state.phase === 'podium' ? '' : encodeGame(this.state);
+    return {
+      code: this.code,
+      title: this.state.title,
+      hostId: this.t.me,
+      phase: this.state.phase,
+      view: this.view(),
+      correct,
+      kicked: [...this.kicked],
+      updatedAt: liveNow(),
+      ...(backup && backup.length < MAX_BACKUP ? { backup } : {}),
+    };
+  }
 
   view(): LivePublic {
     return { ...publicView(this.state), serverNow: liveNow() };
@@ -152,9 +210,7 @@ class HostGame {
     try {
       while (this.dirty) {
         this.dirty = false;
-        const correct = Object.fromEntries(this.state.players.map((p) => [p.id, p.correctCount]));
-        const doc: GameDoc = { code: this.code, title: this.state.title, hostId: this.t.me, phase: this.state.phase, view: this.view(), correct, kicked: [...this.kicked], updatedAt: Date.now() };
-        await this.t.db.doc(`games/${this.t.me}`).set(doc as Any);
+        await this.t.db.doc(`games/${this.t.me}`).set(this.doc() as Any);
       }
     } catch {
       /* a failed write is retried by the next change */
@@ -308,8 +364,11 @@ class HostGame {
     if (this.invited.size) void setLiveInvite(null);
     this.unsubPeers?.();
     this.listeners.clear();
+    if (this.state.phase !== 'podium') {
+      if (this.others) await this.handOver();
+      else await this.t.db.doc(`games/${this.t.me}`).delete().catch(() => {});
+    }
     await this.named.leave().catch(() => {});
-    if (this.state.phase !== 'podium') await this.t.db.doc(`games/${this.t.me}`).delete().catch(() => {});
     if (host === this) host = null;
   }
 }
@@ -460,7 +519,7 @@ export function useOpenGames() {
   }, []);
   if (!docs) return docs;
   return docs
-    .filter((g) => now - g.updatedAt < 90_000)
+    .filter((g) => now - g.updatedAt < 90_000 && !g.hostLeft)
     // The website lists only games my friends host (anyone can still join with the code).
     .filter((g) => !FRIENDS_ONLY || (friends ?? []).includes(g.hostId))
     .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -482,14 +541,20 @@ export function useLocalLiveRoom(code: string) {
   const [peerAnswered, setPeerAnswered] = useState<Record<string, string>>({});
   const [reactions, setReactions] = useState<LiveReaction[]>([]);
   const seenReact = useRef(new Map<string, number>());
+  // Who is in the room right now, and when the host was last seen there (to pick the game up if they leave).
+  const inRoom = useRef<string[]>([]);
+  const hostSeen = useRef(Date.now());
   const followRoom = useCallback((r: Any) => {
     return r.onPeers((change: Any) => {
       const answered: Record<string, string> = {};
       const fresh: LiveReaction[] = [];
+      const here: string[] = [];
       for (const p of change.peers ?? []) {
         const id = p.by as string | null;
-        const pr = (p.presence ?? {}) as { answer?: { qid?: string }; react?: { e?: string; at?: number } };
+        const pr = (p.presence ?? {}) as { answer?: { qid?: string }; react?: { e?: string; at?: number }; player?: string; host?: boolean };
         if (!id) continue;
+        if (pr.player === code) here.push(id);
+        if (pr.host && pr.player === code) hostSeen.current = Date.now();
         if (pr.answer?.qid) answered[id] = String(pr.answer.qid);
         const re = pr.react;
         if (re?.e && REACTIONS.includes(re.e) && typeof re.at === 'number' && re.at > (seenReact.current.get(id) ?? 0)) {
@@ -497,10 +562,11 @@ export function useLocalLiveRoom(code: string) {
           if (Math.abs(liveNow() - re.at) < 8000) fresh.push({ key: `${id}-${re.at}`, by: id, e: re.e });
         }
       }
+      inRoom.current = here;
       setPeerAnswered(answered);
       if (fresh.length) setReactions((x) => [...x, ...fresh].slice(-24));
     });
-  }, []);
+  }, [code]);
 
   useEffect(() => {
     let alive = true;
@@ -524,15 +590,43 @@ export function useLocalLiveRoom(code: string) {
       }
       // Player: follow the host's published game and send answers by presence.
       let seen = false;
+      let latest: GameDoc | undefined;
+      let room: Any = null;
+      let unsub: () => void = () => {};
       hostSkew = 0;
       bestSkew = -Infinity;
-      const unsub = t.db
+      hostSeen.current = Date.now();
+      /** The host is gone: the player with the smallest id still here runs the game from now on. */
+      const takeOver = async () => {
+        const doc = latest;
+        const state = decodeGame(doc?.backup);
+        if (!doc || !state || !room || host || !alive) return;
+        unsub();
+        const mine: LiveState = { ...state, hostId: t.me, players: state.players.map((p) => (p.id === doc.hostId ? { ...p, connected: false } : p)) };
+        host = new HostGame(code, mine, t, room, null, doc.kicked ?? []);
+        await room.presence({ player: code, host: true }).catch(() => {});
+        cleanups.push(host.subscribe((v) => setState(v)));
+        host.resume();
+      };
+      const watch = setInterval(() => {
+        const doc = latest;
+        if (!doc || host || doc.phase === 'podium' || !doc.view.players.some((p) => p.id === t.me)) return;
+        const gone = doc.hostLeft || (Date.now() - hostSeen.current > HOST_GONE_MS && liveNow() - doc.updatedAt > HOST_GONE_MS);
+        if (!gone) return;
+        const players = new Set(doc.view.players.filter((p) => p.id !== doc.hostId).map((p) => p.id));
+        const next = [...new Set([...inRoom.current, t.me])].filter((id) => players.has(id)).sort()[0];
+        if (next === t.me) void takeOver();
+      }, 2000);
+      cleanups.push(() => clearInterval(watch));
+      unsub = t.db
         .collection('games')
         .where('code', '==', code)
-        .limit(1)
+        .limit(5)
         .onSnapshot(
           (snap: Any) => {
-            const doc = plain(snap.docs[0]?.data()) as GameDoc | undefined;
+            if (host?.code === code) return; // I run the game now
+            const doc = freshest(snap.docs.map((d: Any) => plain(d.data()) as GameDoc));
+            latest = doc;
             if (!doc) {
               if (seen) setStatus('closed');
               else {
@@ -565,11 +659,12 @@ export function useLocalLiveRoom(code: string) {
             setError('network');
           },
         );
-      cleanups.push(unsub);
+      cleanups.push(() => unsub());
       try {
         const r = await t.room.join(roomName(code));
         if (!alive) return void r.leave();
         named.current = r;
+        room = r;
         await r.presence({ player: code });
         cleanups.push(followRoom(r));
         cleanups.push(() => void r.leave());
@@ -681,3 +776,5 @@ export async function endHostedGame(code: string) {
 }
 
 export const isHosting = (code: string) => host?.code === code;
+/** Leaving now hands the game to another player (mid-game, others still in it). */
+export const handsOver = (code: string) => host?.code === code && host.others;

@@ -29,6 +29,8 @@ export interface Concept {
   summary: string;
   /** Every fact of this sub-aspect, one testable statement each: each one gets its own question. */
   keyPoints: string[];
+  /** Facts the notes stress (highlighted, underlined, circled, in colour) or the test covers: asked more. */
+  stars?: number[];
   misconceptions: string[];
   examples: string[];
   synonyms: string[];

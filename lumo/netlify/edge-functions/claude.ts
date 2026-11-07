@@ -153,7 +153,9 @@ export function makeHandler(deps: Deps) {
       stream: true as const,
       system: SYSTEM,
       messages: [{ role: 'user' as const, content: [...images, { type: 'text' as const, text: input }] }],
-      output_config: { effort: body.tier === 'quick' ? ('low' as const) : ('medium' as const) },
+      // Thinking is billed like written words: think a little more only to read photos or files of
+      // notes (or when asked); writing questions and chatting think briefly, so the month's budget lasts.
+      output_config: { effort: body.tier === 'complex' || images.length ? ('medium' as const) : ('low' as const) },
     };
     const search = haiku
       ? { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: gateway ? 3 : 4 }

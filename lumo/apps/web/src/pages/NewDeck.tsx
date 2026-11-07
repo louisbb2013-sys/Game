@@ -8,6 +8,7 @@ import { shrinkPhoto } from '../lib/files';
 import { Lumo } from '../components/Lumo';
 import { api, ApiError, NETLIFY } from '../lib/api';
 import { claudeProblem, loadSession } from '../netlify/cloud';
+import { TopicPicker } from '../components/TopicPicker';
 import { canAskClaude, deckFromNotes, deckFromTopic, photoLimits, readPhotos, ReaderError, type DeckDraft, type DeckOptions, type KnownIdea } from '../local/reader';
 import type { Concept } from '@lumo/core';
 import { writeQuestions } from '../local/writer';
@@ -112,8 +113,15 @@ export function NewDeck() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ai]);
 
+  // After reading: choose what goes in the deck (when Lumo found several topics or many parts).
+  const [picking, setPicking] = useState<Draft | null>(null);
   /** Save the draft as a deck (or add what's new to the deck), start Claude on the questions, and open it. */
-  const finish = async (draft: Draft) => {
+  const finish = async (draft: Draft, picked = false) => {
+    if (!picked && (new Set(draft.concepts.map((c) => c.topic)).size >= 2 || draft.concepts.length >= 8)) {
+      setPicking(draft);
+      setBusy(null);
+      return;
+    }
     if (addTo) {
       const r = await api<{ ideas: number; facts: number }>(`/api/local/decks/${addTo}/ideas`, { method: 'POST', body: { concepts: draft.concepts } });
       void writeQuestions(addTo);
@@ -421,7 +429,32 @@ export function NewDeck() {
           </form>
         )}
 
+        {!addTo && ai && (
+          <label className="panel block space-y-1 p-4" data-testid="test-box">
+            <span className="block font-black">📝 {t('picker.testTitle')}</span>
+            <span className="block text-xs text-muted">{t('picker.testBody')}</span>
+            <textarea
+              rows={2}
+              maxLength={1200}
+              value={options.test ?? ''}
+              onChange={(e) => setOptions({ ...options, test: e.target.value })}
+              placeholder={t('picker.testPlaceholder')}
+              className="mt-1 w-full rounded-2xl border-2 border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+            />
+          </label>
+        )}
         {!addTo && ai && <DeckOptionsPanel value={options} onChange={setOptions} />}
+        {picking && (
+          <TopicPicker
+            concepts={picking.concepts}
+            onCancel={() => setPicking(null)}
+            onDone={(kept) => {
+              const d = { ...picking, concepts: kept };
+              setPicking(null);
+              void finish(d, true).catch((e) => setError(String((e as { code?: string })?.code ?? 'network')));
+            }}
+          />
+        )}
 
         {error && (
           <p role="alert" className="rounded-2xl bg-bad/10 px-4 py-3 text-sm font-bold text-bad">

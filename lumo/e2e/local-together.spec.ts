@@ -610,3 +610,43 @@ test('website Live: a player can leave any time, and the host can stop the game 
   await expect(a.getByRole('button', { name: /Create game/ })).toBeVisible();
   await expect(b.getByText('This game has ended.')).toBeVisible({ timeout: 15_000 });
 });
+
+test('website Live: when the host leaves mid-game, a player takes over and the game goes on', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  const b = await ctx.newPage();
+  await a.goto(process.env.MULTI_URL!);
+  await a.evaluate(() => localStorage.clear());
+  await open(a, 'u_h1');
+  await open(b, 'u_h2');
+  await a.getByRole('link', { name: 'Learn', exact: true }).click();
+  await a.getByRole('button', { name: 'Try a sample deck' }).click();
+  await expect(a.getByRole('heading', { name: 'Mastery map' })).toBeVisible();
+  await a.getByRole('link', { name: 'Live', exact: true }).click();
+  await a.getByRole('button', { name: '5', exact: true }).click();
+  await a.getByRole('button', { name: /Create game/ }).click();
+  await expect(a.getByTestId('live-code')).toBeVisible();
+  await b.getByRole('link', { name: 'Live', exact: true }).click();
+  await b.getByRole('button', { name: /Cells — the basics/ }).click({ timeout: 15_000 });
+  await a.getByRole('button', { name: 'Start with 2 players' }).click({ timeout: 10_000 });
+  await expect(b.getByText('Question 1 of 5')).toBeVisible({ timeout: 15_000 });
+
+  // The host leaves (two taps): the player becomes the host, and the game keeps going.
+  await expect(a.getByTestId('live-leave')).toHaveText('✕ Leave (someone takes over)');
+  await a.getByTestId('live-leave').click();
+  await a.getByTestId('live-leave').click();
+  await expect(b.getByTestId('host-change')).toContainText('you run the game now', { timeout: 20_000 });
+  await expect(b.getByTestId('live-leave')).toHaveText('✕ End game');
+  // The new host plays on to the end.
+  for (let i = 0; i < 12; i++) {
+    if (await b.getByRole('heading', { name: /You won!|Final results/ }).isVisible().catch(() => false)) break;
+    const tile = b.locator('section[data-format] .tile:not([disabled])').first();
+    if (await tile.isVisible().catch(() => false)) await tile.click().catch(() => {});
+    const next = b.getByRole('button', { name: /Next question|See the results/ });
+    if (await next.isVisible().catch(() => false)) await next.click().catch(() => {});
+    await b.waitForTimeout(1500);
+  }
+  await expect(b.getByRole('heading', { name: /You won!|Final results/ })).toBeVisible({ timeout: 30_000 });
+  await ctx.close();
+});

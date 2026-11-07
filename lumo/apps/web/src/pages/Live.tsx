@@ -10,7 +10,7 @@ import { QrCode, shareOrCopy } from '../components/QrCode';
 import { isReady, QuestionInput } from '../components/quiz/inputs';
 import { ChoiceTiles } from '../components/play/answers';
 import { api, LOCAL } from '../lib/api';
-import { endHostedGame, hostLocalGame, liveNow, REACTIONS, useLocalLiveRoom, useOpenGames, type LiveReaction } from '../local/liveLocal';
+import { endHostedGame, handsOver, hostLocalGame, liveNow, REACTIONS, useLocalLiveRoom, useOpenGames, type LiveReaction } from '../local/liveLocal';
 import { canAskClaude } from '../local/reader';
 import { writeQuestions } from '../local/writer';
 import { READY_TO_PLAY, WritingScreen } from '../components/play/Writing';
@@ -298,6 +298,7 @@ export function LiveRoom() {
     <ReactCtx.Provider value={fun.react ?? null}>
     <div className="space-y-4">
       {!room.connected && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm font-bold text-bad">{t('live.reconnecting')}</p>}
+      <HostChange s={s} me={room.me} />
       {s.phase !== 'podium' && <LeaveButton s={s} isHost={isHost} send={room.send} />}
       {s.phase === 'lobby' && <Lobby s={s} isHost={isHost} send={room.send} />}
       {s.phase === 'question' && <QuestionView s={s} me={room.me} answer={room.answer} bet={bet} onPick={(qid, id) => (picks.current[qid] = id)} />}
@@ -313,6 +314,25 @@ export function LiveRoom() {
 type Send = ReturnType<typeof useLiveRoom>['send'];
 
 /** Out of a game at any time: a player leaves; the host ends it for everyone. Two taps, so it can't happen by accident. */
+/** The host left and another player picked the game up: say who runs it now. */
+function HostChange({ s, me }: { s: LivePublic; me: string }) {
+  const { t } = useTranslation();
+  const first = useRef(s.hostId);
+  const [who, setWho] = useState<string | null>(null);
+  useEffect(() => {
+    if (s.hostId === first.current) return;
+    first.current = s.hostId;
+    setWho(s.hostId === me ? t('live.youHost') : t('live.newHost', { name: s.players.find((p) => p.id === s.hostId)?.name ?? t('together.someone') }));
+    const id = setTimeout(() => setWho(null), 5000);
+    return () => clearTimeout(id);
+  }, [s.hostId, s.players, me, t]);
+  return who ? (
+    <p role="status" className="pop-in rounded-2xl bg-amber-glow/20 px-3 py-2 text-center text-sm font-black" data-testid="host-change">
+      👑 {who}
+    </p>
+  ) : null;
+}
+
 function LeaveButton({ s, isHost, send }: { s: LivePublic; isHost: boolean; send: Send }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -322,8 +342,14 @@ function LeaveButton({ s, isHost, send }: { s: LivePublic; isHost: boolean; send
     const id = setTimeout(() => setSure(false), 4000);
     return () => clearTimeout(id);
   }, [sure]);
+  // Mid-game with others playing, the host can leave: another player takes over and the game goes on.
+  const handOver = isHost && LOCAL && handsOver(s.code);
   const go = async () => {
     if (!sure) return setSure(true);
+    if (handOver) {
+      await endHostedGame(s.code);
+      return navigate('/live');
+    }
     if (isHost) {
       // Mid-game everyone goes to the results; from the lobby the game just closes.
       if ((s.phase === 'question' || s.phase === 'reveal') && (await send('live:end')).ok) return setSure(false);
@@ -339,7 +365,7 @@ function LeaveButton({ s, isHost, send }: { s: LivePublic; isHost: boolean; send
         data-testid="live-leave"
         className={`rounded-full px-4 py-2 text-sm font-black ring-2 transition-colors ${sure ? 'bg-bad text-white ring-bad' : 'bg-surface text-muted ring-line'}`}
       >
-        {sure ? t(isHost ? 'live.endSure' : 'live.leaveSure') : `✕ ${t(isHost ? 'live.endGame' : 'live.leaveGame')}`}
+        {sure ? t(isHost && !handOver ? 'live.endSure' : 'live.leaveSure') : `✕ ${t(handOver ? 'live.leaveHandOver' : isHost ? 'live.endGame' : 'live.leaveGame')}`}
       </button>
     </div>
   );
